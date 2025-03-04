@@ -27,7 +27,21 @@ export class Matrix3{
                             0, 1, y,
                             0, 0, 1)
     }
+    static fromSinCos(sin:number, cos:number) {
+        return this.fromRows(cos, -sin, 0,
+                            sin, cos, 0,
+                            0, 0, 1)
+    }
+    static fromSinCosOrigin(sin:number, cos:number, x:number, y:number) {
+        const  oneMinusCosV = 1 - cos;// 1-cos=2sin^2(x/2)
 
+        //x0=cos*-x+sin*y+x=x(x-cos)+sin*y
+        //y0=sin*-x-cos*y+y=-sin*x+y(1-cos)
+        return this.fromRows(cos, -sin, sin*y+oneMinusCosV*x,
+                            sin, cos, -sin*x+oneMinusCosV*y,
+
+                            0, 0, 1)
+    }
     static fromRotation(theta:number) {
         // counterclockwise
         const c = Math.cos(theta);
@@ -231,7 +245,7 @@ export class Matrix3{
         );
 
     }
-	setFromMatrix4( m ) {
+	setFromMatrix4( m:Matrix4 ) {
 		const me = m.elements;
 		return this.set(
 			me[ 0 ], me[ 4 ], me[ 8 ],

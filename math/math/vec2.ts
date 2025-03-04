@@ -36,6 +36,9 @@ export class Vector2 {
     static splat(x: number) {
         return this.create(x, x)
     }
+    static lerp(a: Vector2, b: Vector2, t: number) {
+        return this.create(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
+    }
     static pools: Vector2[] = []
     static maxPoolSize: number = 100
     static batchPools: Vector2[] = []

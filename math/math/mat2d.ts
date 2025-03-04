@@ -16,6 +16,10 @@ export class Matrix2D {
     static fromSinCos(sin:number,cos:number){
         return this.fromRows(cos,sin,-sin,cos,0,0)
     }
+    static fromSinCosOrigin(sin:number,cos:number,x:number,y:number){
+        const cost=1-cos
+        return this.fromRows(cos,sin,-sin,cos,sin*y+cost*x,-sin*x+cost*y)
+    }
     static fromTranslation(x: number, y: number) {
         return this.fromRows(1, 0, 0, 1, x, y)
     }
@@ -35,7 +39,12 @@ export class Matrix2D {
     static fromRotate(radian:number){
         const c = Math.cos(radian);
         const s = Math.sin(radian);
-        return this.fromRows(c, s, -s, c, 0, 0)
+        return this.fromSinCos(s,c)
+    }
+    static fromRotateOrigin(radian:number,x:number,y:number){
+        const c = Math.cos(radian);
+        const s = Math.sin(radian);
+        return this.fromSinCosOrigin(s,c,x,y)
     }
     static fromRotateDegrees(degrees:number){
         return this.fromRotate(degrees*Math.PI/180)

@@ -5,7 +5,7 @@ type Point = Vector2
 
 
 // 阶乘
-export const factorial = (n: number):number => {
+export const factorial = (n: number): number => {
     if (n <= 1) {
         return 1
     }
@@ -44,19 +44,19 @@ export const mix = (s: number, e: number, t: number) => {
 
 
 // 有理贝塞尔曲线算法
-export const rationBezier = (pts: Point[],weights:number[], t: number) => {
+export const rationBezier = (pts: Point[], weights: number[], t: number) => {
     const n = pts.length - 1;
     const point = { x: 0, y: 0 }
-    let weight =0
+    let weight = 0
 
     for (let i = 0; i <= n; i++) {
         let b = bernstein(i, n, t)
-        point.x += b *weights[i]* pts[i].x
-        point.y += b *weights[i]* pts[i].y
-        weight+=b*weights[i]
+        point.x += b * weights[i] * pts[i].x
+        point.y += b * weights[i] * pts[i].y
+        weight += b * weights[i]
     }
-    point.x/=weight
-    point.y/=weight
+    point.x /= weight
+    point.y /= weight
     return point
 }
 // 贝塞尔曲线算法
@@ -88,60 +88,49 @@ export const quadraticToCubic = (p0: Point, p1: Point, p2: Point) => {
  * @returns 返回细分后的点数组，包含起点、两个细分点和终点
  */
 export const quadraticBezierSubdivideAt = (p0: Vector2, p1: Vector2, p2: Vector2, t: number) => {
-    const p01 = Vector2.create(lerp(p0.x, p1.x, t), lerp(p0.y, p1.y, t))
-    const p02 = Vector2.create(lerp(p1.x, p2.x, t), lerp(p1.y, p2.y, t))
-    const p03=Vector2.create(lerp(p01.x, p02.x, t), lerp(p01.y, p02.y, t))
-    return [p0, p01, p03, p02,p2];
+    const p01 = Vector2.lerp(p0, p1, t)
+    const p02 = Vector2.lerp(p1, p2, t)
+    const p0102 = Vector2.lerp(p01, p02, t)
+    return [p0, p01, p0102, p02, p2];
 }
 
-export const quadraticRationBezierSubdivideAt = (pts:Vector2[],weights:number[], t: number) => {
-    const w0=weights[0],w1=weights[1],w2=weights[2]
-    const p0=pts[0],p1=pts[1],p2=pts[2]
+export const quadraticRationBezierSubdivideAt = (pts: Vector2[], weights: number[], t: number) => {
+    const w0 = weights[0], w1 = weights[1], w2 = weights[2]
+    const p0 = pts[0], p1 = pts[1], p2 = pts[2]
 
-    const w01=lerp(w0, w1, t)
-    const w02=lerp(w1, w2, t)
-    const w03=lerp(w01, w02, t)
+    const w01 = lerp(w0, w1, t)
+    const w02 = lerp(w1, w2, t)
+    const w03 = lerp(w01, w02, t)
 
-    const p01 = Vector2.create(lerp(p0.x*w0, p1.x*w1, t), lerp(p0.y*w0, p1.y*w1, t)).multiplyScalar(1/w01)
-    const p02 = Vector2.create(lerp(p1.x*w1, p2.x*w2, t), lerp(p1.y*w1, p2.y*w2, t)).multiplyScalar(1/w02)
-    const p03=Vector2.create(lerp(p01.x*w1, p02.x, t), lerp(p01.y, p02.y, t)).multiplyScalar(1/w03)
+    const p01 = Vector2.create(lerp(p0.x * w0, p1.x * w1, t), lerp(p0.y * w0, p1.y * w1, t)).multiplyScalar(1 / w01)
+    const p02 = Vector2.create(lerp(p1.x * w1, p2.x * w2, t), lerp(p1.y * w1, p2.y * w2, t)).multiplyScalar(1 / w02)
+    const p03 = Vector2.create(lerp(p01.x * w1, p02.x, t), lerp(p01.y, p02.y, t)).multiplyScalar(1 / w03)
 
 
-    return [p0, p01, p03, p02,p2];
+    return [p0, p01, p03, p02, p2];
 }
 
 
 // 根据t点细分三次贝塞尔曲线
 export const cubicBezierSubdivideAt = (p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, t: number) => {
-    const p01 = Vector2.create(lerp(p0.x, p1.x, t), lerp(p0.y, p1.y, t))
-    const p12 = Vector2.create(lerp(p1.x, p2.x, t), lerp(p1.y, p2.y, t))
-    const p23 = Vector2.create(lerp(p2.x, p3.x, t), lerp(p2.y, p3.y, t))
+    const q0 = Vector2.lerp(p0,p1,t)
+    const q1 = Vector2.lerp(p1,p2,t)
+    const q2 = Vector2.lerp(p2,p3,t)
 
-    const p012 = Vector2.create(lerp(p01.x, p12.x, t), lerp(p01.y, p12.y, t))
-    const p123 = Vector2.create(lerp(p12.x, p23.x, t), lerp(p12.y, p23.y, t))
+    const s0=Vector2.lerp(q0,q1,t)
+    const s1=Vector2.lerp(q1,q2,t)
 
-    const p0123 = Vector2.create(lerp(p012.x, p123.x, t), lerp(p012.y,p123.y,t))
+    const c0=Vector2.lerp(s0,s1,t)
 
-    return [p0, p01, p012, p0123,p123,p23,p3];
+    return [p0,q0,s0,c0,s1,q2,p3];
 }
 // 二次贝塞尔曲线细分
 export const quadraticBezierSubdivide = (p0: Vector2, p1: Vector2, p2: Vector2) => {
-    const p01 = Vector2.create((p0.x + p1.x) * 0.5, (p0.y + p1.y) * 0.5)
-    const p12 = Vector2.create((p1.x + p2.x) * 0.5, (p1.y + p2.y) * 0.5)
-    const p012 = Vector2.create((p01.x + p12.x) * 0.5, (p01.y + p12.y) * 0.5)
-    return [p0, p01, p012, p12, p2];
+    return quadraticBezierSubdivideAt(p0, p1, p2, 0.5)
 }
 // 三次贝塞尔曲线细分
 export const cubicBezierSubdivide = (p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2) => {
-    const p01 = Vector2.create((p0.x + p1.x) * 0.5, (p0.y + p1.y) * 0.5)
-    const p12 = Vector2.create((p1.x + p2.x) * 0.5, (p1.y + p2.y) * 0.5)
-    const p23 = Vector2.create((p2.x + p3.x) * 0.5, (p2.y + p3.y) * 0.5)
-
-    const p012 = Vector2.create((p01.x + p12.x) * 0.5, (p01.y + p12.y) * 0.5)
-    const p123 = Vector2.create((p12.x + p23.x) * 0.5, (p12.y + p23.y) * 0.5)
-
-    const p0123 = Vector2.create((p012.x + p123.x) * 0.5, (p012.y + p123.y) * 0.5)
-    return [p0, p01, p012, p0123, p123, p23, p3];
+    return cubicBezierSubdivideAt(p0, p1, p2, p3, 0.5)
 }
 
 // 二次贝塞尔曲线包围盒
@@ -462,13 +451,17 @@ export const cubicBezier = (p0: Point, p1: Point, p2: Point, p3: Point, t: numbe
         p0.y * ivt * ivt * ivt + 3 * t * ivt * ivt * p1.y + 3 * tt * ivt * p2.y + ttt * p3.y
     )
 }
+
+
 // 贝塞尔曲线一阶导数
+// 如二次贝塞尔曲线一阶导数：lerp(2*(p1-p0),2*(p2-p1),t)=2(p1-p0)+2t(p2-p1-(p1-p0))=2(p1-p0)+2t(p2-2p1+p0)
+
 export const bezierDerivative = (pts: Point[], t: number) => {
     const n = pts.length - 1;
     let ret = { x: 0, y: 0 }
     for (let i = 0; i < n; i++) {
-        ret.x += n * combination(n - 1, i) * Math.pow((1 - t), n - i - 1) * Math.pow(t, i) * (pts[i + 1].x - pts[i].x)
-        ret.y += n * combination(n - 1, i) * Math.pow((1 - t), n - i - 1) * Math.pow(t, i) * (pts[i + 1].y - pts[i].y)
+        ret.x += n * bernstein(i,n-1,t)* (pts[i + 1].x - pts[i].x)
+        ret.y += n * bernstein(i,n-1,t) * (pts[i + 1].y - pts[i].y)
     }
     return ret
 }
@@ -477,12 +470,22 @@ export const bezierSecondDerivative = (pts: Point[], t: number) => {
     const n = pts.length - 1;
     let ret = { x: 0, y: 0 }
     for (let i = 0; i < n - 1; i++) {
-        ret.x += n * (n - 1) * combination(n - 2, i) * Math.pow((1 - t), n - i - 2) * Math.pow(t, i) * (pts[i + 2].x - 2 * pts[i + 1].x + pts[i].x)
-        ret.y += n * (n - 1) * combination(n - 2, i) * Math.pow((1 - t), n - i - 2) * Math.pow(t, i) * (pts[i + 2].y - 2 * pts[i + 1].y + pts[i].y)
+        ret.x += n * (n - 1) * bernstein(i,n-2,t) * (pts[i + 2].x - 2 * pts[i + 1].x + pts[i].x)
+        ret.y += n * (n - 1) * bernstein(i,n-2,t) * (pts[i + 2].y - 2 * pts[i + 1].y + pts[i].y)
     }
     return ret
 }
 //计算一阶导数控制点
+/**
+ * // 或通过链式调用
+const firstDeriv = computeFirstDerivativeControlPoints(controlPoints);
+const secondDeriv = computeFirstDerivativeControlPoints(firstDeriv);
+
+// 在t=0.5处的二阶导数值
+const t = 0.5;
+const secondDerivValue = evaluateBezier(secondDeriv, t);
+console.log(secondDerivValue);
+*/
 export function computeFirstDerivativeControlPoints(points: Point[]) {
     const n = points.length - 1;
     if (n < 1) throw new Error("需要至少2个控制点");
@@ -507,6 +510,49 @@ export function computeSecondDerivativeControlPoints(points: Point[]) {
     }
     return ddPoints;
 }
+/**
+ * 计算贝塞尔曲线的k阶导数控制点
+ * @param {Array} points 原控制点，格式为[[x0,y0], [x1,y1], ...]
+ * @param {number} k 导数阶数（k ≥ 0）
+ * @returns {Array} k阶导数对应的控制点数组
+ * @examples 
+ * // 使用示例
+const controlPoints = [[0, 0], [1, 2], [3, 3], [4, 0]]; // 3阶曲线
+const k = 2; // 计算二阶导数
+
+// 获取k阶导数控制点
+const derivativePoints = bezierKthDerivative(controlPoints, k);
+ */
+export function bezierKthDerivative(points:Vector2[], k:number) {
+    const n = points.length - 1;
+    if (k > n) return []; // 超出阶数时返回空数组
+    if (k === 0) return points.slice(); // 0阶导数返回原曲线副本
+
+    // 计算k次前向差分
+    let diffPoints = points.slice();
+    for (let d = 0; d < k; d++) {
+        const newDiff = [];
+        for (let i = 0; i < diffPoints.length - 1; i++) {
+            const p0 = diffPoints[i];
+            const p1 = diffPoints[i + 1];
+            const delta = p1.clone().subtract(p0)
+            newDiff.push(delta);
+        }
+        diffPoints = newDiff;
+    }
+
+    // 计算系数 n*(n-1)*...*(n-k+1)
+    let factor = 1;
+    for (let i = 0; i < k; i++) {
+        factor *= (n - i);
+    }
+
+    // 乘以系数得到最终导数控制点
+    const derivativePoints = diffPoints.map(p => p.multiplyScalar(factor));
+    return derivativePoints;
+}
+
+
 //通用贝塞尔曲线求值函数（De Casteljau算法）
 export function evaluateBezier(points: Point[], t: number) {
     let currentPoints = [...points];
@@ -544,26 +590,26 @@ export const deCasteljau = (pts: Point[], t: number) => {
     return ret[0];
 }
 // 有理贝塞尔曲线求值函数（De Casteljau算法）
-export const rationBezierDeCasteljau= (pts:Vector2[],wiehgts:number[], t: number) => {
-    let len=pts.length
-    let n=pts.length-1;
+export const rationBezierDeCasteljau = (pts: Vector2[], wiehgts: number[], t: number) => {
+    let len = pts.length
+    let n = pts.length - 1;
 
-    let newPts=Array.from({length:len},(v,i)=>Vector2.zero().copy(pts[i]))
-    let newWeights=Array.from({length:len},(v,i)=>{
+    let newPts = Array.from({ length: len }, (v, i) => Vector2.zero().copy(pts[i]))
+    let newWeights = Array.from({ length: len }, (v, i) => {
         return wiehgts[i]
     })
-    for(let i=1;i<=n;i++){
-        for(let j=0;j<=n-i;i++){
-            newPts[j].x=lerp(newPts[j].x*wiehgts[j], newPts[j+1].x*wiehgts[j+1], t)
-            newPts[j].y=lerp(newPts[j].y*wiehgts[j], newPts[j+1].y*wiehgts[j+1], t)
-            newWeights[j]=lerp(newWeights[j], newWeights[j+1], t)
+    for (let i = 1; i <= n; i++) {
+        for (let j = 0; j <= n - i; i++) {
+            newPts[j].x = lerp(newPts[j].x * wiehgts[j], newPts[j + 1].x * wiehgts[j + 1], t)
+            newPts[j].y = lerp(newPts[j].y * wiehgts[j], newPts[j + 1].y * wiehgts[j + 1], t)
+            newWeights[j] = lerp(newWeights[j], newWeights[j + 1], t)
         }
     }
-    newPts[0].x=newPts[0].x/newWeights[0]
-    newPts[0].y=newPts[0].y/newWeights[0]
+    newPts[0].x = newPts[0].x / newWeights[0]
+    newPts[0].y = newPts[0].y / newWeights[0]
     return newPts[0]
 }
-export const deCasteljau2 = (pts: Point[], t: number):Vector2 => {
+export const deCasteljau2 = (pts: Point[], t: number): Vector2 => {
     const n = pts.length;
     if (n === 1) {
         return pts[0]
@@ -842,8 +888,9 @@ function pointOnSegmentDistance(pt: Vector2, a: Vector2, b: Vector2) {
 }
 // 点到直线的距离（带符号）
 function distancePointToLine(p: Point, a: Point, b: Point): number {
-    const numerator = (b.y - a.y) * p.x - (b.x - a.x) * p.y + b.x * a.y - b.y * a.x;
-    const denominator = Math.sqrt((b.y - a.y) ** 2 + (b.x - a.x) ** 2);
+
+    const numerator = (b.y - a.y) * p.x + (a.x - b.x) * p.y + b.x * a.y - b.y * a.x;
+    const denominator = Math.sqrt((b.y - a.y) ** 2 + (a.x - b.x) ** 2);
     return Math.abs(numerator / denominator);
 }
 // 计算最大弦高（更精确的平直度判断）
@@ -863,14 +910,14 @@ function maxChordHeight(
 // 二次贝塞尔曲线扁平化转成线段
 export function quadraticCurveToLines(p0: Vector2, p1: Vector2, p2: Vector2, tessellationTolerance: number = 0.5) {
     const points: Vector2[] = []
-    const subdivide = (p0: Vector2, p1: Vector2, p2: Vector2) => {
+    const subdivide = (p0: Vector2, p1: Vector2, p2: Vector2,maxDeep:number=100) => {
         const dist = pointOnSegmentDistance(p1, p0, p2)
-        if (dist < tessellationTolerance) {
+        if (dist < tessellationTolerance||maxDeep<=0) {
             points.push(p2)
         } else {
             const [q0, q1, q2, q3, q4] = quadraticBezierSubdivide(p0, p1, p2)
-            subdivide(q0, q1, q2)
-            subdivide(q2, q3, q4)
+            subdivide(q0, q1, q2,maxDeep-1)
+            subdivide(q2, q3, q4,maxDeep-1)
         }
     }
     subdivide(p0, p1, p2)
@@ -880,20 +927,20 @@ export function quadraticCurveToLines(p0: Vector2, p1: Vector2, p2: Vector2, tes
 // 三次贝塞尔曲线扁平化转成线段
 export function cubicCurveToLines(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, tessellationTolerance: number = 0.5) {
     const points: Vector2[] = []
-    const subdivide = (p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2) => {
+    const subdivide = (p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2,maxDeep:number=100) => {
         // const mid=cubicBezier(p0,p1,p2,p3,0.5)
         // const dist0=pointOnSegmentDistance(mid,p0,p3)  
         const dist1 = distancePointToLine(p1, p0, p3)
         const dist2 = distancePointToLine(p2, p0, p3)
         const dist = Math.max(dist1, dist2)
         // 计算平直度误差（使用最大弦高）
-       //  const chordHeight = maxChordHeight(p0, p3, p1, p2, mid);
-        if (dist < tessellationTolerance) {
+        //  const chordHeight = maxChordHeight(p0, p3, p1, p2, mid);
+        if (dist < tessellationTolerance||maxDeep<=0) {
             points.push(p3)
         } else {
             const [q0, q1, q2, q3, q4, q5, q6] = cubicBezierSubdivide(p0, p1, p2, p3)
-            subdivide(q0, q1, q2, q3)
-            subdivide(q3, q4, q5, q6)
+            subdivide(q0, q1, q2, q3,maxDeep-1)
+            subdivide(q3, q4, q5, q6,maxDeep-1)
         }
     }
     subdivide(p0, p1, p2, p3)
@@ -984,7 +1031,7 @@ export function cubicBezierToLinesByCurvature(p0: Vector2, p1: Vector2, p2: Vect
     return points;
 }
 
-export function subdivideRationalBezier(points:Vector2[], weights:number[], t:number) {
+export function subdivideRationalBezier(points: Vector2[], weights: number[], t: number) {
     // 转换为齐次坐标
     const homogeneous = points.map((p, i) => ({
         x: p.x * weights[i],
@@ -1060,7 +1107,7 @@ export function rationalQuadraticToBeziers(P0, P1, P2, w0, w1, w2, tolerance = 1
  * 在参数t处细分二次有理贝塞尔曲线
  * @returns {Array} 左右子曲线的参数数组 [leftParams, rightParams]
  */
- function subdivideRationalCurve(P0:Vector2, P1:Vector2, P2:Vector2, w0:number, w1:number, w2:number, t:number) {
+function subdivideRationalCurve(P0: Vector2, P1: Vector2, P2: Vector2, w0: number, w1: number, w2: number, t: number) {
     // 转换为齐次坐标
     const Q0 = { x: P0.x * w0, y: P0.y * w0, w: w0 };
     const Q1 = { x: P1.x * w1, y: P1.y * w1, w: w1 };
@@ -1094,7 +1141,7 @@ export function rationalQuadraticToBeziers(P0, P1, P2, w0, w1, w2, tolerance = 1
 }
 
 /** 线性插值 */
-function lerpVec3(a, b, t) {
+function lerpVec3(a:any, b:any, t:number) {
     return {
         x: (1 - t) * a.x + t * b.x,
         y: (1 - t) * a.y + t * b.y,

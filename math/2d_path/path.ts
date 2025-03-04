@@ -5,10 +5,11 @@ import { Vector2 } from '../math/vec2'
 import { quadraticBezierBounds, cubicBezierBounds, quadraticCurveToLines, cubicCurveToLines, cubicBezierToLinesByCurvature, conicToQuadratic, subdivideRationalBezier } from '../curve/bezier'
 import { BoundingRect } from '../math/bounding_rect'
 import { Matrix2D } from '../math/mat2d'
-import { degreesToRadian, radianToDegrees, nearly_equal, scalarNearlyZero, scalarSinSnapToZero,scalarCosSnapToZero, scalarNearlyEqual, mod, modPositiveInteger } from '../math/math'
+import { degreesToRadian, radianToDegrees, nearly_equal, scalarNearlyZero, scalarSinSnapToZero,scalarCosSnapToZero, scalarNearlyEqual, mod, modPositiveInteger, almostEqual, interpolate } from '../math/math'
 import { PathDirection, PathFillType, PathSegmentMask, PathVerb, IsA, RotationDirection, ArcSize, AddPathMode } from './type'
 import { SkConic } from './geometry'
 import { AutoConicToQuads,conicToQuadratic2} from '../curve/conic'
+import { arcToCubicCurves, centerToEndPoint, endPointToCenter } from '../curve/arc_to_bezier'
 class PointIterator {
     fPts: Vector2[] = []
     size: number = 0
@@ -167,6 +168,72 @@ function build_arc_conics(oval: BoundingRect, start: Vector2, stop: Vector2,
     }
     return count;
 }
+
+
+function _ellipseHelper(path:Path,x:number, y:number, radiusX:number, radiusY:number, startAngle:number, endAngle:number) {
+    var sweepDegrees = radianToDegrees(endAngle - startAngle);
+    var startDegrees = radianToDegrees(startAngle);
+  
+    var oval = BoundingRect.fromLTRB(x - radiusX, y - radiusY, x + radiusX, y + radiusY);
+  
+    // draw in 2 180 degree segments because trying to draw all 360 degrees at once
+    // draws nothing.
+    if (almostEqual(Math.abs(sweepDegrees), 360)) {
+      var halfSweep = sweepDegrees/2;
+      path.arcToOval(oval, startDegrees, halfSweep, false);
+      path.arcToOval(oval, startDegrees + halfSweep, halfSweep, false);
+      return;
+    }
+    path.arcToOval(oval, startDegrees, sweepDegrees, false);
+  }
+  
+  function ellipse(skpath:Path, x:number, y:number, radiusX:number, radiusY:number, rotation:number,
+                   startAngle:number, endAngle:number, ccw:number|boolean) {
+    // if (!allAreFinite([x, y, radiusX, radiusY, rotation, startAngle, endAngle])) {
+    //   return;
+    // }
+    if (radiusX < 0 || radiusY < 0) {
+      throw 'radii cannot be negative';
+    }
+  
+    // based off of CanonicalizeAngle in Chrome
+    var tao = 2 * Math.PI;
+    var newStartAngle = startAngle % tao;
+    if (newStartAngle < 0) {
+      newStartAngle += tao;
+    }
+    var delta = newStartAngle - startAngle;
+    startAngle = newStartAngle;
+    endAngle += delta;
+  
+    // Based off of AdjustEndAngle in Chrome.
+    if (!ccw && (endAngle - startAngle) >= tao) {
+      // Draw complete ellipse
+      endAngle = startAngle + tao;
+    } else if (ccw && (startAngle - endAngle) >= tao) {
+      // Draw complete ellipse
+      endAngle = startAngle - tao;
+    } else if (!ccw && startAngle > endAngle) {
+      endAngle = startAngle + (tao - (startAngle - endAngle) % tao);
+    } else if (ccw && startAngle < endAngle) {
+      endAngle = startAngle - (tao - (endAngle - startAngle) % tao);
+    }
+  
+    // Based off of Chrome's implementation in
+    // https://cs.chromium.org/chromium/src/third_party/blink/renderer/platform/graphics/path.cc
+    // of note, can't use addArc or addOval because they close the arc, which
+    // the spec says not to do (unless the user explicitly calls closePath).
+    // This throws off points being in/out of the arc.
+    if (!rotation) {
+      _ellipseHelper(skpath, x, y, radiusX, radiusY, startAngle, endAngle);
+      return;
+    }
+    var rotated = Matrix2D.fromRotateOrigin(rotation, x, y);
+    var rotatedInvert =Matrix2D.fromRotateOrigin(-rotation, x, y);
+    skpath.transform(rotatedInvert);
+    _ellipseHelper(skpath, x, y, radiusX, radiusY, startAngle, endAngle);
+    skpath.transform(rotated);
+  }
 export const PathEncoding = {
     Absolute: 0,
     Relative: 1
@@ -499,6 +566,23 @@ export class Path {
         this.addVerb(PathVerb.CubicTo).addXY(cp1x, cp1y).addXY(cp2x, cp2y).addXY(x, y)
         this.fSegmentMask |= PathSegmentMask.kCubic_SkPathSegmentMask
         return this;
+    }
+    quadraticCurveToCubic(x0:number, y0:number, cpx:number, cpy:number, x:number, y:number) {
+        const r13 = 1 / 3;
+        const r23 = 2 / 3;
+        const cp1x = r13 * x0 + r23 * cpx
+        const cp1y = r13 * y0 + r23 * cpy
+
+        const cp2x = r13 * x + r23 * cpx
+        const cp2y = r13 * y + r23 * cpy
+        return this.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
+    }
+    quadraticCurveToCubic2(x0:number, y0:number, cpx:number, cpy:number, x:number, y:number) {
+        let cp1x=interpolate(x0,cpx,2/3)
+        let cp1y=interpolate(y0,cpy,2/3)
+        let cp2x=interpolate(x,cpx,2/3)
+        let cp2y=interpolate(y,cpy,2/3)
+        return this.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
     }
     conicTo(cp0: Vector2, pt: Vector2, weight: number): this;
     conicTo(x1: number, y1: number, x: number, y: number, weight: number): this;
@@ -966,6 +1050,82 @@ export class Path {
         }
         return this
     }
+    arcToOval(oval: BoundingRect, startAngleDeg: number, sweepAngleDeg: number, forceMoveTo = false) {
+       return this.arcTo(oval, startAngleDeg, sweepAngleDeg, forceMoveTo);
+    }
+    arcToOval2(x:number, y:number, rx:number, ry:number, rotation:number, startAngle:number, deltaAngle:number, shouldLineTo:boolean = false) {
+        const { x1, y1, x2, y2, fa, fs } = centerToEndPoint(
+            x,
+            y,
+            rx,
+            ry,
+            rotation,
+            startAngle,
+            deltaAngle
+        )
+        if (shouldLineTo) {
+            this.moveTo(x1, y1)
+        }
+        this.ellipseArc(x1, y1, rx, ry, rotation, fa, fs, x2, y2)
+    }
+     // 椭圆弧
+     ellipseArc(x1: number, y1: number, x2: number, y2: number,
+        _rx: number, _ry: number, xAxisRotation: number,
+        largeArcFlag: number, sweepFlag: number) {
+
+        // 转换 A 命令为若干个 cubic 贝塞尔曲线段
+        let curves = arcToCubicCurves(x1, y1, x2, y2, _rx, _ry, xAxisRotation, largeArcFlag, sweepFlag);
+        for (const curve of curves) {
+            this.bezierCurveTo(curve[2], curve[3], curve[4], curve[5], curve[6], curve[7])
+        }
+    }
+    ellipseArc2(x1: number, y1: number, x2: number, y2: number,
+        _rx: number, _ry: number, xAxisRotation: number,
+        largeArcFlag: number, sweepFlag: number) {
+        const { cx, cy, rx, ry, theta1, deltaTheta } = endPointToCenter(x1, y1, x2, y2, _rx, _ry, xAxisRotation, largeArcFlag, sweepFlag)
+    
+    
+        const segments = Math.ceil(Math.abs(deltaTheta) / (Math.PI / 2))
+        const delta = deltaTheta / segments
+        let startTheta = theta1
+    
+        const pointTransform = Matrix2D.fromRotate(xAxisRotation)
+        pointTransform.preScale(rx, ry)
+    
+        // const beiers=ellipseArcToCubicBezier(x1,y1,x2,y2,_rx,_ry,xAxisRotation,largeArcFlag,sweepFlag)
+        // for(let b of beiers){
+        //    this.bezierCurveTo(b[2],b[3],b[4],b[5],b[6],b[7])
+        // }
+        const k = 4 / 3 * Math.tan(delta / 4) // 控制点的延伸长度
+        // 计算弧
+        for (let i = 0; i < segments; i++) {
+            let endTheta = startTheta + delta
+    
+            // 椭圆标准参数方程
+            const p0 = Vector2.create(Math.cos(startTheta), Math.sin(startTheta))
+            const p3 = Vector2.create(Math.cos(endTheta), Math.sin(endTheta))
+    
+            // const p1=p0.clone().add(p0.clone().rotateCCW().multiplyScalar(k))
+            // const p2=p3.clone().add(p3.clone().rotateCW().multiplyScalar(k))
+            const p1 = p0.clone().add(p0.clone().rotate(Math.PI / 2).multiplyScalar(k))
+            const p2 = p3.clone().add(p3.clone().rotate(-Math.PI / 2).multiplyScalar(k))
+    
+    
+            // p0.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
+            // p1.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
+            // p2.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
+            // p3.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
+    
+            p0.applyMatrix2D(pointTransform).translate(cx, cy)
+            p1.applyMatrix2D(pointTransform).translate(cx, cy)
+            p2.applyMatrix2D(pointTransform).translate(cx, cy)
+            p3.applyMatrix2D(pointTransform).translate(cx, cy)
+            this.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y)
+            startTheta = endTheta
+        }
+    
+        return this
+    }
     addArc(oval: BoundingRect, startAngleDeg: number, sweepAngleDeg: number) {
         if (oval.isEmpty() || 0 == sweepAngleDeg) {
             return this;
@@ -1046,6 +1206,7 @@ export class Path {
         temp.addArc(bounds, radianToDegrees(startAngle), sweep);
         return this.addPath(temp, AddPathMode.kExtend_AddPathMode)
     }
+    
     ellipse(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, ccw: boolean=false) {
         // This is easiest to do by making a new path and then extending the current path
         // (this properly catches the cases of if there's a moveTo before this call or not).
@@ -1058,6 +1219,78 @@ export class Path {
         let m = Matrix2D.identity();
         m.setRotate(rotation, x, y);
         this.addPath(temp, m, AddPathMode.kExtend_AddPathMode);
+    }
+    ellipse2(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, ccw: boolean=false){
+        ellipse(this,x,y,radiusX,radiusY,rotation,startAngle,endAngle,ccw)
+    }
+    ellipse3(x:number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, ccw: boolean=false){
+        if (radiusX < 0 || radiusY < 0) {
+            throw new DOMException("radii cannot be negative", "IndexSizeError");
+        }
+        const tau = Math.PI * 2
+        let newStartAngle = startAngle % tau;
+        if (newStartAngle <= 0) {
+            newStartAngle += tau;
+        }
+        let delta = newStartAngle - startAngle;
+        startAngle = newStartAngle;
+        endAngle += delta;
+
+        if (!ccw && (endAngle - startAngle) >= tau) {
+            // Draw complete ellipse
+            endAngle = startAngle + tau;
+        }
+        else if (ccw && (startAngle - endAngle) >= tau) {
+            // Draw complete ellipse
+            endAngle = startAngle - tau;
+        }
+        else if (!ccw && startAngle > endAngle) {
+            endAngle = startAngle + (tau - (startAngle - endAngle) % tau);
+        }
+        else if (ccw && startAngle < endAngle) {
+            endAngle = startAngle - (tau - (endAngle - startAngle) % tau);
+        }
+
+        let sweepDegrees = (endAngle - startAngle);
+        let startDegrees = (startAngle);
+
+        //绘制 2 180 度线段，因为尝试一次绘制所有 360 度
+        //不绘制任何内容。
+        if (almostEqual(Math.abs(sweepDegrees), 360)) {
+            const halfSweep = sweepDegrees / 2;
+           // this.moveTo(x,y)
+            this.arcToOval2(
+                x,
+                y,
+                radiusX,
+                radiusY,
+                rotation,
+                startDegrees,
+                (halfSweep),
+                true
+            );
+            this.arcToOval2(
+                x,
+                y,
+                radiusX,
+                radiusY,
+                rotation,
+                (startDegrees + halfSweep),
+                (halfSweep)
+            );
+        }
+        else {
+            this.arcToOval2(
+                x,
+                y,
+                radiusX,
+                radiusY,
+                rotation,
+                (startDegrees),
+                (sweepDegrees),
+                true
+            );
+        }
     }
     rect(x:number,y:number,w:number,h:number) {
         return this.addRect(BoundingRect.fromXYWH(x, y, w,h),PathDirection.kCCW,0)
@@ -1092,6 +1325,7 @@ export class Path {
 
         ctx.closePath(); // 闭合路径
     }
+    
     getBounds() {
         return BoundingRect.default().setFromPoints(this.points)
     }

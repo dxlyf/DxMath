@@ -1,3 +1,5 @@
+import { center_to_endpoint } from "math/curve/arc"
+import { Matrix2D } from "../math/mat2d"
 
 
 
@@ -231,6 +233,10 @@ export class Point {
     negate() {
         return this.set(-this.x, -this.y)
     }
+    scale(x: number, y: number) {
+        return this.set(this.x * x, this.y * y)
+    }
+
     rotate(angle: number) {
         let c = Math.cos(angle);
         let s = Math.sin(angle);
@@ -339,9 +345,8 @@ function isCommand(token: string): boolean {
 // https://www.w3.org/TR/SVG/implnote.html#ArcConversionCenterToEndpoint
 export function centerToEndPoint(cx: number, cy: number, rx: number, ry: number, xAxisRotateAngle: number, startAngle: number, sweepAngle: number) {
 
-
-    const { x: x1, y: y1 } = pointOnEllipse(cx, cy, rx, ry, (startAngle), xAxisRotateAngle)
-    const { x: x2, y: y2 } = pointOnEllipse(cx, cy, rx, ry, (startAngle + sweepAngle), xAxisRotateAngle)
+    const { x: x1, y: y1 } = pointOnEllipse(cx, cy, rx, ry, xAxisRotateAngle,startAngle)
+    const { x: x2, y: y2 } = pointOnEllipse(cx, cy, rx, ry, xAxisRotateAngle,startAngle + sweepAngle)
 
     const fa = Math.abs(sweepAngle) > Math.PI ? 1 : 0
     const fs = sweepAngle > 0 ? 1 : 0
@@ -505,8 +510,13 @@ function pointOnEllipse(cx: number, cy: number, rx: number, ry: number, rotation
     const sinRot = Math.sin(rotation);
     const cosT = Math.cos(theta);
     const sinT = Math.sin(theta);
-    const x = cx + rx * cosT * cosRot - ry * sinT * sinRot;
-    const y = cy + rx * cosT * sinRot + ry * sinT * cosRot;
+    // cos(α-β)=cosα·cosβ+sinα·sinβ
+    // cos(α+β)=cosα·cosβ-sinα·sinβ
+    //sin(α±β)=sinα·cosβ±cosα·sinβ
+    // tan(α+β)=(tanα+tanβ)/(1-tanα·tanβ)
+    // tan(α-β)=(tanα-tanβ)/(1+tanα·tanβ)
+    const x = cx + rx * cosRot * cosT - ry * sinRot * sinT;
+    const y = cy + rx * sinRot * cosT + ry * cosRot * sinT;
     return Point.from(x, y);
 }
 
@@ -1152,6 +1162,57 @@ export class PathBuilder {
         }
         return this
     }
+    ellipseArc2(x1: number, y1: number, x2: number, y2: number,
+        _rx: number, _ry: number, xAxisRotation: number,
+        largeArcFlag: number, sweepFlag: number) {
+        const {cx,cy,rx,ry,theta1,deltaTheta}=endPointToCenter(x1,y1,x2,y2,_rx,_ry,xAxisRotation,largeArcFlag,sweepFlag)
+    
+        
+      
+    
+        const segments=Math.ceil(Math.abs(deltaTheta)/(Math.PI/2))
+        const delta=deltaTheta/segments
+        let startTheta=theta1
+    
+        const pointTransform=Matrix2D.fromRotate(xAxisRotation)
+        pointTransform.preScale(rx,ry)
+        
+        // const beiers=ellipseArcToCubicBezier(x1,y1,x2,y2,_rx,_ry,xAxisRotation,largeArcFlag,sweepFlag)
+        // for(let b of beiers){
+        //    this.bezierCurveTo(b[2],b[3],b[4],b[5],b[6],b[7])
+        // }
+        const k=4/3*Math.tan(delta/4) // 控制点的延伸长度
+        // 计算弧
+        for(let i=0;i<segments;i++){
+            let endTheta=startTheta+delta
+    
+            // 椭圆标准参数方程
+            const p0=Point.from(Math.cos(startTheta),Math.sin(startTheta))
+            const p3=Point.from(Math.cos(endTheta),Math.sin(endTheta))
+    
+            // const p1=p0.clone().add(p0.clone().rotateCCW().multiplyScalar(k))
+            // const p2=p3.clone().add(p3.clone().rotateCW().multiplyScalar(k))
+            const p1=p0.clone().add(p0.clone().rotate(Math.PI/2).multiplyScalar(k))
+            const p2=p3.clone().add(p3.clone().rotate(-Math.PI/2).multiplyScalar(k))
+    
+    
+            p0.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
+            p1.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
+            p2.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
+            p3.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
+    
+            
+        
+            // p0.applyMatrix2D(pointTransform).translate(cx,cy)                   
+            // p1.applyMatrix2D(pointTransform).translate(cx,cy)
+            // p2.applyMatrix2D(pointTransform).translate(cx,cy)
+            // p3.applyMatrix2D(pointTransform).translate(cx,cy)
+            this.bezierCurveTo(p1.x,p1.y,p2.x,p2.y,p3.x,p3.y)
+            startTheta=endTheta
+        }
+    
+        return this
+    }
     // 椭圆弧
     ellipseArc(x1: number, y1: number, x2: number, y2: number,
         _rx: number, _ry: number, xAxisRotation: number,
@@ -1205,6 +1266,56 @@ export class PathBuilder {
             this.bezierCurveTo(bezier[0], bezier[1], bezier[2], bezier[3], bezier[4], bezier[5]);
         }
         return this;
+    }
+    ellipse2(
+        cx: number, cy: number, rx: number, ry: number,
+        rotation: number, startAngle: number, endAngle: number,
+        anticlockwise: boolean = false
+    ) {
+        
+        // var tao = 2 * Math.PI;
+        // var newStartAngle = startAngle % tao;
+        // if (newStartAngle < 0) {
+        //   newStartAngle += tao;
+        // }
+        // var delta = newStartAngle - startAngle;
+        // startAngle = newStartAngle;
+        // endAngle += delta;
+      
+        // // Based off of AdjustEndAngle in Chrome.
+        // if (!anticlockwise && (endAngle - startAngle) >= tao) {
+        //   // Draw complete ellipse
+        //   endAngle = startAngle + tao;
+        // } else if (anticlockwise && (startAngle - endAngle) >= tao) {
+        //   // Draw complete ellipse
+        //   endAngle = startAngle - tao;
+        // } else if (!anticlockwise && startAngle > endAngle) {
+        //   endAngle = startAngle + (tao - (startAngle - endAngle) % tao);
+        // } else if (anticlockwise && startAngle < endAngle) {
+        //   endAngle = startAngle - (tao - (endAngle - startAngle) % tao);
+        // }
+    
+        let deltaTheta = endAngle - startAngle
+    
+        if (anticlockwise && deltaTheta > 0) {
+            while (deltaTheta > 0) {
+                deltaTheta -= 2 * Math.PI;
+            }
+        } 
+        if(!anticlockwise && deltaTheta < 0) {
+            while (deltaTheta < 0) {
+                deltaTheta += 2 * Math.PI;
+            }
+        }
+        if(Math.abs(deltaTheta)<=Math.PI*2){
+            const halfSweep=deltaTheta/2
+            this.arcToOval(cx,cy,rx,ry,rotation,startAngle,halfSweep,true)
+            this.arcToOval(cx,cy,rx,ry,rotation,startAngle+halfSweep,halfSweep,false)
+        }else{
+            this.arcToOval(cx,cy,rx,ry,rotation,startAngle,deltaTheta,true)
+        }
+       
+        return this
     }
     arc(cx: number, cy: number, radius: number, startAngle: number, endAngle: number,
         anticlockwise: boolean = false) {
@@ -1268,6 +1379,23 @@ export class PathBuilder {
         this.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI, false);
         this.closePath();
         return this;
+    }
+    arcToOval(x:number, y:number, rx:number, ry:number, rotation:number, startAngle:number, deltaAngle:number, forceMoveTo:boolean) {
+       
+        const { x1, y1, x2, y2, fa, fs } = centerToEndPoint(
+            x,
+            y,
+            rx,
+            ry,
+            rotation,
+            startAngle,
+            deltaAngle
+        )
+        
+        if (forceMoveTo) {
+            this.moveTo(x1, y1)
+        }
+        this.ellipseArc(x1, y1,x2,y2, rx, ry,rotation, fa, fs)
     }
     arcTo(x1: number, y1: number, x2: number, y2: number, radius: number) {
         // need to know our prev pt so we can construct tangent vectors
@@ -1435,8 +1563,8 @@ export class PathBuilder {
         }
 
         // 计算圆心点
-        let n0 = d1.clone().add(d2).normalize()
-        let len = radius / Math.sin(theta / 2)
+     //   let n0 = d1.clone().add(d2).normalize()
+      //  let len = radius / Math.sin(theta / 2)
 
         //const center=p1.clone().add(n0.clone().multiplyScalar(len))
         // 计算起点和终点 
@@ -1507,21 +1635,7 @@ export class PathBuilder {
         }
     }
 
-    arcToOval(x: number, y: number, rx: number, ry: number, rotation: number, startAngle: number, deltaAngle: number, shouldLineTo: boolean = false) {
-        const { x1, y1, x2, y2, fa, fs } = centerToEndPoint(
-            x,
-            y,
-            rx,
-            ry,
-            rotation,
-            startAngle,
-            deltaAngle
-        )
-        if (shouldLineTo) {
-            this.moveTo(x1, y1)
-        }
-        this.ellipseArc(x1, y1, rx, ry, rotation, fa, fs, x2, y2)
-    }
+ 
     conicTo(x1: number, y1: number, x: number, y: number, weight: number): this {
         if (!(weight > 0.0)) {
             this.lineTo(x, y);
@@ -1757,6 +1871,39 @@ export class PathBuilder {
     }
 }
 
+
+export class Surface{
+    private currentPaint:Paint=Paint.default()
+    private paintStack:Paint[]=[]
+    private currentPath:PathBuilder=PathBuilder.default()
+    constructor(){
+        
+    }
+    beginPath(){
+        this.currentPath=PathBuilder.default()
+    }
+    moveTo(x: number, y: number) {
+        this.currentPath.moveTo(x, y)
+    }
+    lineTo(x: number, y: number) {
+        this.currentPath.lineTo(x, y)
+    }
+    quadraticCurveTo(cpx: number, cpy: number, x: number, y: number) {
+        this.currentPath.quadraticCurveTo(cpx, cpy, x, y)
+    }
+    bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number) {
+        this.currentPath.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
+    }
+    closePath() {
+        this.currentPath.close()
+    }
+    stroke(){
+
+    }
+    fill(){
+
+    }
+}
 
 
 export class PixelImage {

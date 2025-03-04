@@ -4,6 +4,40 @@ const start=Vector2.create()
 const end=Vector2.create()
 const delta=Vector2.create()
 
+// (直线公式)直线距离
+// 获取点与直线的距离
+
+// 设直线a b点, x=ax+(bx-ax)t ,y=ay+(by-ay)t
+// (x-ax)/(bx-ax)=(y-ay)/(by-ay)=t 
+// (x-ax)(by-ay)-(y-ay)(bx-ax)=x(by-ay)+y(ax-bx)+ay(bx-ax)-ax(by-ay)=0
+// A=(by-ay) B=(ax-bx) C=ay(bx-ax)-ax(by-ay)=aybx-axby
+// Ax+By+C=0   
+// 点到直线的距离=|Ax+By+C|/sqrt(A^2+B^2)
+
+export function straightLineDistance(point:Vector2,start:Vector2,end:Vector2):number{
+    let A=end.y-start.y
+    let B=start.x-end.x
+    let C=start.y*end.x-start.x*end.y
+    return Math.abs(A*point.x+B*point.y+C)/Math.sqrt(A*A+B*B)
+
+}
+// 投影法
+export function  straightLineProjDistance(point:Vector2,start:Vector2,end:Vector2):number{
+    const ab=end.clone().sub(start)
+    const ap=point.clone().sub(start)
+    const t=ap.dot(ab)/ab.lengthSq()
+    const projection=start.clone().add(ab.multiplyScalar(t))
+    return projection.distanceTo(point)
+}
+export function  lineSegmentDistance(point:Vector2,start:Vector2,end:Vector2):number{
+    const ab=end.clone().sub(start)
+    const ap=point.clone().sub(start)
+    const t=Math.max(0,Math.min(1,ap.dot(ab)/ab.lengthSq()))
+    const projection=start.clone().add(ab.multiplyScalar(t))
+    return projection.distanceTo(point)
+}
+
+
 // 转成一般式
 export function generalEquation(start:Vector2,end:Vector2){
     Vector2.beginPools()

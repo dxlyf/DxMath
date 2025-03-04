@@ -386,108 +386,210 @@ const isPointInsidePolygon = (point: PointArray, polygon: PointArray[]): boolean
   return inside;
 };
 
-export const weilerAtherton = (subjectPolygon: PointArray[], clipPolygon: PointArray[]): PointArray[][] => {
-  vertexCounter = 0;
 
-  // 创建有序链表（按顺时针方向）
-  const createList = (poly: PointArray[]) => {
-    const vertices = poly.map(createVertex);
-    vertices.forEach((v, i) => {
-      v.next = vertices[(i + 1) % vertices.length];
-      v.prev = vertices[(i - 1 + vertices.length) % vertices.length];
-    });
-    return vertices;
-  };
-
-  const subject = createList(subjectPolygon);
-  const clip = createList(clipPolygon);
-
-  // 阶段1：计算并排序插入交点
-  for (let s of subject) {
-    const sNext = s.next!;
-    const intersections: Vertex[] = [];
-
-    for (let c of clip) {
-      const cNext = c.next!;
-      const intPoint = getIntersection(s.point, sNext.point, c.point, cNext.point);
-      if (!intPoint) continue;
-
-      // 创建配对顶点时增加精度处理
-      const precisePoint = [
-        Number(intPoint[0].toFixed(2)),
-        Number(intPoint[1].toFixed(2))
-      ];
-      // 创建配对顶点
-      const sInt = { ...createVertex(precisePoint.slice()), isIntersection: true };
-      const cInt = { ...createVertex(precisePoint.slice()), isIntersection: true, intersectPartner: sInt };
-      sInt.intersectPartner = cInt;
-      // 精确方向判断
-      // const edgeVec = [cNext.point[0] - c.point[0], cNext.point[1] - c.point[1]];
-      // const testVec = [precisePoint[0] - c.point[0], precisePoint[1] - c.point[1]];
-      // const cross = edgeVec[0] * testVec[1] - edgeVec[1] * testVec[0];
-      // const isInside = isPointInsidePolygon(precisePoint, clipPolygon);
-
-      // // 修正逻辑：当叉积接近0时，依赖精确内部判断
-      // sInt.entryExit = (cross > 0 || (Math.abs(cross) < 1e-6 && isInside)) ? 'entry' : 'exit';
-      // cInt.entryExit = sInt.entryExit === 'entry' ? 'exit' : 'entry';
-
-      // intersections.push(sInt);
-      // insertVertexSorted(c, cInt, false); // 在裁剪多边形中按顺序插入
-      // 精确方向判断（改用向量投影）
-      const edgeVec = [cNext.point[0] - c.point[0], cNext.point[1] - c.point[1]];
-      const subjectDir = [sNext.point[0] - s.point[0], sNext.point[1] - s.point[1]];
-      const dot = edgeVec[0] * subjectDir[0] + edgeVec[1] * subjectDir[1];
-      sInt.entryExit = dot > 0 ? 'entry' : 'exit';
-      cInt.entryExit = sInt.entryExit === 'entry' ? 'exit' : 'entry';
-
-      intersections.push(sInt);
-      insertVertexSorted(c, cInt, false);
-    }
-
-   // 按自然顺序插入交点（删除.reverse()）
-   intersections.sort((a, b) => 
-    calculateT(a.point, s.point, sNext.point) - 
-    calculateT(b.point, s.point, sNext.point)
-  ).forEach(intersection => {
-    insertVertexSorted(s, intersection, true);
-  });
+export const weilerAthertonClipper = (
+  polygon: number[][],
+  clipPolygon: number[][]
+): number[][][] => {
+  // 辅助接口和函数定义
+  interface VertexNode {
+      point: number[];
+      isIntersection: boolean;
+      entryExit: 'entry' | 'exit' | null;
+      partner: VertexNode | null;
+      next: VertexNode | null;
+      prev: VertexNode | null;
+      visited: boolean;
+      isSubject: boolean;
   }
 
-  // 阶段2：追踪多边形
-  const result: PointArray[][] = [];
-  const processed = new Set<string>();
-  // 阶段2：追踪逻辑修正
- // 阶段2：追踪逻辑修正
- const tracePolygon = (start: Vertex): PointArray[] => {
-  const poly: PointArray[] = [];
-  let current: Vertex | undefined = start;
-  const initialId = start.id;
-  
-  do {
-    if (!current || processed.has(current.id)) break;
-    
-    processed.add(current.id);
-    poly.push([current.point[0], current.point[1]]);
+  // 确保多边形顺时针顺序
+  const isClockwise = (poly: number[][]) => {
+      let sum = 0;
+      for (let i = 0; i < poly.length; i++) {
+          const j = (i + 1) % poly.length;
+          sum += (poly[j][0] - poly[i][0]) * (poly[j][1] + poly[i][1]);
+      }
+      return sum > 0;
+  };
 
-    if (current.isIntersection && current.intersectPartner) {
-      processed.add(current.intersectPartner.id);
-      current = current.intersectPartner;
-    }
-    
-    current = current.next;
-  } while (current?.id !== initialId); // 严格环形终止条件
+  const makeClockwise = (poly: number[][]) => {
+      return isClockwise(poly) ? poly : [...poly].reverse();
+  };
 
-  return poly;
-};
+  const subject = makeClockwise(polygon);
+  const clip = makeClockwise(clipPolygon);
 
-// 结果收集（优化闭合判断）
-return subject
-  .filter(s => s.isIntersection && s.entryExit === 'entry' && !processed.has(s.id))
-  .map(s => {
-    const poly = tracePolygon(s);
-    return poly.length > 0 && poly[0].every((v,i) => 
-      Math.abs(v - poly[poly.length-1][i]) < 1e-6
-    ) ? poly : [...poly, poly[0]];
-  })
-  .filter(p => p.length >= 4);
+  // 创建双向链表
+  const createLinkedList = (poly: number[][], isSubject: boolean) => {
+      const nodes: VertexNode[] = poly.map(point => ({
+          point,
+          isIntersection: false,
+          entryExit: null,
+          partner: null,
+          next: null,
+          prev: null,
+          visited: false,
+          isSubject,
+      }));
+      for (let i = 0; i < nodes.length; i++) {
+          nodes[i].next = nodes[(i + 1) % nodes.length];
+          nodes[i].prev = nodes[i === 0 ? nodes.length - 1 : i - 1];
+      }
+      return nodes;
+  };
+
+  // 计算线段交点
+  const getIntersection = (
+      a1: number[],
+      a2: number[],
+      b1: number[],
+      b2: number[]
+  ) => {
+      const [x1, y1] = a1;
+      const [x2, y2] = a2;
+      const [x3, y3] = b1;
+      const [x4, y4] = b2;
+
+      const denominator = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+      if (denominator === 0) return null; // 平行或重合
+
+      const tNumerator = (x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3);
+      const sNumerator = (x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3);
+      const t = tNumerator / denominator;
+      const s = sNumerator / denominator;
+
+      if (t < 0 || t > 1 || s < 0 || s > 1) return null;
+
+      return {
+          point: [x1 + t * (x2 - x1), y1 + t * (y2 - y1)],
+          t,
+          s,
+      };
+  };
+
+  // 插入交点节点到链表
+  const insertNode = (
+      start: VertexNode,
+      end: VertexNode,
+      node: VertexNode,
+      isSubject: boolean
+  ) => {
+      node.prev = start;
+      node.next = end;
+      start.next = node;
+      end.prev = node;
+      node.isSubject = isSubject;
+  };
+
+  // 判断点是否在多边形内
+  const isInside = (point: number[], poly: number[][]) => {
+      let inside = false;
+      const [x, y] = point;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+          const [xi, yi] = poly[i];
+          const [xj, yj] = poly[j];
+          const intersect =
+              yi > y !== yj > y &&
+              x < ((xj - xi) * (y - yi)) / (yj - yi + 1e-12) + xi;
+          if (intersect) inside = !inside;
+      }
+      return inside;
+  };
+
+  // 主算法实现
+  const subjectNodes = createLinkedList(subject, true);
+  const clipNodes = createLinkedList(clip, false);
+  const intersections: VertexNode[] = [];
+
+  // 第一步：查找所有交点并插入链表
+  for (let sNode of subjectNodes) {
+      const sNext = sNode.next!;
+      for (let cNode of clipNodes) {
+          const cNext = cNode.next!;
+          const intersect = getIntersection(
+              sNode.point,
+              sNext.point,
+              cNode.point,
+              cNext.point
+          );
+          if (intersect) {
+              // 创建交点节点
+              const sIntersection: VertexNode = {
+                  point: intersect.point,
+                  isIntersection: true,
+                  entryExit: null,
+                  partner: null,
+                  next: null,
+                  prev: null,
+                  visited: false,
+                  isSubject: true,
+              };
+              const cIntersection: VertexNode = {
+                  point: intersect.point,
+                  isIntersection: true,
+                  entryExit: null,
+                  partner: sIntersection,
+                  next: null,
+                  prev: null,
+                  visited: false,
+                  isSubject: false,
+              };
+              sIntersection.partner = cIntersection;
+
+              // 插入到链表
+              insertNode(sNode, sNext, sIntersection, true);
+              insertNode(cNode, cNext, cIntersection, false);
+
+              // 标记进出类型
+              const startInside = isInside(sNode.point, clip);
+              const endInside = isInside(sNext.point, clip);
+              sIntersection.entryExit = startInside ? 'exit' : 'entry';
+              cIntersection.entryExit = startInside ? 'entry' : 'exit';
+
+              intersections.push(sIntersection);
+          }
+      }
+  }
+
+  // 第二步：遍历收集结果多边形
+  const result: number[][][] = [];
+  for (const intersect of intersections) {
+      if (intersect.entryExit === 'entry' && !intersect.visited) {
+          const path: number[] = [];
+          let current: VertexNode | null = intersect;
+          let isSubject = true;
+
+          while (current && !current.visited) {
+              current.visited = true;
+              path.push(...current.point);
+
+              // 沿当前多边形遍历
+              let next = current.next!;
+              while (!next.isIntersection && next !== current) {
+                  next.visited = true;
+                  path.push(...next.point);
+                  next = next.next!;
+              }
+
+              if (next.isIntersection) {
+                  current = isSubject ? next.partner : next;
+                  isSubject = !isSubject;
+              } else {
+                  break;
+              }
+          }
+
+          if (path.length > 0) {
+              result.push(
+                  Array.from({ length: path.length / 2 }, (_, i) => [
+                      path[2 * i],
+                      path[2 * i + 1],
+                  ])
+              );
+          }
+      }
+  }
+
+  return result;
 };
