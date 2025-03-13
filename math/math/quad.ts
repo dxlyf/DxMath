@@ -1,7 +1,7 @@
-import { Euler } from './euler.js';
-import { Matrix4 } from './mat4.js';
-import { clamp } from './math.js';
-import { Vector3 } from './vec3.js';
+import { Euler } from './euler';
+import { Matrix4 } from './mat4';
+import { clamp } from './math';
+import { Vector3 } from './vec3';
 
 export class Quaternion {
     static default(){

@@ -151,7 +151,7 @@ function find_unit_quad_roots(
         roots_offset += 1;
     }
     let _r2=valid_unit_divide(c, q)
-    if(_r!==undefined) {
+    if(_r2!==undefined) {
         roots[roots_offset] = _r2;
         roots_offset += 1;
     }
@@ -293,7 +293,7 @@ function eval_quad_tangent_at(src: Point[], tol: NormalizedF32):Point {
 // F'' = 6Ct + 6B
 //
 // F' dot F'' -> CCt^3 + 3BCt^2 + (2BB + CA)t + AB
-function find_cubic_max_curvature<(
+function find_cubic_max_curvature(
     src:Point[],
     t_values:NormalizedF32[],
 ):NormalizedF32[] {
@@ -540,7 +540,7 @@ export function find_cubic_cusp(src:Point[]):Option<NormalizedF32Exclusive> {
     // Cubics may have multiple points of maximum curvature, although at most only
     // one is a cusp.
     let  t_values =Array.from({length:3},()=>0);
-    let max_curvature = find_cubic_max_curvature(src, &mut t_values);
+    let max_curvature = find_cubic_max_curvature(src, t_values);
     for(let test_t of max_curvature) {
         if(0.0 >= test_t || test_t >= 1.0) {
             // no need to consider max curvature on the end

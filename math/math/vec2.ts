@@ -531,15 +531,21 @@ export class Vector2 {
     swapCoords() {
         return this.set(this.y, this.x)
     }
+    // 顺时针
     rotateCW() {
         // this.swapCoords()
         // this.x=-this.x
+        // [cos,sin,
+        //  -sin,cos]
         return this.set(this.y, -this.x);
     }
+    // 逆时针
     rotateCCW() {
         // this.swapCoords()
         // this.y=-this.y;
         // return this;
+        // [cos,-sin,
+        // sin,cos]
         return this.set(-this.y, this.x);
     }
 
@@ -635,8 +641,8 @@ export class Vector2 {
         return this.rationBezierDeCasteljau(newPoints, newWeights, t);
 
     }
-    conic(p0: Vector2, p1: Vector2, p2: Vector2, w:number, t: number): Vector2 {
-        return this.rationalBezier([p0, p1, p2], [1,w,1], t)
+    conic(p0: Vector2, p1: Vector2, p2: Vector2, w: number, t: number): Vector2 {
+        return this.rationalBezier([p0, p1, p2], [1, w, 1], t)
     }
     quadraticBezier(p0: Vector2, p1: Vector2, p2: Vector2, t: number): Vector2 {
         return this.bezier([p0, p1, p2], t)
@@ -646,6 +652,12 @@ export class Vector2 {
     }
     almostEqual(other: Vector2) {
         return !(this.clone().sub(other).canNormalize())
+    }
+    isClockwiseVectors(before: Vector2, after: Vector2) {
+        return before.x * after.y > before.y * after.x
+    }
+    isClockwise(b: Vector2) {
+        return this.isClockwiseVectors(this, b)
     }
     equals(v: Vector2) {
         return this.x === v.x && this.y === v.y

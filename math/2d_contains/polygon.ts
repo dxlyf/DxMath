@@ -1,5 +1,74 @@
 type Point = { x: number; y: number };
 
+type FillRule="evenodd" | "nonzero" 
+// 点是否在多边形内
+const pointInPolygon2 = (point: Point,polygon: Point[],fillRule:FillRule='nonzero'): boolean => {
+  let winding = 0;
+  for (let i = 0; i < polygon.length; i++) {
+      const p1 = polygon[i];
+      const p2 = polygon[(i + 1) % polygon.length];
+
+      if(p1.y>point.y!==p2.y>point.y) {
+          let isLeft=(p2.x-p1.x)*(point.y-p1.y)-(p2.y-p1.y)*(point.x-p1.x)
+          if (p2.y>point.y&&isLeft > 0) {
+              winding++
+          }
+          if (p2.y<=point.y&&isLeft < 0) {
+              winding--
+          }
+      }
+  }
+  if(fillRule==='nonzero'){
+      return winding!==0
+
+  }
+  return winding%2!==0
+  
+}
+export function pointInPolygon(x:number,y:number,polygon:Point[]){
+  let wind=0
+  for(let i=0;i<polygon.length;i++){
+      let p0=polygon[i]
+      let p1=polygon[(i+1)%polygon.length]
+      if(y>p0.y!=y>p1.y){
+          if(x>=p0.x+(p1.x-p0.x)*(y-p0.y)/(p1.y-p0.y)){
+              wind++
+          }
+      }
+  }
+  return wind
+}
+export const computeWindingNumber = (point:Point, polygon:Point[]) => {
+  let wn = 0;
+  const n = polygon.length;
+  if (n < 3)
+      return 0;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+      const pi = polygon[i];
+      const pj = polygon[j];
+      // 射线与边的相交测试（向右水平射线）
+      if (pj.y <= point.y) {
+          if (pi.y > point.y) {
+              // 向上的边
+              const isLeft = ((pi.x - pj.x) * (point.y - pj.y) - (point.x - pj.x) * (pi.y - pj.y));
+              if (isLeft > 0)
+                  wn++;
+          }
+      }
+      else {
+          if (pi.y <= point.y) {
+              // 向下的边
+              const isLeft = ((pi.x - pj.x) * (point.y - pj.y) - (point.x - pj.x) * (pi.y - pj.y));
+              if (isLeft < 0)
+                  wn--;
+          }
+      }
+  }
+  // 奇偶规则：wn%2 非零，点在多边形内；wn 等于0，点在多边形外。
+  // 非零规则：wn 不等于0，点在多边形内；wn 等于0，点在多边形外。
+
+  return wn;
+};
 /**
  * 判断点是否在多边形内（含边界）
  * @param point 待检测的点

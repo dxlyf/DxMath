@@ -43,7 +43,7 @@ export class Stroke{
 class SwappableBuilders{
 
 }
-type CapProc=(pivot:Point,normal:Point,stop:Point,other_path?:PathBuilder,path:PathBuilder)=>void
+type CapProc=(pivot:Point,normal:Point,stop:Point,other_path:PathBuilder|undefined,path:PathBuilder)=>void
 
 type JoinProc = (
     before_unit_normal: Point,

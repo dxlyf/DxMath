@@ -9,6 +9,16 @@ export const ScalarNearlyZero = 1e-6;
 const Scalar1=1;
 const ScalarSinCosNearlyZero =(Scalar1 / (1 << 16))
 
+export function alignSize(n:number){
+    return (n+7)&~7; // 对齐到8字节边界
+}
+// 计算以最小percision单位，增加值.保证都是precision的倍数
+// 和alignSize差不多
+
+export function ceiling(num: number, precision: number): number {
+    return (((num / precision) | 0) + 1) * precision;
+  }
+  
 export function scalarNearlyEqual(x:number,y:number,tolerance = ScalarNearlyZero) {
     return Math.abs(x-y) <= tolerance;
 }
@@ -131,7 +141,9 @@ export const modPositiveInteger = (v: number, m: number) => {
 export const clamp = (v: number, min: number, max: number) => {
     return Math.max(Math.min(v, max), min)
 }
-
+export const clamp01 = (v: number) => {
+    return Math.max(Math.min(v, 1), 0)
+}
 export const interpolate = (start: number, end: number, t: number) => {
     return start + (end - start) * t
 }

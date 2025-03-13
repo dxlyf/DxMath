@@ -57,6 +57,31 @@ function findBisector(a: Vector2, b: Vector2) {
     return Vector2.create(x0_x1.x + x0_x1.y, y0_y1.x + y0_y1.y);
 }
 
+
+/** http://www.faculty.idc.ac.il/arik/quality/appendixA.html
+
+    Inflection means that curvature is zero.
+    Curvature is [F' x F''] / [F'^3]
+    So we solve F'x X F''y - F'y X F''y == 0
+    After some canceling of the cubic term, we get
+    A = b - a
+    B = c - 2b + a
+    C = d - 3c + 3b - a
+    (BxCy - ByCx)t^2 + (AxCy - AyCx)t + AxBy - AyBx == 0
+*/
+export function findCubicInflections(src:Vector2[],tValues:number[]) {
+    let    Ax = src[1].x - src[0].x;
+    let    Ay = src[1].y - src[0].y;
+    let    Bx = src[2].x - 2 * src[1].x + src[0].x;
+    let    By = src[2].y - 2 * src[1].y + src[0].y;
+    let    Cx = src[3].x + 3 * (src[1].x - src[2].x) - src[0].x;
+    let    Cy = src[3].y + 3 * (src[1].y - src[2].y) - src[0].y;
+
+    return findUnitQuadRoots(Bx*Cy - By*Cx,
+                               Ax*Cy - Ay*Cx,
+                               Ax*By - Ay*Bx,
+                               tValues);
+}
 function findQuadMidTangent(src: Vector2[]) {
     // Tangents point in the direction of increasing T, so tan0 and -tan1 both point toward the
     // midtangent. The bisector of tan0 and -tan1 is orthogonal to the midtangent:
@@ -86,7 +111,7 @@ function findQuadMidTangent(src: Vector2[]) {
     return T;
 }
 
-function valid_unit_divide(numer: number, denom: number, ratio: { value: number } | number[]) {
+function valid_unit_divide(numer: number, denom: number, ratio: { value: number } | number[]|Float32Array) {
 
     if (numer < 0) {
         numer = -numer;
@@ -118,7 +143,7 @@ function valid_unit_divide(numer: number, denom: number, ratio: { value: number 
     B = 2(b - a)
     Solve for t, only if it fits between 0 < t < 1
 */
-function findQuadExtrema(a: number, b: number, c: number, tValue: { value: number }) {
+export function findQuadExtrema(a: number, b: number, c: number, tValue: { value: number }) {
     /*  At + B == 0
         t = -B / A
     */
@@ -363,7 +388,7 @@ export class SkConic {
 
         // 处理初始单位向量旋转和逆时针情况
         const matrix = Matrix2D.identity();
-        // C++ 中调用 matrix.setSinCos(uStart.fY, uStart.fX)，这里用 uStart.y 和 uStart.x
+        // C++ 中调用 matrix.setSinCos(uStart.y, uStart.x)，这里用 uStart.y 和 uStart.x
         matrix.setSinCos(uStart.y, uStart.x);
         if (dir) {
             matrix.preScale(SK_Scalar1, -SK_Scalar1);

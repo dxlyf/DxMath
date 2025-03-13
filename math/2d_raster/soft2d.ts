@@ -1000,6 +1000,15 @@ type PathVisitor = {
     bezierCurveTo: (record: { type: PathVerb, p0: Point, p1: Point, p2: Point, p3: Point }) => void
     closePath: (record: { type: PathVerb, lastMovePoint: Point }) => void
 }
+const PtsInVerb = (v: PathVerb) => {
+    switch (v) {
+        case PathVerb.MoveTo: return 1
+        case PathVerb.LineTo: return 1
+        case PathVerb.QuadTo: return 2
+        case PathVerb.CubicTo: return 3
+        default: return 0
+    }
+}
 export class PathBuilder {
     static fromSvgPath(svgPath: string) {
         const path = new PathBuilder()
@@ -1026,7 +1035,39 @@ export class PathBuilder {
     get lastMovePoint() {
         return this.points[this.lastMoveIndex]
     }
-    copy(path: PathBuilder) {
+    reset(){
+        this.points.length=0
+        this.verbs.length=0
+        this.lastMoveIndex=-1
+        this.needMoveVerb=true
+    }
+    _copy(path:PathBuilder){
+        path.visit({
+            moveTo: (record) => {
+                this.moveTo(record.p0.x, record.p0.y)
+            },
+            lineTo: (record) => {
+                this.lineTo(record.p0.x, record.p0.y)
+            },
+            quadraticCurveTo: (record) => {
+                this.quadraticCurveTo(record.p1.x, record.p1.y, record.p2.x, record.p2.y)
+            },
+            bezierCurveTo: (record) => {
+                this.bezierCurveTo(record.p1.x, record.p1.y, record.p2.x, record.p2.y, record.p3.x, record.p3.y)
+            },
+            closePath: (record) => {
+                this.closePath()
+            }
+        })
+        return this
+    }
+    copy(path:PathBuilder) {
+        this.reset()
+        this._copy(path)
+        
+        return this
+    }
+    copy2(path: PathBuilder) {
         this.points = path.points.map(d => d.clone())
         this.verbs = path.verbs.slice()
         this.lastMoveIndex = path.lastMoveIndex
@@ -1046,6 +1087,51 @@ export class PathBuilder {
         this.points = this.points.concat(path.points.map(d => d.clone()))
         this.verbs = this.verbs.concat(path.verbs)
         return path
+    }
+    addReversePath(path: PathBuilder) {
+
+        let needMove = true;
+        let needClose = false;
+        let points = path.points
+        let verbs = path.verbs, i = verbs.length;
+        let k = points.length;
+
+        while (i++ > 0) {
+            let type = verbs[i]
+            let n = PtsInVerb(type);
+
+            if (needMove) {
+                --k;
+                this.moveTo(points[k].x, points[k].y);
+                needMove = false;
+            }
+            k -= n;
+            switch (type) {
+                case PathVerb.MoveTo:
+                    if (needClose) {
+                        this.closePath();
+                        needClose = false;
+                    }
+                    needMove = true;
+                    k += 1;   // so we see the point in "if (needMove)" above
+                    break;
+                case PathVerb.LineTo:
+                    this.lineTo(points[k].x, points[k].y);
+                    break;
+                case PathVerb.QuadTo:
+                    this.quadraticCurveTo(points[k + 1].x, points[k + 1].y, points[k].x, points[k].y);
+                    break;
+                case PathVerb.CubicTo:
+                    this.bezierCurveTo(points[k + 2].x, points[k + 2].y, points[k + 1].x, points[k + 1].y, points[k].x, points[k].y));
+                    break;
+                case PathVerb.Close:
+                    needClose = true;
+                    break;
+                default:
+                    console.error("unexpected verb");
+            }
+        }
+
     }
     offset(x: number, y: number) {
         for (let i = 0; i < this.points.length; i++) {
@@ -1732,61 +1818,37 @@ export class PathBuilder {
             bezierCurveTo: () => { },
             closePath: () => { }
         }, visitor)
-        let k = 0, points = this.points, lastMovePoint = null;
-        for (let i = 0; i < this.verbs.length; i++) {
-            const verb = this.verbs[i]
-            switch (verb) {
+        for (let d of this) {
+            switch (d.type) {
                 case PathVerb.MoveTo:
-                    k += 1;
-                    lastMovePoint = points[k - 1].clone()
-                    visitor.moveTo({
-                        type: verb,
-                        p0: points[k - 1].clone()
-                    })
+                    visitor.moveTo({type:d.type,p0:d.p0!});
                     break
                 case PathVerb.LineTo:
-                    k += 1;
-                    visitor.lineTo({
-                        type: verb,
-                        p0: points[k - 1].clone()
-                    })
+                    visitor.lineTo({type:d.type,p0:d.p0!});
                     break
                 case PathVerb.QuadTo:
-                    k += 2;
-                    visitor.quadraticCurveTo({
-                        type: verb,
-                        p0: points[k - 3].clone(),
-                        p1: points[k - 2].clone(),
-                        p2: points[k - 1].clone(),
-                    })
+                    visitor.quadraticCurveTo({type:d.type,p0:d.p0!,p1:d.p1!,p2:d.p2!});
                     break
                 case PathVerb.CubicTo:
-                    k += 3;
-                    visitor.bezierCurveTo({
-                        type: verb,
-                        p0: points[k - 4].clone(),
-                        p1: points[k - 3].clone(),
-                        p2: points[k - 2].clone(),
-                        p3: points[k - 1].clone(),
-                    })
+                    visitor.bezierCurveTo({type:d.type,p0:d.p0!,p1:d.p1!,p2:d.p2!,p3:d.p3!});
                     break
                 case PathVerb.Close:
-                    visitor.closePath({ type: verb, lastMovePoint: lastMovePoint! })
-                    lastMovePoint = null
+                    visitor.closePath({ type:d.type, lastMovePoint: d.p0! })
                     break
             }
 
         }
     }
     *[Symbol.iterator](): Iterator<PathVerbData> {
-        const points = this.points
+        const points = this.points.map(p=>p.clone())
         const verbs = this.verbs
-        let k = 0
+        let k = 0,lastMovePoint:Point|null = null
         for (let i = 0; i < verbs.length; i++) {
             const verb = verbs[i]
             switch (verb) {
                 case PathVerb.MoveTo:
                     k += 1
+                    lastMovePoint=points[k - 1]
                     yield { type: verb, p0: points[k - 1] }
                     break;
                 case PathVerb.LineTo:
@@ -1802,12 +1864,11 @@ export class PathBuilder {
                     yield { type: verb, p0: points[k - 4], p1: points[k - 3], p2: points[k - 2], p3: points[k - 1] }
                     break;
                 case PathVerb.Close:
-                    yield { type: verb }
+                    yield { type: verb,p0:lastMovePoint?.clone() }
                     break;
             }
         }
     }
-
     toCanvas(ctx: CanvasRenderingContext2D | Path2D): void {
 
         for (const { type, p0, p1, p2, p3 } of this) {
@@ -1835,7 +1896,7 @@ export class PathBuilder {
         this.toCanvas(path)
         return path
     }
-    toPolygons(){
+    toPolygons(closed=false){
         const polygons: Point[][] = []
         let polygon:Point[]|null =null
 
@@ -1860,13 +1921,18 @@ export class PathBuilder {
             },
             closePath: (d) => {
                 if(polygon){
-                    polygon.push(d.lastMovePoint)
+                    if(closed){
+                        polygon.push(d.lastMovePoint)
+                    }
                     polygons.push(polygon)
                     polygon=null
 
                 }
             }
         })
+                if(polygon){
+            polygons.push(polygon)
+        }
         return polygons
     }
 }

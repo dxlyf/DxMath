@@ -36,7 +36,23 @@ export function  lineSegmentDistance(point:Vector2,start:Vector2,end:Vector2):nu
     const projection=start.clone().add(ab.multiplyScalar(t))
     return projection.distanceTo(point)
 }
-
+export function getDistanceSquared(a:Vector2,b:Vector2,p:Vector2) {
+    if (a.equals(b)) {
+        return p.distanceToSquared(a)
+    }
+    const ap=p.clone().subtract(a)
+    const ab=b.clone().subtract(a)
+    const  u = ap.dot(ab)/ab.squaredLength();
+    if (u <= 0) {
+        return p.distanceToSquared(a)
+    }
+    else if (u >= 1){
+        return p.distanceToSquared(b)
+    }
+    else{
+        return ap.distanceToSquared(ab.multiplyScalar(u))
+    }
+}
 
 // 转成一般式
 export function generalEquation(start:Vector2,end:Vector2){

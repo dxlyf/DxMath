@@ -20,8 +20,18 @@ function App() {
     {
       path: '/svg',
       title:'svg命令',
-
       element: <SvgCmd></SvgCmd>,
+    },   {
+      path: '/raster3d',
+      title:'raster3d',
+
+      element:loadLazyComponent(()=>import('./pages/raster_3d')),
+    },
+    {
+      path: '/raster',
+      title:'raster',
+
+      element:loadLazyComponent(()=>import('./pages/raster')),
     },
     {
       path: '/path',

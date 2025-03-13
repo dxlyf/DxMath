@@ -1,3 +1,4 @@
+import { Vector2 } from '../../math/vec2';
 import { drawBresenhamLine } from './line'
 
 
@@ -92,7 +93,7 @@ export const polygonScanFillAntialias = (
   };
 
   let edges: Edge[] = [];
-  
+
   // **构建边表**
   for (let i = 0; i < polygon.length; i++) {
     const v1 = polygon[i];
@@ -682,8 +683,8 @@ export const polygonScanFill4 = (
   }
 
   let aet: any[] = [];
-  const yMin = Math.min(...polygon.map(d=>d[1]));
-  const yMax = Math.max(...polygon.map(d=>d[1]));
+  const yMin = Math.min(...polygon.map(d => d[1]));
+  const yMax = Math.max(...polygon.map(d => d[1]));
 
 
   for (let y = yMin; y <= yMax; y++) {
@@ -751,8 +752,8 @@ export const polygonScanFillAntialias4 = (
   }
 
   let aet: any[] = [];
-  const yMin = Math.min(...polygon.map(d=>d[1]));
-  const yMax = Math.max(...polygon.map(d=>d[1]));
+  const yMin = Math.min(...polygon.map(d => d[1]));
+  const yMax = Math.max(...polygon.map(d => d[1]));
 
   for (let y = yMin; y <= yMax; y++) {
     if (ET[y]) aet.push(...ET[y]);
@@ -801,3 +802,518 @@ export const polygonScanFillAntialias4 = (
     }
   }
 };
+
+
+
+const fillPolygons = (polygons, color, bounds, fillRule = "nonzero" // 新增参数
+) => {
+  const width = bounds.right - bounds.left + 1;
+  const height = bounds.bottom - bounds.top + 1;
+  const data = new Uint8ClampedArray(width * height * 4);
+  data.fill(0);
+  /**
+   * 计算点的绕数（Winding Number）
+   * 返回值为绕数值，可用于不同填充规则判断
+   */
+  const computeWindingNumber = (point, polygon) => {
+    let wn = 0;
+    const n = polygon.length;
+    if (n < 3)
+      return 0;
+    for (let i = 0, j = n - 1; i < n; j = i++) {
+      const pi = polygon[i];
+      const pj = polygon[j];
+      // 射线与边的相交测试（向右水平射线）
+      if (pj.y <= point.y) {
+        if (pi.y > point.y) {
+          // 向上的边
+          const isLeft = ((pi.x - pj.x) * (point.y - pj.y) - (point.x - pj.x) * (pi.y - pj.y));
+          if (isLeft > 0)
+            wn++;
+        }
+      }
+      else {
+        if (pi.y <= point.y) {
+          // 向下的边
+          const isLeft = ((pi.x - pj.x) * (point.y - pj.y) - (point.x - pj.x) * (pi.y - pj.y));
+          if (isLeft < 0)
+            wn--;
+        }
+      }
+    }
+    return wn;
+  };
+  // 合并所有多边形的包围盒
+  let globalMinX = Infinity, globalMaxX = -Infinity;
+  let globalMinY = Infinity, globalMaxY = -Infinity;
+  polygons.forEach(polygon => {
+    polygon.forEach(p => {
+      globalMinX = Math.min(globalMinX, p.x);
+      globalMaxX = Math.max(globalMaxX, p.x);
+      globalMinY = Math.min(globalMinY, p.y);
+      globalMaxY = Math.max(globalMaxY, p.y);
+    });
+  });
+  // 计算需要遍历的像素范围
+  const startX = Math.floor(globalMinX - bounds.left);
+  const endX = Math.ceil(globalMaxX - bounds.left);
+  const startY = Math.floor(globalMinY - bounds.top);
+  const endY = Math.ceil(globalMaxY - bounds.top);
+  // 遍历所有可能受影响的像素
+  for (let y = startY; y <= endY; y++) {
+    if (y < 0 || y >= height)
+      continue;
+    const pixelY = bounds.top + y + 0.5;
+    for (let x = startX; x <= endX; x++) {
+      if (x < 0 || x >= width)
+        continue;
+      const pixelX = bounds.left + x + 0.5;
+      let totalWinding = 0;
+      for (const polygon of polygons) {
+        totalWinding += computeWindingNumber({ x: pixelX, y: pixelY }, polygon);
+      }
+      // 根据填充规则判断
+      let shouldFill = false;
+      switch (fillRule) {
+        case "nonzero":
+          shouldFill = totalWinding !== 0;
+          break;
+        case "evenodd":
+          shouldFill = Math.abs(totalWinding % 2) === 1;
+          break;
+      }
+      if (shouldFill) {
+        const idx = (y * width + x) * 4;
+        data[idx] = color[0];
+        data[idx + 1] = color[1];
+        data[idx + 2] = color[2];
+        data[idx + 3] = color[3];
+      }
+    }
+  }
+  return new ImageData(data, width, height);
+};
+
+
+class PolygonEdge {
+  static from(start: Vector2, end: Vector2) {
+    return new this(start, end)
+  }
+  x: number = 0
+  yMin: number = 0 //yMin
+  yMax: number = 0 //yMax
+  invSlope: number = 1 //斜率
+  direction: number = 1 // +1 或 -1 表示边方向
+  start: Vector2 = Vector2.zero() // 当前边在扫描线上的x坐标
+  end: Vector2 = Vector2.zero() // 当前边在扫描线上的x坐标
+
+
+  constructor(start: Vector2, end: Vector2) {
+    const dx = end.x - start.x
+    const dy = end.y - start.y
+    this.yMin = Math.min(start.y, end.y)
+    this.yMax = Math.max(start.y, end.y)
+    this.invSlope = dx / dy
+    this.x = start.y === this.yMin ? start.x : end.x
+    this.direction = start.y === this.yMin ? 1 : -1;
+    this.start.copy(start)
+    this.end.copy(end)
+  }
+
+  // 动态计算当前扫描线对应x坐标
+  currentX(y: number): number {
+    return this.start.x + (y - this.start.y) * this.invSlope;
+  }
+  // 计算边在指定y值的精确x坐标（保留8位小数）
+  preciseX(y: number): number {
+    return this.start.x + (y - this.start.y) * this.invSlope;
+  }
+}
+//实现覆盖率计算
+function calculateCoverage(xStart: number, xEnd: number): number {
+  const left = Math.max(xStart, 0);
+  const right = Math.min(xEnd, 1);
+  return Math.max(0, right - left);
+}
+
+type AASetPixel = (x: number, y: number, alpha: number) => void;
+
+export const scanFillPolygonAA = (
+  polygon: Vector2[],
+  setPixel: AASetPixel, // 修改为支持透明度的回调
+  rule: 'nonzero' | 'evenodd' = 'nonzero'
+) => {
+  // 1. 构建高精度边表
+  const edges = polygon.map((p, i) => {
+    const next = polygon[(i+1)%polygon.length];
+    return  PolygonEdge.from(p, next);
+  }).filter(e => e.start.y !== e.end.y);
+
+  // 2. 创建扫描线分桶
+  const edgeTable = new Map<number, PolygonEdge[]>();
+  edges.forEach(edge => {
+    const startY = Math.ceil(edge.yMin * 8) / 8; // 1/8像素精度分桶
+    if (!edgeTable.has(startY)) edgeTable.set(startY, []);
+    edgeTable.get(startY)!.push(edge);
+  });
+
+  // 3. 主扫描循环
+  let activeEdges: PolygonEdge[] = [];
+  const yValues = Array.from(edgeTable.keys());
+  const minY = Math.min(...yValues);
+  const maxY = Math.max(...yValues);
+
+  for (let y = minY; y <= maxY; y += 1/8) { // 1/8子采样
+    // 3.1 激活新边
+    if (edgeTable.has(y)) {
+      activeEdges.push(...edgeTable.get(y)!);
+      edgeTable.delete(y);
+    }
+
+    // 3.2 更新活动边
+    activeEdges.sort((a, b) => a.preciseX(y) - b.preciseX(y));
+    
+    // 3.3 填充处理
+    let winding = 0;
+    let startX = 0;
+    const coverageMap = new Map<number, number>();
+    
+    for (let i = 0; i < activeEdges.length; i++) {
+      const edge = activeEdges[i];
+      const x = edge.preciseX(y);
+      
+      // 记录交叉点
+      if (i % 2 === 0) {
+        startX = x;
+      } else {
+        const endX = x;
+        const startCol = Math.floor(startX * 8) / 8;
+        const endCol = Math.ceil(endX * 8) / 8;
+        
+        // 遍历子像素列
+        for (let col = startCol; col < endCol; col += 1/8) {
+          const coverage = calculateCoverage(
+            Math.max(startX, col),
+            Math.min(endX, col + 1/8)
+          );
+          
+          const alpha = coverage * 8; // 转换为0-1范围
+          const pixelX = Math.floor(col);
+          const current = coverageMap.get(pixelX) || 0;
+          coverageMap.set(pixelX, current + alpha);
+        }
+      }
+    }
+
+    // 3.4 提交抗锯齿结果
+    coverageMap.forEach((alpha, x) => {
+      setPixel(x, Math.floor(y), Math.min(alpha, 1));
+    });
+
+    // 3.5 移除过期边
+    activeEdges = activeEdges.filter(edge => y < edge.yMax);
+  }
+};
+export const scanFillPolygonIntAntialias = (polygon: Vector2[], setPixel: (x: number, y: number, coverage: number) => void) => {
+  polygon.forEach(p => {
+    p.floor()
+  })
+  const min = Vector2.create(Infinity, Infinity), max = Vector2.create(-Infinity, -Infinity);
+  // 创建有序边
+  const edges: PolygonEdge[] = []
+  for (let [i, point] of polygon.entries()) {
+    min.min(point)
+    max.max(point)
+    let p0 = polygon[i]
+    let p1 = polygon[(i + 1) % polygon.length]
+    if (p0.y !== p1.y) {
+      edges.push(PolygonEdge.from(p0, p1))
+    }
+  }
+  // 排序
+  edges.sort((a, b) => a.yMin - b.yMin)
+
+  // 激活的边,当前在扫描线的范围内
+
+  const activeEdges: PolygonEdge[] = []
+
+  for (let y = min.y; y <= max.y; y++) {
+    for (let i = 0; i < edges.length; i++) {
+      let edge = edges[i]
+      if (edge.yMin == y) {
+        activeEdges.push(edge)
+        edges.splice(i, 1)
+        i--
+      }
+    }
+    activeEdges.sort((a, b) => a.x - b.x)
+
+    for (let i = 0; i < activeEdges.length - 1; i += 2) {
+      const leftEdge = activeEdges[i];
+      const rightEdge = activeEdges[i + 1];
+
+      // 计算真实边界
+      const realLeft = leftEdge.x;
+      const realRight = rightEdge.x;
+
+      // 确定像素范围
+      const startPixel = Math.floor(realLeft);
+      const endPixel = Math.ceil(realRight);
+
+      // 遍历受影响像素
+      for (let px = startPixel; px <= endPixel; px++) {
+        const pixelLeft = px;
+        const pixelRight = px + 1;
+
+        // 计算覆盖区域
+        const coverageLeft = Math.max(realLeft, pixelLeft);
+        const coverageRight = Math.min(realRight, pixelRight);
+
+        // 计算覆盖率
+        const ratio = (coverageRight - coverageLeft) / (pixelRight - pixelLeft);
+        // 调用抗锯齿绘制
+        setPixel(px, y, ratio);
+      }
+
+    }
+    for (let i = activeEdges.length - 1; i >= 0; i--) {
+      if (activeEdges[i].yMax <= y) {
+        activeEdges.splice(i, 1)
+      }
+    }
+    activeEdges.forEach(edge => {
+      edge.x += edge.invSlope
+    })
+
+  }
+}
+export const scanFillPolygonInt = (polygon: Vector2[], setPixel: (x: number, y: number) => void) => {
+  polygon.forEach(p => {
+    p.floor()
+  })
+  const min = Vector2.create(Infinity, Infinity), max = Vector2.create(-Infinity, -Infinity);
+  // 创建有序边
+  const edges: PolygonEdge[] = []
+  for (let [i, point] of polygon.entries()) {
+    min.min(point)
+    max.max(point)
+    let p0 = polygon[i]
+    let p1 = polygon[(i + 1) % polygon.length]
+    if (p0.y !== p1.y) {
+      edges.push(PolygonEdge.from(p0, p1))
+    }
+  }
+  // 排序
+  edges.sort((a, b) => a.yMin - b.yMin)
+
+  // 激活的边,当前在扫描线的范围内
+
+  const activeEdges: PolygonEdge[] = []
+
+  for (let y = min.y; y <= max.y; y++) {
+    for (let i = 0; i < edges.length; i++) {
+      let edge = edges[i]
+      if (edge.yMin == y) {
+        activeEdges.push(edge)
+        edges.splice(i, 1)
+        i--
+      }
+    }
+    activeEdges.sort((a, b) => a.x - b.x)
+
+    for (let i = 0; i < activeEdges.length - 1; i += 2) {
+      let startX = Math.floor(activeEdges[i].x)
+      let endX = Math.ceil(activeEdges[i + 1].x)
+      for (let x = startX; x <= endX; x++) {
+        setPixel(x, y)
+      }
+    }
+
+    for (let i = activeEdges.length - 1; i >= 0; i--) {
+      if (activeEdges[i].yMax <= y) {
+        activeEdges.splice(i, 1)
+      }
+    }
+    activeEdges.forEach(edge => {
+      edge.x += edge.invSlope
+    })
+  }
+
+
+}
+export const scanFillPolygonFloat = (polygon: Vector2[], setPixel: (x: number, y: number) => void) => {
+
+  // 1. 边表构建
+  const edges: PolygonEdge[] = []
+  for (let [i, point] of polygon.entries()) {
+
+    let p0 = polygon[i]
+    let p1 = polygon[(i + 1) % polygon.length]
+    if (p0.y !== p1.y) {
+      edges.push(PolygonEdge.from(p0, p1))
+    }
+  }
+  // 2. 构建分桶边表
+  const edgeTable: PolygonEdge[][] = [];
+  const yValues: number[] = [];
+  edges.forEach(edge => {
+    const startY = Math.ceil(edge.yMin);
+    if (!edgeTable[startY]) {
+      edgeTable[startY] = [];
+    }
+    edgeTable[startY].push(edge);
+    yValues.push(startY, Math.ceil(edge.yMax));
+  });
+  // 3. 确定扫描范围
+  const minY = Math.min(...yValues);
+  const maxY = Math.max(...yValues);
+
+  // 4. 扫描主循环
+  let activeEdges: PolygonEdge[] = [];
+  for (let y = minY; y <= maxY; y++) {
+
+    // 4.1 添加新边
+    if (edgeTable[y]) {
+      activeEdges.push(...edgeTable[y]);
+      edgeTable[y] = [];
+    }
+    // 4.2 更新当前x坐标
+    activeEdges.forEach(edge => {
+     // edge.x = edge.currentX(y);
+    });
+    // 4.3 排序活动边
+    activeEdges.sort((a, b) => a.x - b.x);
+    for (let i = 0; i < activeEdges.length - 1; i += 2) {
+      let startX = Math.ceil(activeEdges[i].x)
+      let endX = Math.floor(activeEdges[i + 1].x)
+      for (let x = startX; x <= endX; x++) {
+        setPixel(x, y)
+      }
+    }
+    // 4.5 移除过期边
+    activeEdges = activeEdges.filter(edge => y < edge.yMax);
+    // for (let i = activeEdges.length - 1; i >= 0; i--) {
+    //   if (activeEdges[i].yMax <= y) {
+    //     activeEdges.splice(i, 1)
+    //   }
+    // }
+    activeEdges.forEach(edge => {
+      edge.x = edge.currentX(y);// 浮点数
+      //  edge.x+=edge.invSlope
+      //  edge.x = edge.preciseX(y)
+    })
+  }
+
+
+}
+
+export const scanFillPolygon2WithFillRule = (polygon: Vector2[], setPixel: (x: number, y: number) => void,fillRule: "evenodd" | "nonzero"='nonzero') => {
+
+  polygon.forEach(p => {
+    p.floor()
+  })
+  const min = Vector2.create(Infinity, Infinity), max = Vector2.create(-Infinity, -Infinity);
+  // 创建有序边
+  const edges = new Map<number, PolygonEdge[]>()
+  for (let [i, point] of polygon.entries()) {
+    min.min(point)
+    max.max(point)
+    let p0 = polygon[i]
+    let p1 = polygon[(i + 1) % polygon.length]
+    if (p0.y !== p1.y) {
+      let edge = PolygonEdge.from(p0, p1)
+      if (!edges.has(edge.yMin)) {
+        edges.set(edge.yMin, [edge])
+      } else {
+        edges.get(edge.yMin)!.push(edge)
+      }
+
+    }
+  }
+
+  // 激活的边,当前在扫描线的范围内
+
+  const activeEdges: PolygonEdge[] = []
+  // min.floor()
+  // max.ceil()
+  // 插入新边时保持有序（插入排序思路）
+  const insertActiveEdge = (activeEdges: PolygonEdge[], newEdge: PolygonEdge) => {
+    let i = activeEdges.length;
+    while (i > 0 && activeEdges[i - 1].x > newEdge.x) {
+      i--;
+    }
+    activeEdges.splice(i, 0, newEdge);
+  }
+  for (let y = min.y; y <= max.y; y++) {
+    if (edges.has(y)) {
+      edges.get(y)!.forEach(edge => {
+        // activeEdges.push(edge)
+        insertActiveEdge(activeEdges, edge) // 插入新边时保持有序（插入排序思路）
+      })
+      edges.delete(y)
+
+    }
+    //  activeEdges.sort((a, b) => a.x - b.x)
+
+    // for (let i = 0; i < activeEdges.length - 1; i += 2) {
+    //   let startX = Math.floor(activeEdges[i].x)
+    //   let endX = Math.ceil(activeEdges[i + 1].x)
+    //   for (let x = startX; x <= endX; x++) {
+    //     setPixel(x, y)
+    //   }
+    // }
+    // 填充逻辑
+    let winding = 0;
+    let startX = 0;
+    for (const edge of activeEdges) {
+      const prevWinding = winding;
+      winding += edge.direction;
+
+      if (fillRule === 'nonzero') {
+        if (prevWinding === 0 && winding !== 0) {
+          startX = Math.ceil(edge.x);
+        } else if (prevWinding !== 0 && winding === 0) {
+          const endX = Math.floor(edge.x);
+          for (let x = startX; x <= endX; x++) {
+            setPixel(x, y);
+          }
+        }
+      } else { // evenodd
+        if (prevWinding % 2 === 0) {
+          startX = Math.ceil(edge.x);
+        } else {
+          const endX = Math.floor(edge.x);
+          for (let x = startX; x <= endX; x++) {
+            setPixel(x, y);
+          }
+        }
+      }
+    }
+    // 移除过期边并更新x
+    for (let i = activeEdges.length - 1; i >= 0; i--) {
+      if (activeEdges[i].yMax <= y) {
+        activeEdges.splice(i, 1)
+      }
+    }
+    activeEdges.forEach(edge => {
+      edge.x += edge.invSlope
+      //   edge.x = edge.x + (y - edge.yMin) * edge.invSlope;
+    })
+  }
+
+
+}
+
+export const fillPolygons2 = (polygons: Vector2[][], setPixel: (x: number, y: number) => void) => {
+
+  const min = Vector2.create(Infinity, Infinity), max = Vector2.create(-Infinity, -Infinity);
+
+  for (let polygon of polygons) {
+    for (let point of polygon) {
+
+      min.min(point)
+      max.max(point)
+    }
+  }
+
+}

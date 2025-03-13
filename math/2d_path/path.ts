@@ -5,11 +5,35 @@ import { Vector2 } from '../math/vec2'
 import { quadraticBezierBounds, cubicBezierBounds, quadraticCurveToLines, cubicCurveToLines, cubicBezierToLinesByCurvature, conicToQuadratic, subdivideRationalBezier } from '../curve/bezier'
 import { BoundingRect } from '../math/bounding_rect'
 import { Matrix2D } from '../math/mat2d'
-import { degreesToRadian, radianToDegrees, nearly_equal, scalarNearlyZero, scalarSinSnapToZero,scalarCosSnapToZero, scalarNearlyEqual, mod, modPositiveInteger, almostEqual, interpolate } from '../math/math'
+import { degreesToRadian, radianToDegrees, nearly_equal, scalarNearlyZero, scalarSinSnapToZero, scalarCosSnapToZero, scalarNearlyEqual, mod, modPositiveInteger, almostEqual, interpolate } from '../math/math'
 import { PathDirection, PathFillType, PathSegmentMask, PathVerb, IsA, RotationDirection, ArcSize, AddPathMode } from './type'
 import { SkConic } from './geometry'
-import { AutoConicToQuads,conicToQuadratic2} from '../curve/conic'
+import { AutoConicToQuads, conicToQuadratic2 } from '../curve/conic'
 import { arcToCubicCurves, centerToEndPoint, endPointToCenter } from '../curve/arc_to_bezier'
+
+type PathVisitor = {
+    moveTo: (record: { type: PathVerb, p0: Vector2 }) => void
+    lineTo: (record: { type: PathVerb, p0: Vector2 }) => void
+    quadraticCurveTo: (record: { type: PathVerb, p0: Vector2, p1: Vector2, p2: Vector2 }) => void
+    bezierCurveTo: (record: { type: PathVerb, p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2 }) => void
+    closePath: (record: { type: PathVerb, lastMovePoint: Vector2 }) => void
+}
+export type PathVerbData = {
+    type: PathVerb
+    p0?: Vector2,
+    p1?: Vector2,
+    p2?: Vector2
+    p3?: Vector2
+}
+const PtsInVerb = (v: PathVerb) => {
+    switch (v) {
+        case PathVerb.MoveTo: return 1
+        case PathVerb.LineTo: return 1
+        case PathVerb.QuadTo: return 2
+        case PathVerb.CubicTo: return 3
+        default: return 0
+    }
+}
 class PointIterator {
     fPts: Vector2[] = []
     size: number = 0
@@ -170,70 +194,70 @@ function build_arc_conics(oval: BoundingRect, start: Vector2, stop: Vector2,
 }
 
 
-function _ellipseHelper(path:Path,x:number, y:number, radiusX:number, radiusY:number, startAngle:number, endAngle:number) {
+function _ellipseHelper(path: Path, x: number, y: number, radiusX: number, radiusY: number, startAngle: number, endAngle: number) {
     var sweepDegrees = radianToDegrees(endAngle - startAngle);
     var startDegrees = radianToDegrees(startAngle);
-  
+
     var oval = BoundingRect.fromLTRB(x - radiusX, y - radiusY, x + radiusX, y + radiusY);
-  
+
     // draw in 2 180 degree segments because trying to draw all 360 degrees at once
     // draws nothing.
     if (almostEqual(Math.abs(sweepDegrees), 360)) {
-      var halfSweep = sweepDegrees/2;
-      path.arcToOval(oval, startDegrees, halfSweep, false);
-      path.arcToOval(oval, startDegrees + halfSweep, halfSweep, false);
-      return;
+        var halfSweep = sweepDegrees / 2;
+        path.arcToOval(oval, startDegrees, halfSweep, false);
+        path.arcToOval(oval, startDegrees + halfSweep, halfSweep, false);
+        return;
     }
     path.arcToOval(oval, startDegrees, sweepDegrees, false);
-  }
-  
-  function ellipse(skpath:Path, x:number, y:number, radiusX:number, radiusY:number, rotation:number,
-                   startAngle:number, endAngle:number, ccw:number|boolean) {
+}
+
+function ellipse(skpath: Path, x: number, y: number, radiusX: number, radiusY: number, rotation: number,
+    startAngle: number, endAngle: number, ccw: number | boolean) {
     // if (!allAreFinite([x, y, radiusX, radiusY, rotation, startAngle, endAngle])) {
     //   return;
     // }
     if (radiusX < 0 || radiusY < 0) {
-      throw 'radii cannot be negative';
+        throw 'radii cannot be negative';
     }
-  
+
     // based off of CanonicalizeAngle in Chrome
     var tao = 2 * Math.PI;
     var newStartAngle = startAngle % tao;
     if (newStartAngle < 0) {
-      newStartAngle += tao;
+        newStartAngle += tao;
     }
     var delta = newStartAngle - startAngle;
     startAngle = newStartAngle;
     endAngle += delta;
-  
+
     // Based off of AdjustEndAngle in Chrome.
     if (!ccw && (endAngle - startAngle) >= tao) {
-      // Draw complete ellipse
-      endAngle = startAngle + tao;
+        // Draw complete ellipse
+        endAngle = startAngle + tao;
     } else if (ccw && (startAngle - endAngle) >= tao) {
-      // Draw complete ellipse
-      endAngle = startAngle - tao;
+        // Draw complete ellipse
+        endAngle = startAngle - tao;
     } else if (!ccw && startAngle > endAngle) {
-      endAngle = startAngle + (tao - (startAngle - endAngle) % tao);
+        endAngle = startAngle + (tao - (startAngle - endAngle) % tao);
     } else if (ccw && startAngle < endAngle) {
-      endAngle = startAngle - (tao - (endAngle - startAngle) % tao);
+        endAngle = startAngle - (tao - (endAngle - startAngle) % tao);
     }
-  
+
     // Based off of Chrome's implementation in
     // https://cs.chromium.org/chromium/src/third_party/blink/renderer/platform/graphics/path.cc
     // of note, can't use addArc or addOval because they close the arc, which
     // the spec says not to do (unless the user explicitly calls closePath).
     // This throws off points being in/out of the arc.
     if (!rotation) {
-      _ellipseHelper(skpath, x, y, radiusX, radiusY, startAngle, endAngle);
-      return;
+        _ellipseHelper(skpath, x, y, radiusX, radiusY, startAngle, endAngle);
+        return;
     }
     var rotated = Matrix2D.fromRotateOrigin(rotation, x, y);
-    var rotatedInvert =Matrix2D.fromRotateOrigin(-rotation, x, y);
+    var rotatedInvert = Matrix2D.fromRotateOrigin(-rotation, x, y);
     skpath.transform(rotatedInvert);
     _ellipseHelper(skpath, x, y, radiusX, radiusY, startAngle, endAngle);
     skpath.transform(rotated);
-  }
+}
 export const PathEncoding = {
     Absolute: 0,
     Relative: 1
@@ -247,9 +271,9 @@ export function fromSVGString(data: string, path: Path) {
         const cmd = m[1].trim()
         const upperCmd = cmd.toUpperCase()
         const _args = m[2].trim().match(/(-?[\d.]+(?:e[-+]?\d+)?)/g)
-        const args=_args?_args.map(parseFloat):[]
+        const args = _args ? _args.map(parseFloat) : []
         const isRelative = cmd !== upperCmd
-        
+
         switch (cmd) {
             case "M": //M x y
             case "m":
@@ -330,7 +354,7 @@ export function fromSVGString(data: string, path: Path) {
                     _x += x
                     _y += y
                 }
-               // path.ellipse(_x,_y,rx,ry,xAxisRotation, largeArcFlag, sweepFlag)
+                // path.ellipse(_x,_y,rx,ry,xAxisRotation, largeArcFlag, sweepFlag)
                 path.arcTo(Vector2.create(rx, ry), xAxisRotation, largeArcFlag, Number(!sweepFlag), Vector2.create(_x, _y));
                 x = path.lastPoint.x
                 y = path.lastPoint.y
@@ -407,11 +431,11 @@ export class Path {
             return this
         }
         let firstVerb = true;
-        for (let [verb, { p0, p1, p2, p3 }] of srcPath) {
+        for (let { type, p0, p1, p2, p3 } of srcPath) {
             const mappedPts = [p0, p1, p2, p3].filter(Boolean).map(p => p!.clone());
 
             matrix.mapPoints(mappedPts, mappedPts)
-            switch (verb) {
+            switch (type) {
                 case PathVerb.MoveTo:
 
 
@@ -444,14 +468,86 @@ export class Path {
 
         return this
     }
-    countVerbs() {
-        return this.verbs.length
+    addReversePath(path: Path) {
+
+        let needMove = true;
+        let needClose = false;
+        let points = path.points
+        let verbs = path.verbs, i = verbs.length;
+        let k = points.length;
+
+        while (i-- > 0) {
+            let type = verbs[i]
+            let n = PtsInVerb(type);
+
+            if (needMove) {
+                --k;
+                this.moveTo(points[k].x, points[k].y);
+                needMove = false;
+            }
+            k -= n;
+            switch (type) {
+                case PathVerb.MoveTo:
+                    if (needClose) {
+                        this.closePath();
+                        needClose = false;
+                    }
+                    needMove = true;
+                    k += 1;   // so we see the point in "if (needMove)" above
+                    break;
+                case PathVerb.LineTo:
+                    this.lineTo(points[k].x, points[k].y);
+                    break;
+                case PathVerb.QuadTo:
+                    this.quadraticCurveTo(points[k + 1].x, points[k + 1].y, points[k].x, points[k].y);
+                    break;
+                case PathVerb.CubicTo:
+                    this.bezierCurveTo(points[k + 2].x, points[k + 2].y, points[k + 1].x, points[k + 1].y, points[k].x, points[k].y);
+                    break;
+                case PathVerb.Close:
+                    needClose = true;
+                    break;
+                default:
+                    console.error("unexpected verb");
+            }
+        }
 
     }
-    copy(source: Path) {
+    countVerbs() {
+
+
+    }
+    _copy(path:Path){
+        path.visit({
+            moveTo: (record) => {
+                this.moveTo(record.p0.x, record.p0.y)
+            },
+            lineTo: (record) => {
+                this.lineTo(record.p0.x, record.p0.y)
+            },
+            quadraticCurveTo: (record) => {
+                this.quadraticCurveTo(record.p1.x, record.p1.y, record.p2.x, record.p2.y)
+            },
+            bezierCurveTo: (record) => {
+                this.bezierCurveTo(record.p1.x, record.p1.y, record.p2.x, record.p2.y, record.p3.x, record.p3.y)
+            },
+            closePath: (record) => {
+                this.closePath()
+            }
+        })
+        return this
+    }
+    copy(path:Path) {
+        this.reset()
+        this._copy(path)
+        
+        return this
+    }
+    copy2(source: Path) {
         this.points = source.points.slice().map(p => p.clone())
         this.verbs = source.verbs.slice()
         this.lastMoveIndex = source.lastMoveIndex
+        this.needsMoveVerb = source.needsMoveVerb
         return this
     }
     clone() {
@@ -567,7 +663,7 @@ export class Path {
         this.fSegmentMask |= PathSegmentMask.kCubic_SkPathSegmentMask
         return this;
     }
-    quadraticCurveToCubic(x0:number, y0:number, cpx:number, cpy:number, x:number, y:number) {
+    quadraticCurveToCubic(x0: number, y0: number, cpx: number, cpy: number, x: number, y: number) {
         const r13 = 1 / 3;
         const r23 = 2 / 3;
         const cp1x = r13 * x0 + r23 * cpx
@@ -577,11 +673,11 @@ export class Path {
         const cp2y = r13 * y + r23 * cpy
         return this.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
     }
-    quadraticCurveToCubic2(x0:number, y0:number, cpx:number, cpy:number, x:number, y:number) {
-        let cp1x=interpolate(x0,cpx,2/3)
-        let cp1y=interpolate(y0,cpy,2/3)
-        let cp2x=interpolate(x,cpx,2/3)
-        let cp2y=interpolate(y,cpy,2/3)
+    quadraticCurveToCubic2(x0: number, y0: number, cpx: number, cpy: number, x: number, y: number) {
+        let cp1x = interpolate(x0, cpx, 2 / 3)
+        let cp1y = interpolate(y0, cpy, 2 / 3)
+        let cp2x = interpolate(x, cpx, 2 / 3)
+        let cp2y = interpolate(y, cpy, 2 / 3)
         return this.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
     }
     conicTo(cp0: Vector2, pt: Vector2, weight: number): this;
@@ -758,7 +854,7 @@ export class Path {
 
 
             let last = this.lastPoint
-            let quadder= conicToQuadratic2([last, Vector2.create(x1, y1), Vector2.create(x, y)],weight);
+            let quadder = conicToQuadratic2([last, Vector2.create(x1, y1), Vector2.create(x, y)], weight);
 
             if (quadder) {
                 let offset = 1;
@@ -801,7 +897,7 @@ export class Path {
 
     arcTo(oval: BoundingRect, startAngleDeg: number, sweepAngleDeg: number, forceMoveTo: boolean): this;
     arcTo(p1: Vector2, p2: Vector2, radius: number): this;
-    arcTo(x1:number,y1:number,x2:number,y2:number, radius: number): this;
+    arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): this;
     arcTo(r: Vector2, xAxisRotate: number, largeArc: ArcSize, sweep: PathDirection, xy: Vector2): this;
     arcTo(...args: any[]): this {
         if (args.length === 4) {
@@ -866,14 +962,14 @@ export class Path {
             } else {
                 addPt(singlePt);
             }
-        } else if (typeof args[0]!=='number'&&args.length === 5) {
-            
+        } else if (typeof args[0] !== 'number' && args.length === 5) {
+
             let rad = args[0] as Vector2
             let angle = args[1] as number
             let arcLarge = args[2] as ArcSize
             let arcSweep = args[3] as PathDirection
             let endPt = args[4] as Vector2
-      
+
             this.injectMoveToIfNeeded();
 
             let srcPts: Vector2[] = Vector2.makeZeroArray(2)
@@ -916,7 +1012,7 @@ export class Path {
                 rx *= radiiScale;
                 ry *= radiiScale;
             }
-           
+
             pointTransform.setScale(1 / rx, 1 / ry);
             pointTransform.preRotate(-angle);
 
@@ -942,7 +1038,7 @@ export class Path {
             let thetaArc = theta2 - theta1;
             if (thetaArc < 0 && Number(arcSweep) == PathDirection.kCW) {  // arcSweep flipped from the original implementation
                 thetaArc += Math.PI * 2;
-            } else if (thetaArc > 0 &&Number(arcSweep)== PathDirection.kCCW) {  // arcSweep flipped from the original implementation
+            } else if (thetaArc > 0 && Number(arcSweep) == PathDirection.kCCW) {  // arcSweep flipped from the original implementation
                 thetaArc -= Math.PI * 2;
             }
 
@@ -964,7 +1060,7 @@ export class Path {
             if (!Number.isFinite(t)) {
                 return this;
             }
-    
+
             const ScalarHalf = 0.5
             let startTheta = theta1;
             let w = Math.sqrt(ScalarHalf + Math.cos(thetaWidth) * ScalarHalf);
@@ -1005,15 +1101,15 @@ export class Path {
             // ensure that rounding errors in the above math don't cause any problems.
             this.lastPoint.copy(endPt)
             return this;
-        } else if (args.length == 3||typeof args[0]==='number'&&args.length === 5) {
+        } else if (args.length == 3 || typeof args[0] === 'number' && args.length === 5) {
             let p1 = args[0] as Vector2, p2 = args[1] as Vector2, radius = args[2] as number;
-            if(typeof args[0]==='number'&&args.length === 5){
-                
-                p1=Vector2.create(args[0],args[1])
-                p2=Vector2.create(args[2],args[3])
-                radius=args[4]
+            if (typeof args[0] === 'number' && args.length === 5) {
+
+                p1 = Vector2.create(args[0], args[1])
+                p2 = Vector2.create(args[2], args[3])
+                radius = args[4]
             }
-         
+
             this.injectMoveToIfNeeded();
 
             if (radius == 0) {
@@ -1051,9 +1147,9 @@ export class Path {
         return this
     }
     arcToOval(oval: BoundingRect, startAngleDeg: number, sweepAngleDeg: number, forceMoveTo = false) {
-       return this.arcTo(oval, startAngleDeg, sweepAngleDeg, forceMoveTo);
+        return this.arcTo(oval, startAngleDeg, sweepAngleDeg, forceMoveTo);
     }
-    arcToOval2(x:number, y:number, rx:number, ry:number, rotation:number, startAngle:number, deltaAngle:number, shouldLineTo:boolean = false) {
+    arcToOval2(x: number, y: number, rx: number, ry: number, rotation: number, startAngle: number, deltaAngle: number, shouldLineTo: boolean = false) {
         const { x1, y1, x2, y2, fa, fs } = centerToEndPoint(
             x,
             y,
@@ -1068,8 +1164,8 @@ export class Path {
         }
         this.ellipseArc(x1, y1, rx, ry, rotation, fa, fs, x2, y2)
     }
-     // 椭圆弧
-     ellipseArc(x1: number, y1: number, x2: number, y2: number,
+    // 椭圆弧
+    ellipseArc(x1: number, y1: number, x2: number, y2: number,
         _rx: number, _ry: number, xAxisRotation: number,
         largeArcFlag: number, sweepFlag: number) {
 
@@ -1083,15 +1179,15 @@ export class Path {
         _rx: number, _ry: number, xAxisRotation: number,
         largeArcFlag: number, sweepFlag: number) {
         const { cx, cy, rx, ry, theta1, deltaTheta } = endPointToCenter(x1, y1, x2, y2, _rx, _ry, xAxisRotation, largeArcFlag, sweepFlag)
-    
-    
+
+
         const segments = Math.ceil(Math.abs(deltaTheta) / (Math.PI / 2))
         const delta = deltaTheta / segments
         let startTheta = theta1
-    
+
         const pointTransform = Matrix2D.fromRotate(xAxisRotation)
         pointTransform.preScale(rx, ry)
-    
+
         // const beiers=ellipseArcToCubicBezier(x1,y1,x2,y2,_rx,_ry,xAxisRotation,largeArcFlag,sweepFlag)
         // for(let b of beiers){
         //    this.bezierCurveTo(b[2],b[3],b[4],b[5],b[6],b[7])
@@ -1100,22 +1196,22 @@ export class Path {
         // 计算弧
         for (let i = 0; i < segments; i++) {
             let endTheta = startTheta + delta
-    
+
             // 椭圆标准参数方程
             const p0 = Vector2.create(Math.cos(startTheta), Math.sin(startTheta))
             const p3 = Vector2.create(Math.cos(endTheta), Math.sin(endTheta))
-    
+
             // const p1=p0.clone().add(p0.clone().rotateCCW().multiplyScalar(k))
             // const p2=p3.clone().add(p3.clone().rotateCW().multiplyScalar(k))
             const p1 = p0.clone().add(p0.clone().rotate(Math.PI / 2).multiplyScalar(k))
             const p2 = p3.clone().add(p3.clone().rotate(-Math.PI / 2).multiplyScalar(k))
-    
-    
+
+
             // p0.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
             // p1.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
             // p2.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
             // p3.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
-    
+
             p0.applyMatrix2D(pointTransform).translate(cx, cy)
             p1.applyMatrix2D(pointTransform).translate(cx, cy)
             p2.applyMatrix2D(pointTransform).translate(cx, cy)
@@ -1123,7 +1219,7 @@ export class Path {
             this.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y)
             startTheta = endTheta
         }
-    
+
         return this
     }
     addArc(oval: BoundingRect, startAngleDeg: number, sweepAngleDeg: number) {
@@ -1206,8 +1302,8 @@ export class Path {
         temp.addArc(bounds, radianToDegrees(startAngle), sweep);
         return this.addPath(temp, AddPathMode.kExtend_AddPathMode)
     }
-    
-    ellipse(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, ccw: boolean=false) {
+
+    ellipse(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, ccw: boolean = false) {
         // This is easiest to do by making a new path and then extending the current path
         // (this properly catches the cases of if there's a moveTo before this call or not).
         let bounds = BoundingRect.fromLTRB(x - radiusX, y - radiusY, x + radiusX, y + radiusY);
@@ -1220,10 +1316,10 @@ export class Path {
         m.setRotate(rotation, x, y);
         this.addPath(temp, m, AddPathMode.kExtend_AddPathMode);
     }
-    ellipse2(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, ccw: boolean=false){
-        ellipse(this,x,y,radiusX,radiusY,rotation,startAngle,endAngle,ccw)
+    ellipse2(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, ccw: boolean = false) {
+        ellipse(this, x, y, radiusX, radiusY, rotation, startAngle, endAngle, ccw)
     }
-    ellipse3(x:number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, ccw: boolean=false){
+    ellipse3(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, ccw: boolean = false) {
         if (radiusX < 0 || radiusY < 0) {
             throw new DOMException("radii cannot be negative", "IndexSizeError");
         }
@@ -1258,7 +1354,7 @@ export class Path {
         //不绘制任何内容。
         if (almostEqual(Math.abs(sweepDegrees), 360)) {
             const halfSweep = sweepDegrees / 2;
-           // this.moveTo(x,y)
+            // this.moveTo(x,y)
             this.arcToOval2(
                 x,
                 y,
@@ -1292,10 +1388,10 @@ export class Path {
             );
         }
     }
-    rect(x:number,y:number,w:number,h:number) {
-        return this.addRect(BoundingRect.fromXYWH(x, y, w,h),PathDirection.kCCW,0)
+    rect(x: number, y: number, w: number, h: number) {
+        return this.addRect(BoundingRect.fromXYWH(x, y, w, h), PathDirection.kCCW, 0)
     }
-    roundRect(x:number, y:number, width:number, height:number, radius:number|number|{tl:number,tr:number,br:number,bl:number}) {
+    roundRect(x: number, y: number, width: number, height: number, radius: number | number | { tl: number, tr: number, br: number, bl: number }) {
         let ctx = this;
         // 如果 radius 是数字，统一处理为四个角的半径
         if (typeof radius === 'number') {
@@ -1325,7 +1421,7 @@ export class Path {
 
         ctx.closePath(); // 闭合路径
     }
-    
+
     getBounds() {
         return BoundingRect.default().setFromPoints(this.points)
     }
@@ -1362,31 +1458,69 @@ export class Path {
     transform(matrix: Matrix2D) {
         matrix.mapPoints(this.points, this.points)
     }
-    [Symbol.iterator](): Iterator<[PathVerb, { index: number, p0?: Vector2, p1?: Vector2, p2?: Vector2, p3?: Vector2 }]> {
+    translate(x: number, y: number) {
+        this.transform(Matrix2D.fromTranslate(x, y))
+    }
+    rotate(angle: number) {
+        this.transform(Matrix2D.fromRotate(angle))
+    }
+    scale(x: number, y: number) {
+        this.transform(Matrix2D.fromScale(x, y))
+    }
+    visit(_visitor: Partial<PathVisitor>) {
+        const visitor:PathVisitor = Object.assign({
+            moveTo: () => { },
+            lineTo: () => { },
+            quadraticCurveTo: () => { },
+            bezierCurveTo: () => { },
+            closePath: () => { }
+        }, _visitor)
+        for (let d of this) {
+            switch (d.type) {
+                case PathVerb.MoveTo:
+                    visitor.moveTo({type:d.type,p0:d.p0!});
+                    break
+                case PathVerb.LineTo:
+                    visitor.lineTo({type:d.type,p0:d.p0!});
+                    break
+                case PathVerb.QuadTo:
+                    visitor.quadraticCurveTo({type:d.type,p0:d.p0!,p1:d.p1!,p2:d.p2!});
+                    break
+                case PathVerb.CubicTo:
+                    visitor.bezierCurveTo({type:d.type,p0:d.p0!,p1:d.p1!,p2:d.p2!,p3:d.p3!});
+                    break
+                case PathVerb.Close:
+                    visitor.closePath({ type:d.type, lastMovePoint: d.p0! })
+                    break
+            }
+
+        }
+    }
+    [Symbol.iterator](): Iterator<PathVerbData> {
         const self = this;
         return (function* () {
             const verbs = self.verbs, points = self.points.map(p => p.clone())
             let index = 0, p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, lastMove: Vector2 | null = null;
             for (let i = 0; i < verbs.length; i++) {
-                const verb = verbs[i]
-                switch (verb) {
+                const type = verbs[i]
+                switch (type) {
                     case PathVerb.MoveTo:
                         index += 1;
                         p0 = points[index - 1]
-                        lastMove = p0.clone()
-                        yield [verb, { index: index - 1, p0 }]
+                        lastMove = p0
+                        yield { type, p0 }
                         break;
                     case PathVerb.LineTo:
                         index += 1;
                         p0 = points[index - 1]
-                        yield [verb, { index: index - 1, p0 }]
+                        yield { type, p0 }
                         break;
                     case PathVerb.QuadTo:
                         index += 2;
                         p0 = points[index - 3]
                         p1 = points[index - 2]
                         p2 = points[index - 1]
-                        yield [verb, { index: index - 1, p0, p1, p2 }]
+                        yield { type, p0, p1, p2 }
                         break;
                     case PathVerb.CubicTo:
                         index += 3;
@@ -1394,10 +1528,10 @@ export class Path {
                         p1 = points[index - 3]
                         p2 = points[index - 2]
                         p3 = points[index - 1]
-                        yield [verb, { index: index - 1, p0, p1, p2, p3 }]
+                        yield { type, p0, p1, p2, p3 }
                         break;
                     case PathVerb.Close:
-                        yield [verb, { index: index - 1, p0: lastMove! }]
+                        yield { type, p0: lastMove?.clone() }
                         break;
                 }
             }
@@ -1406,8 +1540,8 @@ export class Path {
     fatten() {
         const newPath = new Path()
 
-        for (let [verb, { p0, p1, p2, p3 }] of this) {
-            switch (verb) {
+        for (let { type, p0, p1, p2, p3 } of this) {
+            switch (type) {
                 case PathVerb.MoveTo:
                     newPath.moveTo(p0!.x, p0!.y)
                     break;
@@ -1431,42 +1565,70 @@ export class Path {
         }
         return newPath
     }
-    toPolygon():Vector2[] {
+    isZeroLengthSincePoint(start_pt_index: usize):bool {
+        let count = this.points.length - start_pt_index;
+        if(count < 2) {
+            return true;
+        }
+
+        let first = this.points[start_pt_index];
+        for(let i=1;i<count;i++) {
+            if(!first.equalsEpsilon(this.points[start_pt_index + i])) {
+                return false;
+            }
+        }
+
+       return true
+    }
+    toPolygons(closed:boolean=false): Vector2[][] {
+     
         const newPath = this.fatten()
-        const polygon: Vector2[] = []
+        const polygons: Vector2[][] = []
+        let polygon: Vector2[] | null = null
         let lastMovePoint: Vector2 | null = null;
-        for (let [verb, { p0, p1, p2, p3 }] of newPath) {
-            switch (verb) {
+        for (let { type, p0, p1, p2, p3 } of newPath) {
+            switch (type) {
                 case PathVerb.MoveTo:
+                    if (polygon != null) {
+                        polygons.push(polygon)
+                    }
+                    polygon = []
                     polygon.push(p0!.clone())
                     lastMovePoint = p0!.clone()
                     break;
                 case PathVerb.LineTo:
-                    polygon.push(p0!.clone())
+                    polygon!.push(p0!.clone())
                     break;
                 case PathVerb.QuadTo:
                     quadraticCurveToLines(p0!, p1!, p2!).forEach(p => {
-                        polygon.push(p.clone())
+                        polygon!.push(p.clone())
                     })
                     break;
                 case PathVerb.CubicTo:
                     cubicCurveToLines(p0!, p1!, p2!, p3!).forEach(p => {
-                        polygon.push(p.clone())
+                        polygon!.push(p.clone())
                     })
                     break;
                 case PathVerb.Close:
-                    if(lastMovePoint!==null){
-                        polygon.push(lastMovePoint.clone())
-                        lastMovePoint=null
+                    if (polygon) {
+                        if (closed) {
+                            polygon!.push(lastMovePoint!.clone())
+                        } 
+                        polygons.push(polygon)
+                        polygon = null
+                        lastMovePoint = null
                     }
                     break;
             }
         }
-        return polygon
+        if(polygon){
+            polygons.push(polygon)
+        }
+        return polygons
     }
     toCanvas(ctx: CanvasRenderingContext2D | Path2D) {
-        for (let [verb, { p0, p1, p2, p3 }] of this) {
-            switch (verb) {
+        for (let { type, p0, p1, p2, p3 } of this) {
+            switch (type) {
                 case PathVerb.MoveTo:
                     ctx.moveTo(p0!.x, p0!.y)
                     break;

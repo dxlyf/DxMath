@@ -10,7 +10,7 @@ export type CanvasExpose={
     ctx:null|CanvasRenderingContext2D,
     clear:()=>void
     drawOnce:(callback:(ctx:CanvasRenderingContext2D)=>void)=>void
-
+    animate:(callback:(ctx:CanvasRenderingContext2D)=>void)=>()=>void
 }
 type CanvasProps={
     width:number
@@ -47,6 +47,16 @@ const Canvas=React.forwardRef<CanvasExpose,CanvasProps>((props,ref)=>{
                 ctx!.scale(dpr,dpr)
                 callback(ctx!)
                 ctx!.restore()
+            },
+            animate:(callback)=>{
+                const loop=()=>{
+                    instance.drawOnce(callback)
+                    animationId=requestAnimationFrame(loop)
+                }
+                let animationId=requestAnimationFrame(loop)
+                return ()=>{
+                    cancelAnimationFrame(animationId)
+                }
             }
 
         }
