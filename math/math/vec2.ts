@@ -1,6 +1,7 @@
 import { Matrix2D } from "./mat2d"
 import { Matrix3 } from "./mat3"
 
+
 export class Vector2 {
     static AreFinite(v: Vector2[]) {
         return !v.some(d => !d.isFinite())
@@ -674,3 +675,4 @@ export class Vector2 {
         return [this.x, this.y]
     }
 }
+

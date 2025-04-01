@@ -1,5 +1,9 @@
-import { If } from 'three/webgpu';
+
 import { Vector2 } from '../../math/vec2';
+
+function lerp(a: number, b: number, t: number) {
+    return a + (b - a) * t;
+}
 
 
 type FillRule = "evenodd" | "nonzero"
@@ -56,23 +60,23 @@ const insertActiveEdge2 = (edges: PolygonEdge[], edge: PolygonEdge) => {
     }
     edges.splice(i, 0, edge)
 }
- // **计算像素覆盖率**
- const geometricCoverage = (x: number, x1: number, x2: number): number => {
+// **计算像素覆盖率**
+const geometricCoverage = (x: number, x1: number, x2: number): number => {
     return Math.max(0, Math.min(1, (Math.min(x + 0.5, x2) - Math.max(x - 0.5, x1))));
-  };
+};
 
-  // **边缘增强处理**
-  const edgeEnhancement = (
+// **边缘增强处理**
+const edgeEnhancement = (
     x: number,
     y: number,
     left: { x: number; normal: [number, number] },
     right: { x: number; normal: [number, number] }
-  ): number => {
+): number => {
     const centerX = x + 0.5;
     const distLeft = Math.abs((centerX - left.x) * left.normal[0]);
     const distRight = Math.abs((centerX - right.x) * right.normal[0]);
     return Math.min(1, Math.max(0, (Math.min(distLeft, distRight) * 2)));
-  };
+};
 
 // 点是否在多边形内
 const pointInPolygon = (point: Vector2, polygon: Vector2[], fillRule: FillRule = 'nonzero'): boolean => {
@@ -202,7 +206,8 @@ export const fillPolygon = (polygons: Vector2[], setPixel: (x: number, y: number
                 continue
             }
             if (p1.y > y !== p2.y > y) {
-                let x_intersect = (p2.x - p1.x) * (y - p1.y) / (p2.y - p1.y) + p1.x
+                let t = (y - p1.y) / (p2.y - p1.y)
+                let x_intersect = lerp(p1.x, p2.x, t)
                 let winding = p1.y < p2.y ? 1 : -1; // 计算方向
                 intersections.push({ x: x_intersect, winding });
 
@@ -224,13 +229,13 @@ export const fillPolygon = (polygons: Vector2[], setPixel: (x: number, y: number
                 const startX = Math.floor(x1);
                 const endX = Math.ceil(x2);
 
-                for (let x = startX; x <=endX; x++) {
+                for (let x = startX; x <= endX; x++) {
                     const pixelLeft = x;          // 像素左边界
                     const pixelRight = x + 1;     // 像素右边界
                     // 计算覆盖范围
                     const coverageStart = Math.max(x1, pixelLeft);
                     const coverageEnd = Math.min(x2, pixelRight);
-                    const coverage =Math.min(1, coverageEnd-coverageStart)
+                    const coverage = Math.min(1, coverageEnd - coverageStart)
 
                     if (coverage > 0) {
                         setPixel(x, y, coverage); // 传递覆盖率参数
@@ -340,7 +345,7 @@ export const fillPolygonDeepSeek = (
  * @param {(x: number, y: number, coverage?: number) => void} setPixel - 设置像素的回调函数
  * @param {FillRule} [fillRule='nonzero'] - 填充规则
  */
-export const fillPolygonGrok = (polygons:Vector2[], setPixel:(x:number,y:number,coverage?:number)=>void, fillRule:FillRule = 'nonzero') => {
+export const fillPolygonGrok = (polygons: Vector2[], setPixel: (x: number, y: number, coverage?: number) => void, fillRule: FillRule = 'nonzero') => {
     // 扫描线范围
     let yMin = Infinity, yMax = -Infinity;
     polygons.forEach(p => {
@@ -367,8 +372,8 @@ export const fillPolygonGrok = (polygons:Vector2[], setPixel:(x:number,y:number,
 
         let windingNumber = 0;
         for (let i = 0; i < intersections.length - 1; i++) {
-            windingNumber = fillRule === "nonzero" 
-                ? windingNumber + intersections[i].winding 
+            windingNumber = fillRule === "nonzero"
+                ? windingNumber + intersections[i].winding
                 : (windingNumber + 1) % 2;
 
             if (windingNumber !== 0) {
@@ -416,3 +421,171 @@ export const fillPolygonGrok = (polygons:Vector2[], setPixel:(x:number,y:number,
         intersections.length = 0;
     }
 };
+
+export class CLAAFill {
+    subpixel: number = 1;
+    constructor(subpixelScale = 256) {
+        this.subpixel = subpixelScale;
+    }
+
+    // 坐标对齐（简化版，如果需要的话）
+    alignToGrid(points: Vector2[]) {
+        return points.map(p => 
+            Vector2.create(
+                Math.round(p.x * this.subpixel) / this.subpixel,
+                Math.round(p.y * this.subpixel) / this.subpixel
+            )
+        );
+    }
+
+    // 扫描线填充算法（核心逻辑）
+    fill(
+        polygon: Vector2[], 
+        setPixel: (x: number, y: number, coverage: number) => void, 
+        fillRule: FillRule = 'nonzero'
+    ) {
+        // 将多边形顶点转换为固定点坐标（单位：subpixel）
+        const fixedPoly = polygon.map(p => 
+            Vector2.create(
+                Math.round(p.x * this.subpixel), 
+                Math.round(p.y * this.subpixel)
+            )
+        );
+
+        // 计算固定坐标的边界（单位：subpixel）
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        fixedPoly.forEach(p => {
+            if (p.x < minX) minX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y > maxY) maxY = p.y;
+        });
+
+        // 计算像素网格的尺寸（单位：像素）
+        const gridX0 = Math.floor(minX / this.subpixel);
+        const gridY0 = Math.floor(minY / this.subpixel);
+        const gridX1 = Math.ceil(maxX / this.subpixel);
+        const gridY1 = Math.ceil(maxY / this.subpixel);
+        const gridWidth = gridX1 - gridX0;
+        const gridHeight = gridY1 - gridY0;
+
+        // 初始化网格单元，每个单元保存 cover 与 area 累计值
+        const cells: { cover: number, area: number }[][] = new Array(gridHeight);
+        for (let j = 0; j <= gridHeight; j++) {
+            cells[j] = new Array(gridWidth);
+            for (let i = 0; i <= gridWidth; i++) {
+                cells[j][i] = { area: 0, cover: 0 };
+            }
+        }
+
+        // 对每条边进行处理（多边形闭合）
+        for (let i = 0; i < fixedPoly.length; i++) {
+            const p0 = fixedPoly[i];
+            const p1 = fixedPoly[(i + 1) % fixedPoly.length];
+            // 将边分割成若干段，每段端点均落在网格边界上
+            const segments = this.splitEdge(p0, p1);
+            segments.forEach(seg => {
+                this.accumulateSegment(cells, seg, gridX0, gridY0, this.subpixel);
+            });
+        }
+
+        // 扫描每行单元格，累加 cover 与 area 后计算有效面积，并调用 setPixel 绘制
+        for (let j = 0; j < gridHeight; j++) {
+            let accCover = 0, accArea = 0;
+            for (let i = 0; i < gridWidth; i++) {
+                accCover += cells[j][i].cover;
+                accArea += cells[j][i].area;
+                // 根据公式计算有效面积：
+                // effectiveArea = subpixel * accumulatedCover - (accumulatedArea)/2
+                let effectiveArea = this.subpixel * accCover - accArea / 2;
+                // 将 effectiveArea 归一化到 [0,256]（简单 clamp）
+                let cov = Math.max(0, Math.min(256, Math.round(effectiveArea)));
+                let globalAlpha = cov / 256;
+                setPixel(i + gridX0, j + gridY0, globalAlpha);
+            }
+        }
+    }
+
+    /**
+     * 将一条边 p0→p1 分割成若干段，使得每段端点均落在水平或垂直的网格线上。
+     * p0 和 p1 为固定点坐标（单位：subpixel）。
+     */
+    splitEdge(p0: Vector2, p1: Vector2) {
+        let segments: { x0: number, y0: number, x1: number, y1: number }[] = [];
+        // 先沿 x 轴分割
+        let tempSegs = this.splitByGrid(p0, p1, this.subpixel, 'x');
+        // 对每个分割段再沿 y 轴分割
+        tempSegs.forEach(seg => {
+            const subSegs = this.splitByGrid(
+                Vector2.create(seg.x0, seg.y0), 
+                Vector2.create(seg.x1, seg.y1), 
+                this.subpixel, 
+                'y'
+            );
+            segments = segments.concat(subSegs);
+        });
+        return segments;
+    }
+
+    /**
+     * 根据指定轴（'x' 或 'y'）的网格线分割边段 p0→p1，
+     * 返回分割后的段数组，每段格式为 {x0, y0, x1, y1}。
+     */
+    splitByGrid(p0: Vector2, p1: Vector2, precision: number, axis: string) {
+        let segs: { x0: number, y0: number, x1: number, y1: number }[] = [];
+        let diff = axis === 'x' ? (p1.x - p0.x) : (p1.y - p0.y);
+        if (diff === 0) return [{ x0: p0.x, y0: p0.y, x1: p1.x, y1: p1.y }];
+        const start = axis === 'x' ? p0.x : p0.y;
+        const end = axis === 'x' ? p1.x : p1.y;
+        const sign = diff > 0 ? 1 : -1;
+        let gridStart = sign > 0 ?
+            (Math.floor(start / precision) + 1) * precision :
+            (Math.ceil(start / precision) - 1) * precision;
+        let tValues: number[] = [];
+        while ((sign > 0 && gridStart < end) || (sign < 0 && gridStart > end)) {
+            const t = (gridStart - start) / diff;
+            tValues.push(t);
+            gridStart += sign * precision;
+        }
+        tValues.unshift(0);
+        tValues.push(1);
+        for (let i = 0; i < tValues.length - 1; i++) {
+            let t0 = tValues[i], t1 = tValues[i + 1];
+            segs.push({
+                x0: p0.x + (p1.x - p0.x) * t0,
+                y0: p0.y + (p1.y - p0.y) * t0,
+                x1: p0.x + (p1.x - p0.x) * t1,
+                y1: p0.y + (p1.y - p0.y) * t1
+            });
+        }
+        return segs;
+    }
+
+    /**
+     * 将一段边对经过的像素单元累加 area 与 cover 值。
+     * seg 为 {x0, y0, x1, y1}（固定点坐标）。
+     * gridX0, gridY0 用于将固定坐标转换为单元格坐标（像素坐标）。
+     */
+    accumulateSegment(
+        cells: { cover: number, area: number }[][], 
+        seg: { x0: number, y0: number, x1: number, y1: number }, 
+        gridX0: number, 
+        gridY0: number, 
+        precision: number
+    ) {
+        // 计算该段中心所在的单元格索引
+        let cx = Math.floor(((seg.x0 + seg.x1) / 2) / precision) - gridX0;
+        let cy = Math.floor(((seg.y0 + seg.y1) / 2) / precision) - gridY0;
+        // 该单元格左边界（固定点坐标）
+        let cellLeft = (cx + gridX0) * precision;
+        let dy = seg.y1 - seg.y0;
+        // 计算边段两端相对于单元格左边界的水平偏移平均值
+        // 这样得到的值反映了边段相对于网格左边界的平均位置
+        let avg_dx = ((seg.x0 - cellLeft) + (seg.x1 - cellLeft)) / 2;
+        // 根据算法，存储的是两倍面积，所以：
+        // segAreaTwice = ((seg.x0 - cellLeft) + (seg.x1 - cellLeft)) * (seg.y1 - seg.y0)
+        let segAreaTwice = ((seg.x0 - cellLeft) + (seg.x1 - cellLeft)) * dy;
+        cells[cy][cx].cover += dy;
+        cells[cy][cx].area += segAreaTwice;
+    }
+}

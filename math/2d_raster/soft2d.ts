@@ -1,4 +1,3 @@
-import { center_to_endpoint } from "math/curve/arc"
 import { Matrix2D } from "../math/mat2d"
 
 
@@ -156,7 +155,18 @@ export class Point {
     distanceTo(v: Point) {
         return Math.sqrt((this.x - v.x) * (this.x - v.x) + (this.y - v.y) * (this.y - v.y))
     }
-
+    round() {
+        return this.set(Math.round(this.x), Math.round(this.y))
+    }
+    floor() {
+        return this.set(Math.floor(this.x), Math.floor(this.y))
+    }
+    ceil() {
+        return this.set(Math.ceil(this.x), Math.ceil(this.y))
+    }
+    trunc() {
+        return this.set(Math.trunc(this.x), Math.trunc(this.y))
+    }
     dot(v: Point) {
         return this.x * v.x + this.y * v.y;
     }
@@ -242,6 +252,9 @@ export class Point {
         let s = Math.sin(angle);
         return this.set(c * this.x - s * this.y, s * this.x + c * this.y)
     }
+    rotateDegrees(angle: number) {
+        return this.rotate(angle * Math.PI / 180)
+    }
     clone() {
         return new Point(this.x, this.y)
     }
@@ -276,7 +289,7 @@ export class Color {
 }
 
 export class Paint {
-    static default(){
+    static default() {
         return new this()
     }
     color: Color = Color.black()
@@ -345,8 +358,8 @@ function isCommand(token: string): boolean {
 // https://www.w3.org/TR/SVG/implnote.html#ArcConversionCenterToEndpoint
 export function centerToEndPoint(cx: number, cy: number, rx: number, ry: number, xAxisRotateAngle: number, startAngle: number, sweepAngle: number) {
 
-    const { x: x1, y: y1 } = pointOnEllipse(cx, cy, rx, ry, xAxisRotateAngle,startAngle)
-    const { x: x2, y: y2 } = pointOnEllipse(cx, cy, rx, ry, xAxisRotateAngle,startAngle + sweepAngle)
+    const { x: x1, y: y1 } = pointOnEllipse(cx, cy, rx, ry, xAxisRotateAngle, startAngle)
+    const { x: x2, y: y2 } = pointOnEllipse(cx, cy, rx, ry, xAxisRotateAngle, startAngle + sweepAngle)
 
     const fa = Math.abs(sweepAngle) > Math.PI ? 1 : 0
     const fs = sweepAngle > 0 ? 1 : 0
@@ -705,26 +718,26 @@ function getCubicBounds(p0: Point, p1: Point, p2: Point, p3: Point) {
 
     return { min: Point.from(minX, minY), max: Point.from(maxX, maxY) }
 }
-function quadraticBezierSubdivide(p0: Point, p1: Point, p2: Point,t:number = 0.5) {
-    const q0 = Point.lerp(p0, p1,t);
-    const q1 = Point.lerp(p1, p2,t);
-    const q01 = Point.lerp(q0,q1,t);
+function quadraticBezierSubdivide(p0: Point, p1: Point, p2: Point, t: number = 0.5) {
+    const q0 = Point.lerp(p0, p1, t);
+    const q1 = Point.lerp(p1, p2, t);
+    const q01 = Point.lerp(q0, q1, t);
 
-    return [p0.clone(),q0,q01,q1,p2.clone()]
+    return [p0.clone(), q0, q01, q1, p2.clone()]
 }
 // 三次贝塞尔曲线细分
-export const cubicBezierSubdivide = (p0: Point, p1: Point, p2: Point, p3: Point,t:number=0.5) => {
-    const q0 = Point.lerp(p0, p1,t);
-    const q1 = Point.lerp(p1, p2,t);
-    const q2 = Point.lerp(p2, p3,t);
-    const q01 = Point.lerp(q0,q1,t);
-    const q12 = Point.lerp(q1,q2,t);
-    const q0112=Point.lerp(q01,q12,t);
+export const cubicBezierSubdivide = (p0: Point, p1: Point, p2: Point, p3: Point, t: number = 0.5) => {
+    const q0 = Point.lerp(p0, p1, t);
+    const q1 = Point.lerp(p1, p2, t);
+    const q2 = Point.lerp(p2, p3, t);
+    const q01 = Point.lerp(q0, q1, t);
+    const q12 = Point.lerp(q1, q2, t);
+    const q0112 = Point.lerp(q01, q12, t);
 
-    return [p0.clone(), q0,q01,q0112,q12,q2,p3.clone()];
+    return [p0.clone(), q0, q01, q0112, q12, q2, p3.clone()];
 }
 
- // 点与线段距离
+// 点与线段距离
 function pointOnSegmentDistance(pt: Point, a: Point, b: Point) {
     const ab = b.clone().sub(a)
     const ap = pt.clone().sub(a)
@@ -734,40 +747,40 @@ function pointOnSegmentDistance(pt: Point, a: Point, b: Point) {
 // 二次贝塞尔曲线扁平化转成线段
 export function quadraticCurveToLines(p0: Point, p1: Point, p2: Point, tessellationTolerance: number = 0.5) {
     const points: Point[] = []
-    const subdivide = (p0: Point, p1: Point, p2: Point,maxDep:number=100) => {
+    const subdivide = (p0: Point, p1: Point, p2: Point, maxDep: number = 100) => {
         const dist = pointOnSegmentDistance(p1, p0, p2)
-        if (dist < tessellationTolerance||maxDep<=0) {
+        if (dist < tessellationTolerance || maxDep <= 0) {
             points.push(p2)
         } else {
             const [q0, q1, q2, q3, q4] = quadraticBezierSubdivide(p0, p1, p2)
-            subdivide(q0, q1, q2,maxDep-1)
-            subdivide(q2, q3, q4,maxDep-1)
+            subdivide(q0, q1, q2, maxDep - 1)
+            subdivide(q2, q3, q4, maxDep - 1)
         }
     }
-    subdivide(p0, p1, p2,Math.max(1,Math.floor(p0.distanceTo(p2)/tessellationTolerance)))
+    subdivide(p0, p1, p2, Math.max(1, Math.floor(p0.distanceTo(p2) / tessellationTolerance)))
     return points
 }
 
 // 三次贝塞尔曲线扁平化转成线段
 export function cubicCurveToLines(p0: Point, p1: Point, p2: Point, p3: Point, tessellationTolerance: number = 0.5) {
     const points: Point[] = []
-    const subdivide = (p0: Point, p1: Point, p2: Point, p3: Point,maxDeep=100) => {
+    const subdivide = (p0: Point, p1: Point, p2: Point, p3: Point, maxDeep = 100) => {
         // const mid=cubicBezier(p0,p1,p2,p3,0.5)
         // const dist0=pointOnSegmentDistance(mid,p0,p3)  
         const dist1 = pointOnSegmentDistance(p1, p0, p3)
         const dist2 = pointOnSegmentDistance(p2, p0, p3)
         const dist = Math.max(dist1, dist2)
         // 计算平直度误差（使用最大弦高）
-       //  const chordHeight = maxChordHeight(p0, p3, p1, p2, mid);
-        if (dist < tessellationTolerance||maxDeep<=0) {
+        //  const chordHeight = maxChordHeight(p0, p3, p1, p2, mid);
+        if (dist < tessellationTolerance || maxDeep <= 0) {
             points.push(p3)
         } else {
             const [q0, q1, q2, q3, q4, q5, q6] = cubicBezierSubdivide(p0, p1, p2, p3)
-            subdivide(q0, q1, q2, q3,maxDeep-1)
-            subdivide(q3, q4, q5, q6,maxDeep-1)
+            subdivide(q0, q1, q2, q3, maxDeep - 1)
+            subdivide(q3, q4, q5, q6, maxDeep - 1)
         }
     }
-    subdivide(p0, p1, p2, p3,Math.max(1,Math.floor(p0.distanceTo(p3)/tessellationTolerance)))
+    subdivide(p0, p1, p2, p3, Math.max(1, Math.floor(p0.distanceTo(p3) / tessellationTolerance)))
     return points
 }
 
@@ -1035,13 +1048,16 @@ export class PathBuilder {
     get lastMovePoint() {
         return this.points[this.lastMoveIndex]
     }
-    reset(){
-        this.points.length=0
-        this.verbs.length=0
-        this.lastMoveIndex=-1
-        this.needMoveVerb=true
+    get length() {
+        return this.verbs.length
     }
-    _copy(path:PathBuilder){
+    reset() {
+        this.points.length = 0
+        this.verbs.length = 0
+        this.lastMoveIndex = -1
+        this.needMoveVerb = true
+    }
+    _copy(path: PathBuilder) {
         path.visit({
             moveTo: (record) => {
                 this.moveTo(record.p0.x, record.p0.y)
@@ -1061,10 +1077,10 @@ export class PathBuilder {
         })
         return this
     }
-    copy(path:PathBuilder) {
+    copy(path: PathBuilder) {
         this.reset()
         this._copy(path)
-        
+
         return this
     }
     copy2(path: PathBuilder) {
@@ -1122,7 +1138,7 @@ export class PathBuilder {
                     this.quadraticCurveTo(points[k + 1].x, points[k + 1].y, points[k].x, points[k].y);
                     break;
                 case PathVerb.CubicTo:
-                    this.bezierCurveTo(points[k + 2].x, points[k + 2].y, points[k + 1].x, points[k + 1].y, points[k].x, points[k].y));
+                    this.bezierCurveTo(points[k + 2].x, points[k + 2].y, points[k + 1].x, points[k + 1].y, points[k].x, points[k].y);
                     break;
                 case PathVerb.Close:
                     needClose = true;
@@ -1251,52 +1267,52 @@ export class PathBuilder {
     ellipseArc2(x1: number, y1: number, x2: number, y2: number,
         _rx: number, _ry: number, xAxisRotation: number,
         largeArcFlag: number, sweepFlag: number) {
-        const {cx,cy,rx,ry,theta1,deltaTheta}=endPointToCenter(x1,y1,x2,y2,_rx,_ry,xAxisRotation,largeArcFlag,sweepFlag)
-    
-        
-      
-    
-        const segments=Math.ceil(Math.abs(deltaTheta)/(Math.PI/2))
-        const delta=deltaTheta/segments
-        let startTheta=theta1
-    
-        const pointTransform=Matrix2D.fromRotate(xAxisRotation)
-        pointTransform.preScale(rx,ry)
-        
+        const { cx, cy, rx, ry, theta1, deltaTheta } = endPointToCenter(x1, y1, x2, y2, _rx, _ry, xAxisRotation, largeArcFlag, sweepFlag)
+
+
+
+
+        const segments = Math.ceil(Math.abs(deltaTheta) / (Math.PI / 2))
+        const delta = deltaTheta / segments
+        let startTheta = theta1
+
+        const pointTransform = Matrix2D.fromRotate(xAxisRotation)
+        pointTransform.preScale(rx, ry)
+
         // const beiers=ellipseArcToCubicBezier(x1,y1,x2,y2,_rx,_ry,xAxisRotation,largeArcFlag,sweepFlag)
         // for(let b of beiers){
         //    this.bezierCurveTo(b[2],b[3],b[4],b[5],b[6],b[7])
         // }
-        const k=4/3*Math.tan(delta/4) // 控制点的延伸长度
+        const k = 4 / 3 * Math.tan(delta / 4) // 控制点的延伸长度
         // 计算弧
-        for(let i=0;i<segments;i++){
-            let endTheta=startTheta+delta
-    
+        for (let i = 0; i < segments; i++) {
+            let endTheta = startTheta + delta
+
             // 椭圆标准参数方程
-            const p0=Point.from(Math.cos(startTheta),Math.sin(startTheta))
-            const p3=Point.from(Math.cos(endTheta),Math.sin(endTheta))
-    
+            const p0 = Point.from(Math.cos(startTheta), Math.sin(startTheta))
+            const p3 = Point.from(Math.cos(endTheta), Math.sin(endTheta))
+
             // const p1=p0.clone().add(p0.clone().rotateCCW().multiplyScalar(k))
             // const p2=p3.clone().add(p3.clone().rotateCW().multiplyScalar(k))
-            const p1=p0.clone().add(p0.clone().rotate(Math.PI/2).multiplyScalar(k))
-            const p2=p3.clone().add(p3.clone().rotate(-Math.PI/2).multiplyScalar(k))
-    
-    
-            p0.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
-            p1.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
-            p2.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
-            p3.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
-    
-            
-        
+            const p1 = p0.clone().add(p0.clone().rotate(Math.PI / 2).multiplyScalar(k))
+            const p2 = p3.clone().add(p3.clone().rotate(-Math.PI / 2).multiplyScalar(k))
+
+
+            p0.scale(rx, ry).rotate(xAxisRotation).translate(cx, cy)
+            p1.scale(rx, ry).rotate(xAxisRotation).translate(cx, cy)
+            p2.scale(rx, ry).rotate(xAxisRotation).translate(cx, cy)
+            p3.scale(rx, ry).rotate(xAxisRotation).translate(cx, cy)
+
+
+
             // p0.applyMatrix2D(pointTransform).translate(cx,cy)                   
             // p1.applyMatrix2D(pointTransform).translate(cx,cy)
             // p2.applyMatrix2D(pointTransform).translate(cx,cy)
             // p3.applyMatrix2D(pointTransform).translate(cx,cy)
-            this.bezierCurveTo(p1.x,p1.y,p2.x,p2.y,p3.x,p3.y)
-            startTheta=endTheta
+            this.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y)
+            startTheta = endTheta
         }
-    
+
         return this
     }
     // 椭圆弧
@@ -1358,7 +1374,7 @@ export class PathBuilder {
         rotation: number, startAngle: number, endAngle: number,
         anticlockwise: boolean = false
     ) {
-        
+
         // var tao = 2 * Math.PI;
         // var newStartAngle = startAngle % tao;
         // if (newStartAngle < 0) {
@@ -1367,7 +1383,7 @@ export class PathBuilder {
         // var delta = newStartAngle - startAngle;
         // startAngle = newStartAngle;
         // endAngle += delta;
-      
+
         // // Based off of AdjustEndAngle in Chrome.
         // if (!anticlockwise && (endAngle - startAngle) >= tao) {
         //   // Draw complete ellipse
@@ -1380,27 +1396,27 @@ export class PathBuilder {
         // } else if (anticlockwise && startAngle < endAngle) {
         //   endAngle = startAngle - (tao - (endAngle - startAngle) % tao);
         // }
-    
+
         let deltaTheta = endAngle - startAngle
-    
+
         if (anticlockwise && deltaTheta > 0) {
             while (deltaTheta > 0) {
                 deltaTheta -= 2 * Math.PI;
             }
-        } 
-        if(!anticlockwise && deltaTheta < 0) {
+        }
+        if (!anticlockwise && deltaTheta < 0) {
             while (deltaTheta < 0) {
                 deltaTheta += 2 * Math.PI;
             }
         }
-        if(Math.abs(deltaTheta)<=Math.PI*2){
-            const halfSweep=deltaTheta/2
-            this.arcToOval(cx,cy,rx,ry,rotation,startAngle,halfSweep,true)
-            this.arcToOval(cx,cy,rx,ry,rotation,startAngle+halfSweep,halfSweep,false)
-        }else{
-            this.arcToOval(cx,cy,rx,ry,rotation,startAngle,deltaTheta,true)
+        if (Math.abs(deltaTheta) <= Math.PI * 2) {
+            const halfSweep = deltaTheta / 2
+            this.arcToOval(cx, cy, rx, ry, rotation, startAngle, halfSweep, true)
+            this.arcToOval(cx, cy, rx, ry, rotation, startAngle + halfSweep, halfSweep, false)
+        } else {
+            this.arcToOval(cx, cy, rx, ry, rotation, startAngle, deltaTheta, true)
         }
-       
+
         return this
     }
     arc(cx: number, cy: number, radius: number, startAngle: number, endAngle: number,
@@ -1466,8 +1482,8 @@ export class PathBuilder {
         this.closePath();
         return this;
     }
-    arcToOval(x:number, y:number, rx:number, ry:number, rotation:number, startAngle:number, deltaAngle:number, forceMoveTo:boolean) {
-       
+    arcToOval(x: number, y: number, rx: number, ry: number, rotation: number, startAngle: number, deltaAngle: number, forceMoveTo: boolean) {
+
         const { x1, y1, x2, y2, fa, fs } = centerToEndPoint(
             x,
             y,
@@ -1477,11 +1493,11 @@ export class PathBuilder {
             startAngle,
             deltaAngle
         )
-        
+
         if (forceMoveTo) {
             this.moveTo(x1, y1)
         }
-        this.ellipseArc(x1, y1,x2,y2, rx, ry,rotation, fa, fs)
+        this.ellipseArc(x1, y1, x2, y2, rx, ry, rotation, fa, fs)
     }
     arcTo(x1: number, y1: number, x2: number, y2: number, radius: number) {
         // need to know our prev pt so we can construct tangent vectors
@@ -1649,8 +1665,8 @@ export class PathBuilder {
         }
 
         // 计算圆心点
-     //   let n0 = d1.clone().add(d2).normalize()
-      //  let len = radius / Math.sin(theta / 2)
+        //   let n0 = d1.clone().add(d2).normalize()
+        //  let len = radius / Math.sin(theta / 2)
 
         //const center=p1.clone().add(n0.clone().multiplyScalar(len))
         // 计算起点和终点 
@@ -1721,7 +1737,7 @@ export class PathBuilder {
         }
     }
 
- 
+
     conicTo(x1: number, y1: number, x: number, y: number, weight: number): this {
         if (!(weight > 0.0)) {
             this.lineTo(x, y);
@@ -1768,16 +1784,16 @@ export class PathBuilder {
                     break;
                 case PathVerb.QuadTo:
                     {
-                        const { min, max } = getQuadraticBounds(d.p0!, d.p1!, d.p2!)
-                        min.min(min)
-                        max.max(max)
+                        const { min: _min, max: _max } = getQuadraticBounds(d.p0!, d.p1!, d.p2!)
+                        min.min(_min)
+                        max.max(_max)
                     }
                     break
                 case PathVerb.CubicTo:
                     {
-                        const { min, max } = getCubicBounds(d.p0!, d.p1!, d.p2!, d.p3!)
-                        min.min(min)
-                        max.max(max)
+                        const { min: _min, max: _max } = getCubicBounds(d.p0!, d.p1!, d.p2!, d.p3!)
+                        min.min(_min)
+                        max.max(_max)
                     }
                     break
             }
@@ -1786,7 +1802,7 @@ export class PathBuilder {
 
     }
 
-    fatten(){
+    fatten() {
         let path = PathBuilder.default()
 
         this.visit({
@@ -1797,12 +1813,12 @@ export class PathBuilder {
                 path.lineTo(d.p0!.x, d.p0!.y)
             },
             quadraticCurveTo: (d) => {
-                 const points = quadraticCurveToLines(d.p0!, d.p1!, d.p2!)
-                 points.forEach(p => path.lineTo(p.x,p.y))
+                const points = quadraticCurveToLines(d.p0!, d.p1!, d.p2!)
+                points.forEach(p => path.lineTo(p.x, p.y))
             },
             bezierCurveTo: (d) => {
-                const points = cubicCurveToLines(d.p0!, d.p1!, d.p2!,d.p3!)
-                 points.forEach(p => path.lineTo(p.x,p.y))
+                const points = cubicCurveToLines(d.p0!, d.p1!, d.p2!, d.p3!)
+                points.forEach(p => path.lineTo(p.x, p.y))
             },
             closePath: () => {
                 path.closePath()
@@ -1810,45 +1826,45 @@ export class PathBuilder {
         })
         return path
     }
-    visit(visitor: PathVisitor) {
-        visitor = Object.assign({
+    visit(_visitor: Partial<PathVisitor>) {
+        const visitor: PathVisitor = Object.assign({
             moveTo: () => { },
             lineTo: () => { },
             quadraticCurveTo: () => { },
             bezierCurveTo: () => { },
             closePath: () => { }
-        }, visitor)
+        }, _visitor)
         for (let d of this) {
             switch (d.type) {
                 case PathVerb.MoveTo:
-                    visitor.moveTo({type:d.type,p0:d.p0!});
+                    visitor.moveTo({ type: d.type, p0: d.p0! });
                     break
                 case PathVerb.LineTo:
-                    visitor.lineTo({type:d.type,p0:d.p0!});
+                    visitor.lineTo({ type: d.type, p0: d.p0! });
                     break
                 case PathVerb.QuadTo:
-                    visitor.quadraticCurveTo({type:d.type,p0:d.p0!,p1:d.p1!,p2:d.p2!});
+                    visitor.quadraticCurveTo({ type: d.type, p0: d.p0!, p1: d.p1!, p2: d.p2! });
                     break
                 case PathVerb.CubicTo:
-                    visitor.bezierCurveTo({type:d.type,p0:d.p0!,p1:d.p1!,p2:d.p2!,p3:d.p3!});
+                    visitor.bezierCurveTo({ type: d.type, p0: d.p0!, p1: d.p1!, p2: d.p2!, p3: d.p3! });
                     break
                 case PathVerb.Close:
-                    visitor.closePath({ type:d.type, lastMovePoint: d.p0! })
+                    visitor.closePath({ type: d.type, lastMovePoint: d.p0! })
                     break
             }
 
         }
     }
     *[Symbol.iterator](): Iterator<PathVerbData> {
-        const points = this.points.map(p=>p.clone())
+        const points = this.points.map(p => p.clone())
         const verbs = this.verbs
-        let k = 0,lastMovePoint:Point|null = null
+        let k = 0, lastMovePoint: Point | null = null
         for (let i = 0; i < verbs.length; i++) {
             const verb = verbs[i]
             switch (verb) {
                 case PathVerb.MoveTo:
                     k += 1
-                    lastMovePoint=points[k - 1]
+                    lastMovePoint = points[k - 1]
                     yield { type: verb, p0: points[k - 1] }
                     break;
                 case PathVerb.LineTo:
@@ -1864,7 +1880,7 @@ export class PathBuilder {
                     yield { type: verb, p0: points[k - 4], p1: points[k - 3], p2: points[k - 2], p3: points[k - 1] }
                     break;
                 case PathVerb.Close:
-                    yield { type: verb,p0:lastMovePoint?.clone() }
+                    yield { type: verb, p0: lastMovePoint?.clone() }
                     break;
             }
         }
@@ -1896,41 +1912,41 @@ export class PathBuilder {
         this.toCanvas(path)
         return path
     }
-    toPolygons(closed=false){
+    toPolygons(closed = false) {
         const polygons: Point[][] = []
-        let polygon:Point[]|null =null
+        let polygon: Point[] | null = null
 
         this.visit({
             moveTo: (d) => {
-                if(polygon){
+                if (polygon) {
                     polygons.push(polygon)
                 }
-                polygon=[]
+                polygon = []
                 polygon.push(d.p0)
             },
             lineTo: (d) => {
                 polygon!.push(d.p0)
             },
             quadraticCurveTo: (d) => {
-                 const points = quadraticCurveToLines(d.p0!, d.p1!, d.p2!)
-                 points.forEach(p => polygon!.push(p))
+                const points = quadraticCurveToLines(d.p0!, d.p1!, d.p2!)
+                points.forEach(p => polygon!.push(p))
             },
             bezierCurveTo: (d) => {
-                const points = cubicCurveToLines(d.p0!, d.p1!, d.p2!,d.p3!)
+                const points = cubicCurveToLines(d.p0!, d.p1!, d.p2!, d.p3!)
                 points.forEach(p => polygon!.push(p))
             },
             closePath: (d) => {
-                if(polygon){
-                    if(closed){
+                if (polygon) {
+                    if (closed) {
                         polygon.push(d.lastMovePoint)
                     }
                     polygons.push(polygon)
-                    polygon=null
+                    polygon = null
 
                 }
             }
         })
-                if(polygon){
+        if (polygon) {
             polygons.push(polygon)
         }
         return polygons
@@ -1938,15 +1954,15 @@ export class PathBuilder {
 }
 
 
-export class Surface{
-    private currentPaint:Paint=Paint.default()
-    private paintStack:Paint[]=[]
-    private currentPath:PathBuilder=PathBuilder.default()
-    constructor(){
+export class Surface {
+    private currentPaint: Paint = Paint.default()
+    private paintStack: Paint[] = []
+    private currentPath: PathBuilder = PathBuilder.default()
+    constructor() {
         
     }
-    beginPath(){
-        this.currentPath=PathBuilder.default()
+    beginPath() {
+        this.currentPath = PathBuilder.default()
     }
     moveTo(x: number, y: number) {
         this.currentPath.moveTo(x, y)
@@ -1961,12 +1977,12 @@ export class Surface{
         this.currentPath.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
     }
     closePath() {
-        this.currentPath.close()
+        this.currentPath.closePath()
     }
-    stroke(){
+    stroke() {
 
     }
-    fill(){
+    fill() {
 
     }
 }
