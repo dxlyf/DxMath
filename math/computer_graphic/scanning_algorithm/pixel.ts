@@ -72,3 +72,53 @@ export class PixelRenderer {
 
 
 }
+
+
+type PixelGridRendererOptions = {
+    ctx: CanvasRenderingContext2D
+    width?:number
+    height?:number
+    scale?:number
+    offset?:number[]
+}
+
+export class PixelGridRenderer {
+    ctx: CanvasRenderingContext2D
+    width: number = 0
+    height: number = 0
+    dimensions:number=64
+    row:number=4
+    col:number=4
+    rows:number=10
+    cols:number=10
+    grid:{}[]=[]
+    constructor(opts: PixelGridRendererOptions) {
+        this.ctx = opts.ctx
+        this.width = this.cols*this.dimensions
+        this.height =this.rows*this.dimensions
+
+    }
+
+    setPixel(x: number, y: number, color: number[]) {
+        if(x>=0&&y>=0&&x<this.width&&y<this.height) {
+
+        }
+
+    }
+    drawAxis(x:number,y:number,x2:number,y2:number){
+        this.ctx.beginPath()
+        this.ctx.lineWidth=1
+        this.ctx.strokeStyle="black";
+        this.ctx.moveTo(x,y)
+        this.ctx.lineTo(x2,y2)
+        this.ctx.stroke()
+    }
+    draw(){
+        this.ctx.clearRect(0, 0,this.ctx.canvas.width, this.ctx.canvas.height)
+        this.ctx.save()
+
+        this.ctx.restore()
+    }
+
+
+}

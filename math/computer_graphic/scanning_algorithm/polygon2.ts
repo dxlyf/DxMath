@@ -1,4 +1,5 @@
 
+import { clamp } from '../../math/math';
 import { Vector2 } from '../../math/vec2';
 
 function lerp(a: number, b: number, t: number) {
@@ -235,7 +236,7 @@ export const fillPolygon = (polygons: Vector2[], setPixel: (x: number, y: number
                     // 计算覆盖范围
                     const coverageStart = Math.max(x1, pixelLeft);
                     const coverageEnd = Math.min(x2, pixelRight);
-                    const coverage = Math.min(1, coverageEnd - coverageStart)
+                    const coverage = clamp(coverageEnd - coverageStart,0,1)
 
                     if (coverage > 0) {
                         setPixel(x, y, coverage); // 传递覆盖率参数

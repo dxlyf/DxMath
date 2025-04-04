@@ -551,7 +551,7 @@ export const weilerAthertonClipper = (
           }
       }
   }
-
+  
   // 第二步：遍历收集结果多边形
   const result: number[][][] = [];
   for (const intersect of intersections) {

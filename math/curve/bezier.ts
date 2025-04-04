@@ -888,10 +888,15 @@ function pointOnSegmentDistance(pt: Vector2, a: Vector2, b: Vector2) {
 }
 // 点到直线的距离（带符号）
 function distancePointToLine(p: Point, a: Point, b: Point): number {
-
+    // Ax+By+C=0
+    // x0+t(x1-x0)=x y0+t(y1-y0)=y
+    // t=(x-x0)/(x1-x0) t=(y-y0)/(y1-y0)
+    // (x-x0)/(x1-x0)=(y-y0)/(y1-y0)
+    // (x-x0)*(y1-y0)=(y-y0)*(x1-x0)  dx=(x1-x0) dy=(y1-y0)
+    // A=dy B=-dx C=x0*dy-y0*dx=x0(y1-y0)-y0(x1-x0)=x0*y1-y0*x1
     const numerator = (b.y - a.y) * p.x + (a.x - b.x) * p.y + b.x * a.y - b.y * a.x;
     const denominator = Math.sqrt((b.y - a.y) ** 2 + (a.x - b.x) ** 2);
-    return Math.abs(numerator / denominator);
+    return Math.abs(numerator)/denominator;
 }
 // 计算最大弦高（更精确的平直度判断）
 function maxChordHeight(

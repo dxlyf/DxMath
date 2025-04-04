@@ -75,7 +75,7 @@ export default () => {
 
 
         ctx.drawOnce((ctx) => {
-            testDDA2(ctx)
+            testDDA(ctx)
         })
 
     }

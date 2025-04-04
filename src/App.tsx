@@ -56,6 +56,10 @@ function App() {
       path: '/scan/polygon',
       title:'polygon',
       element:loadLazyComponent(()=>import('./pages/scan/polygon')),
+    },  {
+      path: '/scan/polygon4',
+      title:'polygon4',
+      element:loadLazyComponent(()=>import('./pages/scan/polygon4')),
     }
   ] as RouteObject[],[])
 

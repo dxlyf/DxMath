@@ -126,8 +126,32 @@ export const randomCeil = (min: number, max: number) => {
 export const randomRound = (min: number, max: number) => {
     return Math.round(min + (max - min) * Math.random())
 }
-export const fract = (v) => {
+export const fract = (v:number) => {
     return v - Math.trunc(v)
+}
+// 向上取模 10%100=-90  -10%100=-10 
+// 返回的永远是负数
+export const ceilMod=(v:number,m:number)=>{
+    return v - Math.ceil(v / m) * m
+}
+
+// 向下取模 10%100=10 -10%100=90
+// 返回的永远是正数
+export const floorMod=(v:number,m:number)=>{
+    return v - Math.floor(v / m) * m
+}
+// 给定偏移和缩放和单位，计算起始坐标值
+// 用于标尺或网格的计算起点坐标值
+export const calcStartCoordinateValue=(unit:number,offset:number,scalar:number)=>{
+  //  const scalarUnit=unit*scalar
+     // return offset>0?offset-scalarUnit:offset
+    //return offset-Math.ceil(offset/scalarUnit)*scalarUnit
+    return ceilMod(offset,unit*scalar)
+}
+// 计算起始刻度值
+export const calcStartGraduationValue=(unit:number,offset:number,scalar:number)=>{
+    // return Math.floor(-offset/(unit*scalar))*unit
+     return -Math.ceil(offset/(unit*scalar))*unit
 }
 // -2%10 -2 2%10=2
 export const mod = (v: number, m: number) => {
