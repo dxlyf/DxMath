@@ -48,7 +48,7 @@ export class Transform{
     private get needUpdateScale() {
         return this.scale.x !== 1 || this.scale.y !== 1
     }
-    get parent() {
+    get parent():any {
         return this.owner && this.owner.parent ? this.owner.parent.transform : null
     }
     get angle() {
@@ -117,7 +117,7 @@ export class Transform{
     isIdentity() {
         return this.matrix.isIdentity()
     }
-    onChange(changeCallback) {
+    onChange(changeCallback:(v:Transform)=>void) {
         this.changeCallback = changeCallback
     }
     setFromMatrix(matrix:Matrix2D) {

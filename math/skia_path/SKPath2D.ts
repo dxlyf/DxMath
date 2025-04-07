@@ -150,7 +150,7 @@ export class SKPath2D{
         this._path.simplify()
         return this
     }
-    transform(...args:any[]){
+    transform(...args:Parameters<SkPath['transform']>){
         this._path.transform(...args)
         return this
     }
