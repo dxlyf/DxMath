@@ -40,7 +40,19 @@ export const lerp = linearInterpolation
 export const mix = (s: number, e: number, t: number) => {
     return s * (1 - t) + e * t
 }
+export function isLinear(curve: Point[]) {
+    const [P0, P1, P2, P3] = curve;
 
+    // 计算向量P0->P3的方向
+    const dx = P3.x - P0.x;
+    const dy = P3.y - P0.y;
+
+    // 检查P1和P2是否在P0-P3连线上
+    const cross1 = (P1.x - P0.x) * dy - (P1.y - P0.y) * dx;
+    const cross2 = (P2.x - P0.x) * dy - (P2.y - P0.y) * dx;
+
+    return Math.abs(cross1) < 1e-6 && Math.abs(cross2) < 1e-6;
+}
 
 
 // 有理贝塞尔曲线算法
@@ -113,16 +125,16 @@ export const quadraticRationBezierSubdivideAt = (pts: Vector2[], weights: number
 
 // 根据t点细分三次贝塞尔曲线
 export const cubicBezierSubdivideAt = (p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, t: number) => {
-    const q0 = Vector2.lerp(p0,p1,t)
-    const q1 = Vector2.lerp(p1,p2,t)
-    const q2 = Vector2.lerp(p2,p3,t)
+    const q0 = Vector2.lerp(p0, p1, t)
+    const q1 = Vector2.lerp(p1, p2, t)
+    const q2 = Vector2.lerp(p2, p3, t)
 
-    const s0=Vector2.lerp(q0,q1,t)
-    const s1=Vector2.lerp(q1,q2,t)
+    const s0 = Vector2.lerp(q0, q1, t)
+    const s1 = Vector2.lerp(q1, q2, t)
 
-    const c0=Vector2.lerp(s0,s1,t)
+    const c0 = Vector2.lerp(s0, s1, t)
 
-    return [p0,q0,s0,c0,s1,q2,p3];
+    return [p0, q0, s0, c0, s1, q2, p3];
 }
 // 二次贝塞尔曲线细分
 export const quadraticBezierSubdivide = (p0: Vector2, p1: Vector2, p2: Vector2) => {
@@ -165,6 +177,51 @@ export const cubicBezierBounds = (p0: Point, p1: Point, p2: Point, p3: Point) =>
         max
     }
 }
+export function getTOnQuadraticBezier(p0: Point, p1: Point, p2: Point, pt: Vector2, tolerance = 1e-6) {
+
+    let lower = 0, upper = 1;
+    let t;
+    for (let i = 0; i < 100; i++) {
+        t = (lower + upper) / 2;
+        const value = quadraticBezier(p0, p1, p2, t);
+
+        if (value.distanceTo(pt) < tolerance) {
+            return t;
+        }
+
+        if (value.distanceToSquared(p0) < pt.distanceToSquared(p0)) {
+            lower = t;
+        } else {
+            upper = t;
+        }
+    }
+
+    return t; // 近似解
+}
+function getTOnCubicBezier(p0: Point, p1: Point, p2: Point, p3: Point, pt: Vector2, tolerance = 1e-6) {
+
+
+    let lower = 0, upper = 1;
+    let t;
+
+    for (let i = 0; i < 100; i++) {
+        t = (lower + upper) / 2;
+        const value = cubicBezier(p0, p1, p2, p3, t);
+
+        if (pt.distanceTo(value) < tolerance) {
+            return t;
+        }
+
+        if (value.distanceToSquared(p0) < pt.distanceToSquared(p0)) {
+            lower = t;
+        } else {
+            upper = t;
+        }
+    }
+
+    return t; // 近似解
+}
+
 // 根据点求在二次贝塞尔曲线上的t值
 export const quadraticBezierT = (p0: Point, p1: Point, p2: Point, pt: Vector2) => {
     const a = {
@@ -460,8 +517,8 @@ export const bezierDerivative = (pts: Point[], t: number) => {
     const n = pts.length - 1;
     let ret = { x: 0, y: 0 }
     for (let i = 0; i < n; i++) {
-        ret.x += n * bernstein(i,n-1,t)* (pts[i + 1].x - pts[i].x)
-        ret.y += n * bernstein(i,n-1,t) * (pts[i + 1].y - pts[i].y)
+        ret.x += n * bernstein(i, n - 1, t) * (pts[i + 1].x - pts[i].x)
+        ret.y += n * bernstein(i, n - 1, t) * (pts[i + 1].y - pts[i].y)
     }
     return ret
 }
@@ -470,8 +527,8 @@ export const bezierSecondDerivative = (pts: Point[], t: number) => {
     const n = pts.length - 1;
     let ret = { x: 0, y: 0 }
     for (let i = 0; i < n - 1; i++) {
-        ret.x += n * (n - 1) * bernstein(i,n-2,t) * (pts[i + 2].x - 2 * pts[i + 1].x + pts[i].x)
-        ret.y += n * (n - 1) * bernstein(i,n-2,t) * (pts[i + 2].y - 2 * pts[i + 1].y + pts[i].y)
+        ret.x += n * (n - 1) * bernstein(i, n - 2, t) * (pts[i + 2].x - 2 * pts[i + 1].x + pts[i].x)
+        ret.y += n * (n - 1) * bernstein(i, n - 2, t) * (pts[i + 2].y - 2 * pts[i + 1].y + pts[i].y)
     }
     return ret
 }
@@ -523,7 +580,7 @@ const k = 2; // 计算二阶导数
 // 获取k阶导数控制点
 const derivativePoints = bezierKthDerivative(controlPoints, k);
  */
-export function bezierKthDerivative(points:Vector2[], k:number) {
+export function bezierKthDerivative(points: Vector2[], k: number) {
     const n = points.length - 1;
     if (k > n) return []; // 超出阶数时返回空数组
     if (k === 0) return points.slice(); // 0阶导数返回原曲线副本
@@ -896,7 +953,7 @@ function distancePointToLine(p: Point, a: Point, b: Point): number {
     // A=dy B=-dx C=x0*dy-y0*dx=x0(y1-y0)-y0(x1-x0)=x0*y1-y0*x1
     const numerator = (b.y - a.y) * p.x + (a.x - b.x) * p.y + b.x * a.y - b.y * a.x;
     const denominator = Math.sqrt((b.y - a.y) ** 2 + (a.x - b.x) ** 2);
-    return Math.abs(numerator)/denominator;
+    return Math.abs(numerator) / denominator;
 }
 // 计算最大弦高（更精确的平直度判断）
 function maxChordHeight(
@@ -915,14 +972,14 @@ function maxChordHeight(
 // 二次贝塞尔曲线扁平化转成线段
 export function quadraticCurveToLines(p0: Vector2, p1: Vector2, p2: Vector2, tessellationTolerance: number = 0.5) {
     const points: Vector2[] = []
-    const subdivide = (p0: Vector2, p1: Vector2, p2: Vector2,maxDeep:number=100) => {
+    const subdivide = (p0: Vector2, p1: Vector2, p2: Vector2, maxDeep: number = 100) => {
         const dist = pointOnSegmentDistance(p1, p0, p2)
-        if (dist < tessellationTolerance||maxDeep<=0) {
+        if (dist < tessellationTolerance || maxDeep <= 0) {
             points.push(p2)
         } else {
             const [q0, q1, q2, q3, q4] = quadraticBezierSubdivide(p0, p1, p2)
-            subdivide(q0, q1, q2,maxDeep-1)
-            subdivide(q2, q3, q4,maxDeep-1)
+            subdivide(q0, q1, q2, maxDeep - 1)
+            subdivide(q2, q3, q4, maxDeep - 1)
         }
     }
     subdivide(p0, p1, p2)
@@ -932,7 +989,7 @@ export function quadraticCurveToLines(p0: Vector2, p1: Vector2, p2: Vector2, tes
 // 三次贝塞尔曲线扁平化转成线段
 export function cubicCurveToLines(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, tessellationTolerance: number = 0.5) {
     const points: Vector2[] = []
-    const subdivide = (p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2,maxDeep:number=100) => {
+    const subdivide = (p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, maxDeep: number = 100) => {
         // const mid=cubicBezier(p0,p1,p2,p3,0.5)
         // const dist0=pointOnSegmentDistance(mid,p0,p3)  
         const dist1 = distancePointToLine(p1, p0, p3)
@@ -940,12 +997,12 @@ export function cubicCurveToLines(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vec
         const dist = Math.max(dist1, dist2)
         // 计算平直度误差（使用最大弦高）
         //  const chordHeight = maxChordHeight(p0, p3, p1, p2, mid);
-        if (dist < tessellationTolerance||maxDeep<=0) {
+        if (dist < tessellationTolerance || maxDeep <= 0) {
             points.push(p3)
         } else {
             const [q0, q1, q2, q3, q4, q5, q6] = cubicBezierSubdivide(p0, p1, p2, p3)
-            subdivide(q0, q1, q2, q3,maxDeep-1)
-            subdivide(q3, q4, q5, q6,maxDeep-1)
+            subdivide(q0, q1, q2, q3, maxDeep - 1)
+            subdivide(q3, q4, q5, q6, maxDeep - 1)
         }
     }
     subdivide(p0, p1, p2, p3)
@@ -1079,6 +1136,40 @@ export function subdivideRationalBezier(points: Vector2[], weights: number[], t:
     return { leftCurve, rightCurve };
 }
 
+/** 
+ * 导数曲线的控制点可以用来计算B’(t)
+ * 计算导数曲线的控制点，可以使用以下公式：
+
+*/
+export function derivativeControlPoints(controlPoints: Point[]) {
+
+    const n = controlPoints.length - 1;
+
+    const dPoints = [];
+
+    for (let i = 0; i < n; i++) {
+
+        const dx = controlPoints[i + 1].x - controlPoints[i].x;
+
+        const dy = controlPoints[i + 1].y - controlPoints[i].y;
+
+        dPoints.push(Vector2.create(n * dx, n * dy));
+
+    }
+
+    return dPoints;
+
+}
+//     例如，对于贝塞尔曲线，二阶导数的控制点可以由一阶导数的控制点再次求导得到。例如，原控制点是P0,P1,P2,P3（三阶），一阶导数的控制点是3(P1-P0), 3(P2-P1), 3(P3-P2)。然后二阶导数的控制点是 2*(导数控制点的差分)，即 2*[3(P2-P1)-3(P1-P0)] = 6(P2 - 2P1 + P0)，对于三阶来说，二阶导数是线性的。
+// 所以，可以写一个函数来求二阶导数的控制点：
+
+export function secondDerivativeControlPoints(controlPoints: Point[]) {
+
+    const firstDeriv = derivativeControlPoints(controlPoints);
+
+    return derivativeControlPoints(firstDeriv);
+
+}
 /**
  * 将二次有理贝塞尔曲线细分为普通二次贝塞尔曲线
  * @param {Object} P0 起点坐标，格式 { x: number, y: number }
@@ -1146,7 +1237,7 @@ function subdivideRationalCurve(P0: Vector2, P1: Vector2, P2: Vector2, w0: numbe
 }
 
 /** 线性插值 */
-function lerpVec3(a:any, b:any, t:number) {
+function lerpVec3(a: any, b: any, t: number) {
     return {
         x: (1 - t) * a.x + t * b.x,
         y: (1 - t) * a.y + t * b.y,
@@ -1160,4 +1251,175 @@ function areWeightsConvertible(w0, w1, w2, tolerance) {
     const avg = (w0 + w1 + w2) / 3;
     const variance = (Math.pow(w0 - avg, 2) + Math.pow(w1 - avg, 2) + Math.pow(w2 - avg, 2)) / 3;
     return variance <= tolerance;
+}
+
+/**
+ * 计算三次贝塞尔曲线在参数 t 处的坐标
+ * @param {number} t 参数 (0 ≤ t ≤ 1)
+ * @param {number[]} P0 起点 [x, y]
+ * @param {number[]} P1 控制点1 [x, y]
+ * @param {number[]} P2 控制点2 [x, y]
+ * @param {number[]} P3 终点 [x, y]
+ * @returns {number[]} 曲线上的点 [x, y]
+ */
+function bezierPoint(t, P0, P1, P2, P3) {
+    const t1 = 1 - t;
+    return [
+        t1 ** 3 * P0[0] + 3 * t1 ** 2 * t * P1[0] + 3 * t1 * t ** 2 * P2[0] + t ** 3 * P3[0],
+        t1 ** 3 * P0[1] + 3 * t1 ** 2 * t * P1[1] + 3 * t1 * t ** 2 * P2[1] + t ** 3 * P3[1]
+    ];
+}
+
+
+
+/**
+ * 判断点 Q 是否在贝塞尔曲线上（基于牛顿迭代法）
+ * @param {number[]} Q 待检测点 [x, y]
+ * @param {number[]} P0-P3 贝塞尔曲线控制点
+ * @param {number} epsilon 容差（默认2像素）
+ * @returns {boolean}
+ */
+function isPointOnBezier(Q, P0, P1, P2, P3, epsilon = 2) {
+    let t = 0.5; // 初始猜测参数
+    let delta = Infinity;
+
+    // 牛顿迭代优化（最多10次）
+    for (let i = 0; i < 10 && Math.abs(delta) > 1e-6; i++) {
+        const B = bezierPoint(t, P0, P1, P2, P3);
+        const dB = bezierDerivative(t, P0, P1, P2, P3);
+        const d2B = bezierSecondDerivative(t, P0, P1, P2, P3);
+
+        // 计算 f(t) 和 f'(t)
+        const dx = B[0] - Q[0], dy = B[1] - Q[1];
+        const f = dx * dB[0] + dy * dB[1]; // f(t) = (B - Q) · dB/dt
+        const df = (dB[0] ** 2 + dB[1] ** 2) + (dx * d2B[0] + dy * d2B[1]); // f'(t)
+
+        if (Math.abs(df) < 1e-6) break; // 防止除以零
+        delta = f / df;
+        t = Math.max(0, Math.min(1, t - delta)); // 更新 t 并限制范围
+    }
+
+    // 计算最终距离
+    const B = bezierPoint(t, P0, P1, P2, P3);
+    const distance = Math.hypot(B[0] - Q[0], B[1] - Q[1]);
+    return distance < epsilon;
+}
+
+
+function cubicBezierPoint(t, P0, P1, P2, P3) {
+    const u = 1 - t;
+    const tt = t * t;
+    const uu = u * u;
+    const uuu = uu * u;
+    const ttt = tt * t;
+  
+    return {
+      x: uuu * P0.x + 3 * uu * t * P1.x + 3 * u * tt * P2.x + ttt * P3.x,
+      y: uuu * P0.y + 3 * uu * t * P1.y + 3 * u * tt * P2.y + ttt * P3.y
+    };
+  }
+  
+  function cubicBezierDerivative(t, P0, P1, P2, P3) {
+    const u = 1 - t;
+    return {
+      x: 3 * u * u * (P1.x - P0.x) + 6 * u * t * (P2.x - P1.x) + 3 * t * t * (P3.x - P2.x),
+      y: 3 * u * u * (P1.y - P0.y) + 6 * u * t * (P2.y - P1.y) + 3 * t * t * (P3.y - P2.y)
+    };
+  }
+  
+  function cubicBezierSecondDerivative(t, P0, P1, P2, P3) {
+    const u = 1 - t;
+    return {
+      x: 6 * u * (P2.x - 2 * P1.x + P0.x) + 6 * t * (P3.x - 2 * P2.x + P1.x),
+      y: 6 * u * (P2.y - 2 * P1.y + P0.y) + 6 * t * (P3.y - 2 * P2.y + P1.y)
+    };
+  }
+  
+  function getClosestTOnCubicBezier_Newton(P0, P1, P2, P3, P, tolerance = 1e-6, maxSteps = 20) {
+    // 初值，先用采样法
+    let bestT = 0, minDist = Infinity;
+    for (let i = 0; i <= 100; i++) {
+      const t = i / 100;
+      const pt = cubicBezierPoint(t, P0, P1, P2, P3);
+      const dx = pt.x - P.x;
+      const dy = pt.y - P.y;
+      const dist = dx * dx + dy * dy;
+      if (dist < minDist) {
+        minDist = dist;
+        bestT = t;
+      }
+    }
+  
+    // 牛顿迭代 refine
+    let t = bestT;
+    for (let i = 0; i < maxSteps; i++) {
+      const pt = cubicBezierPoint(t, P0, P1, P2, P3);
+      const d1 = cubicBezierDerivative(t, P0, P1, P2, P3);
+      const d2 = cubicBezierSecondDerivative(t, P0, P1, P2, P3);
+  
+      const dx = pt.x - P.x;
+      const dy = pt.y - P.y;
+  
+      const f = 2 * (dx * d1.x + dy * d1.y);
+      const fPrime = 2 * (d1.x * d1.x + d1.y * d1.y + dx * d2.x + dy * d2.y);
+  
+      // 防止除0或极小值导致发散
+      if (Math.abs(fPrime) < 1e-10) break;
+  
+      const tNext = t - f / fPrime;
+  
+      // 保证在 [0,1] 范围内
+      const tClamped = Math.max(0, Math.min(1, tNext));
+  
+      if (Math.abs(tClamped - t) < tolerance) {
+        t = tClamped;
+        break;
+      }
+  
+      t = tClamped;
+    }
+  
+    return t;
+  }
+  function getClosestTOnCubicBezier2(p0, p1, p2, p3, p, steps = 100, tolerance = 1e-6) {
+    let minDist = Infinity, bestT = 0;
+
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const pt = cubicBezierPoint(p0, p1, p2, p3, t);
+        const dx = pt.x - p.x;
+        const dy = pt.y - p.y;
+        const dist = dx * dx + dy * dy;
+        if (dist < minDist) {
+            minDist = dist;
+            bestT = t;
+        }
+    }
+
+    let lower = Math.max(0, bestT - 1 / steps);
+    let upper = Math.min(1, bestT + 1 / steps);
+    let t;
+    for (let i = 0; i < 30; i++) {
+        t = (lower + upper) / 2;
+        const pt = cubicBezierPoint(p0, p1, p2, p3, t);
+        const dx = pt.x - p.x;
+        const dy = pt.y - p.y;
+        const dist = dx * dx + dy * dy;
+
+        const ptLower = cubicBezierPoint(p0, p1, p2, p3, t);
+        const distLower = (ptLower.x - p.x) ** 2 + (ptLower.y - p.y) ** 2;
+
+        const ptUpper = cubicBezierPoint(p0, p1, p2, p3, t);
+        const distUpper = (ptUpper.x - p.x) ** 2 + (ptUpper.y - p.y) ** 2;
+
+        if (distLower < distUpper) {
+            upper = t;
+        } else {
+            lower = t;
+        }
+
+        if (Math.abs(upper - lower) < tolerance) break;
+    }
+
+    return (lower + upper) / 2;
 }

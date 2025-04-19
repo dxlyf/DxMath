@@ -90,15 +90,34 @@ export  const rationalBezier=(controls:Vector2[],weight:number[],t:number)=>{
 // 数值微分，求近似导数
 // 中心差分= ∫'(x)=dy/dx
 // dy=dx*∫'(x)
-export const centralDifference = (fn, h: number, ...args) => {
+export const centralDifference = (fn:any, h: number, ...args:any[]) => {
     return (fn(...args.map(d => d + h)) - fn(...args.map(d => d - h))) / (2 * h)
 }
+// 求导
+// 计算 d/dx f(x)
+export function derivative(f:(x:number)=>number, x:number, h:number = 1e-5) {
+    return (f(x + h) - f(x - h)) / (2 * h);
+}
+// 多变量偏导 d/dx, d/dy, d/dt
+// 示例
+// const g = (x, y) => x ** 2 + y ** 3;
+// console.log(partialDerivative(g, 0, [2, 3])); // ∂g/∂x ≈4
+export function partialDerivative(f:(...args:number[])=>number, varIndex:number, point:number[], h = 1e-5) {
+    const shifted = [...point];
+    shifted[varIndex] += h;
+    const fPlus = f(...shifted);
+    shifted[varIndex] -= 2 * h;
+    const fMinus = f(...shifted);
+    return (fPlus - fMinus) / (2 * h);
+}
+
+
 // 前向差分
-export const forwardDifferential = (fn, h, ...args) => {
+export const forwardDifferential = (fn:any, h:number, ...args:any[]) => {
     return (fn(...args.map(d => d + h)) - fn(...args)) / h
 }
 // 后向差分
-export const backwardDifferential = (fn, h, ...args) => {
+export const backwardDifferential = (fn:any, h:number, ...args:any[]) => {
     return (fn(...args) - fn(...args.map(d => d - h))) / h
 }
 export const degreesToRadian = (degrees:number) => {
