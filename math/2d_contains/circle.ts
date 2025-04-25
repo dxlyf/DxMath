@@ -36,7 +36,7 @@ export function isPointInCircle(
  * @param epsilon 允许的误差范围（默认 0）
  * @returns 是否在指定边线范围内
  */
-function isPointOnCircleEdge(
+export function isPointOnCircleEdge(
   x: number,
   y: number,
   h: number = 0,

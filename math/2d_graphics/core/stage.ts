@@ -1,4 +1,4 @@
 
-export class Stage{
-    renderer:
+export class Application{
+
 }

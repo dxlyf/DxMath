@@ -80,7 +80,7 @@ export class Int26_6 {
     return this.set(this.value - other.value)
   }
   mul(other: Int26_6) {
-    return this.set((this.value * other.value) >> Int26_6.SHIFT)
+    return this.set(this.value * (other.value>> Int26_6.SHIFT))
   }
   div(other: Int26_6) {
     return this.set((this.value << Int26_6.SHIFT) / other.value)

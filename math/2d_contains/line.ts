@@ -9,7 +9,7 @@ type Point = { x: number; y: number };
  * @param inclusive 是否包含线段的端点（默认 true）
  * @returns 是否在线段上
  */
-function isPointOnLineSegment(
+export function isPointOnLineSegment(
   point: Point,
   start: Point,
   end: Point,

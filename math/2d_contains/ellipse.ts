@@ -9,7 +9,7 @@
  * @param {number} [rotation=0] - 椭圆的旋转角度（弧度，默认 0）
  * @returns {boolean} 点是否在椭圆内
  */
-function isPointInEllipse(x: number, y: number, h: number, k: number, a: number, b: number, rotation: number = 0) {
+export function isPointInEllipse(x: number, y: number, h: number, k: number, a: number, b: number, rotation: number = 0) {
     // 将点平移到以椭圆中心为原点
     const translatedX = x - h;
     const translatedY = y - k;

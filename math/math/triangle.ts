@@ -1,3 +1,5 @@
+//@ts-nocheck
+
 import { Vector3 } from './vec3';
 import { Vector4 } from './vec4';
 

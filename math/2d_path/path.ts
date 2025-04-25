@@ -1427,8 +1427,8 @@ export class Path {
     }
     computeTightBounds() {
         const bounds = BoundingRect.default()
-        for (let [verb, d] of this) {
-            switch (verb) {
+        for (let d of this) {
+            switch (d.type) {
                 case PathVerb.MoveTo:
                     bounds.expandByPoint(d.p0!)
 

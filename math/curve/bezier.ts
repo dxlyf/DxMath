@@ -1279,7 +1279,7 @@ function bezierPoint(t, P0, P1, P2, P3) {
  * @param {number} epsilon 容差（默认2像素）
  * @returns {boolean}
  */
-function isPointOnBezier(Q, P0, P1, P2, P3, epsilon = 2) {
+export function isPointOnBezier(Q, P0, P1, P2, P3, epsilon = 2) {
     let t = 0.5; // 初始猜测参数
     let delta = Infinity;
 
@@ -1306,7 +1306,7 @@ function isPointOnBezier(Q, P0, P1, P2, P3, epsilon = 2) {
 }
 
 
-function cubicBezierPoint(t, P0, P1, P2, P3) {
+export function cubicBezierPoint(t, P0, P1, P2, P3) {
     const u = 1 - t;
     const tt = t * t;
     const uu = u * u;
@@ -1319,7 +1319,7 @@ function cubicBezierPoint(t, P0, P1, P2, P3) {
     };
   }
   
-  function cubicBezierDerivative(t, P0, P1, P2, P3) {
+  export function cubicBezierDerivative(t, P0, P1, P2, P3) {
     const u = 1 - t;
     return {
       x: 3 * u * u * (P1.x - P0.x) + 6 * u * t * (P2.x - P1.x) + 3 * t * t * (P3.x - P2.x),
@@ -1327,7 +1327,7 @@ function cubicBezierPoint(t, P0, P1, P2, P3) {
     };
   }
   
-  function cubicBezierSecondDerivative(t, P0, P1, P2, P3) {
+  export function cubicBezierSecondDerivative(t, P0, P1, P2, P3) {
     const u = 1 - t;
     return {
       x: 6 * u * (P2.x - 2 * P1.x + P0.x) + 6 * t * (P3.x - 2 * P2.x + P1.x),
@@ -1335,7 +1335,7 @@ function cubicBezierPoint(t, P0, P1, P2, P3) {
     };
   }
   
-  function getClosestTOnCubicBezier_Newton(P0, P1, P2, P3, P, tolerance = 1e-6, maxSteps = 20) {
+  export function getClosestTOnCubicBezier_Newton(P0, P1, P2, P3, P, tolerance = 1e-6, maxSteps = 20) {
     // 初值，先用采样法
     let bestT = 0, minDist = Infinity;
     for (let i = 0; i <= 100; i++) {
@@ -1381,7 +1381,7 @@ function cubicBezierPoint(t, P0, P1, P2, P3) {
   
     return t;
   }
-  function getClosestTOnCubicBezier2(p0, p1, p2, p3, p, steps = 100, tolerance = 1e-6) {
+  export function getClosestTOnCubicBezier2(p0, p1, p2, p3, p, steps = 100, tolerance = 1e-6) {
     let minDist = Infinity, bestT = 0;
 
     for (let i = 0; i <= steps; i++) {

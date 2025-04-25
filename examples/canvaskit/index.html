@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <canvas id="canvas" width="500" height="500"></canvas>
+    <script type="module">
+        import * as canvaskit  from '../../dist/canvaskit.es.js'
+                import * as math  from '../../dist/math.es.js'
+        console.log('canvaskit',canvaskit)
+        window.math=math
+        window.canvaskit=canvaskit
+        let CanvasKit
+        canvaskit.initializeCanvasKit().then(_CanvasKit=>{
+            CanvasKit=_CanvasKit
+            console.log('CanvasKit',CanvasKit.ColorMatrix)
+            window.CanvasKit=_CanvasKit
+            const surface=CanvasKit.MakeWebGLCanvasSurface('canvas')
+            const canvas=surface.getCanvas()
+            const paint=new CanvasKit.Paint()
+            paint.setColor(CanvasKit.Color(255, 0, 0, 1.0))
+            paint.setStrokeWidth(5)
+            paint.setStyle(CanvasKit.PaintStyle.Stroke)
+            paint.setStrokeCap(CanvasKit.StrokeCap.Round)    
+            paint.setStrokeJoin(CanvasKit.StrokeJoin.Round)
+         
+
+
+            const path=new CanvasKit.Path()
+            path.moveTo(10, 10)
+            path.lineTo(100, 10)
+            path.lineTo(100, 100)
+            path.lineTo(10, 100)
+            path.close()
+            canvas.drawPath(path, paint)
+            surface.flush()
+
+
+
+
+
+
+
+
+
+
+        })
+    </script>
+    
+</body>
+</html>

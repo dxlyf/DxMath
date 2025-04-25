@@ -1,84 +1,106 @@
 
 import PathKitInit from './pathkit.js'
-import type {PathKit as PathKitLib} from './pathkit.js'
+import type { PathKit as PathKitLib } from './pathkit.js'
+import pathKitWasmUrl from './pathkit.wasm?url'
 
-export const PathKit=await PathKitInit({
-    locateFile(file){
-        return import.meta.resolve('./'+file,import.meta.url)
+let PathKit: typeof PathKitLib
+export const getPathKit = async () => {
+    if (PathKit) {
+        return PathKit
     }
-})
-
-type SkPath= PathKitLib.SkPath
-type StrokeOptions= PathKitLib.StrokeOpts
-type FillType= PathKitLib.FillType
-
-export const CANVAS_LINE_JOIN_MAP={
-    'round':PathKit.StrokeJoin.ROUND,
-    'bevel':PathKit.StrokeJoin.BEVEL,
-    'miter':PathKit.StrokeJoin.MITER,
+    PathKit = await PathKitInit({
+        locateFile: () => pathKitWasmUrl,
+    })
+    return PathKit
 }
-export const CANVAS_LINE_CAP_MAP={
-    'round':PathKit.StrokeCap.ROUND,
-    'butt':PathKit.StrokeCap.BUTT,
-    'square':PathKit.StrokeCap.SQUARE,
+type SkPath = PathKitLib.SkPath
+type StrokeOptions = PathKitLib.StrokeOpts
+
+export enum StrokeJoin {
+    MITER,
+    ROUND,
+    BEVEL
 }
-export class SKPath2D{
-    static fromSvgPath(svgPath:string){
+export enum StrokeCap {
+    BUTT,
+    ROUND,
+    SQUARE
+}
+// 这些用于PathKit.MakeFromOp()和SkPath.op()
+export enum PathOp {
+    DIFFERENCE,
+    INTERSECT,
+    REVERSE_DIFFERENCE,
+    UNION,
+    XOR
+}
+export enum FillType {
+    WINDING,// 非零
+    EVENODD,// 奇偶
+    INVERSE_WINDING,// 填充外部
+    INVERSE_EVENODD
+}
+
+export class SKPath2D {
+    static async initializePathKit(){
+          await getPathKit() 
+    }
+    static fromSvgPath(svgPath: string) {
         return new this(svgPath)
     }
     /**@type {import('./pathkit.d.ts').PathKit.SkPath} */
-    _path:PathKitLib.SkPath
-    constructor(path?:SKPath2D|string){
-
-        if(path instanceof SKPath2D){
-            this._path=PathKit.NewPath(path._path)
-        }else if(typeof path==='string'){
-            this._path=PathKit.FromSVGString(path)
-        }else{
-            this._path=PathKit.NewPath()
+    _path: PathKitLib.SkPath
+    constructor(path?: SKPath2D | string) {
+        if (path instanceof SKPath2D) {
+            this._path = PathKit.NewPath(path._path)
+        } else if (typeof path === 'string') {
+            this._path = PathKit.FromSVGString(path)
+        } else {
+            this._path = PathKit.NewPath()
         }
     }
-    addPath(...args:Parameters<PathKitLib.SkPath['addPath']>){
+    
+    addPath(...args: Parameters<PathKitLib.SkPath['addPath']>) {
         this._path.addPath(...args)
         return this
     }
-    clone(){
-        let a=new SKPath2D()
-        a._path=this._path.copy()
+    clone() {
+        let a = new SKPath2D()
+        a._path = this._path.copy()
         return a
     }
-    moveTo(x:number,y:number){
-        this._path.moveTo(x,y)
+    moveTo(x: number, y: number) {
+        this._path.moveTo(x, y)
     }
-    lineTo(x:number,y:number){
-        this._path.lineTo(x,y)
+    lineTo(x: number, y: number) {
+        this._path.lineTo(x, y)
     }
-    quadraticCurveTo(cp1x:number, cp1y:number, x:number, y:number){
+    quadraticCurveTo(cp1x: number, cp1y: number, x: number, y: number) {
         this._path.quadraticCurveTo(cp1x, cp1y, x, y);
     }
-    bezierCurveTo(cp1x:number, cp1y:number, cp2x:number, cp2y:number, x:number, y:number){
+    bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number) {
         this._path.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
     }
-    arc(x:number,y:number,radius:number,startAngle:number,endAngle:number,ccw=false){
-        this._path.arc(x,y,radius,startAngle,endAngle,ccw)
+    arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, ccw = false) {
+        this._path.arc(x, y, radius, startAngle, endAngle, ccw)
     }
-    ellipse(x:number, y:number, radiusX:number, radiusY:number, rotation:number, startAngle:number, endAngle:number, ccw=false){
+    ellipse(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, ccw = false) {
         this._path.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, ccw)
         return this
     }
-    conicTo(x1:number,y1:number,x:number,y:number,w:number){
-        this._path.conicTo(x1,y1,x,y,w)
+    conicTo(x1: number, y1: number, x: number, y: number, w: number) {
+        this._path.conicTo(x1, y1, x, y, w)
     }
-    arcTo(x1:number, y1:number, x2:number, y2:number, radius:number){
+    arcTo(x1: number, y1: number, x2: number, y2: number, radius: number) {
         this._path.arcTo(x1, y1, x2, y2, radius)
     }
-    dash(on:number,off:number,phase:number){
-        this._path.dash(on,off,phase)
+    dash(on: number, off: number, phase: number) {
+        this._path.dash(on, off, phase)
     }
-    rect(x:number,y:number,w:number,h:number){
-        this._path.rect(x,y,w,h)
+    rect(x: number, y: number, w: number, h: number) {
+        this._path.rect(x, y, w, h)
     }
-    roundRect(x:number, y:number, width:number, height:number, radius:number|number|{tl:number,tr:number,br:number,bl:number}) {
+    roundRect(x: number, y: number, width: number, height: number, radius: number | number | { tl: number, tr: number, br: number, bl: number }) {
         let ctx = this;
         // 如果 radius 是数字，统一处理为四个角的半径
         if (typeof radius === 'number') {
@@ -108,13 +130,13 @@ export class SKPath2D{
 
         ctx.closePath(); // 闭合路径
     }
-    closePath(){
+    closePath() {
         this._path.closePath()
     }
-    getFillTypeString(){
+    getFillTypeString() {
         return this._path.getFillTypeString()
     }
-    getFillType(){
+    getFillType() {
         return this._path.getFillType()
     }
     /**
@@ -122,51 +144,51 @@ export class SKPath2D{
      * @param {import('./pathkit.d.ts').PathKit.FillType} fillType 
      * @returns 
      */
-    setFillType(fillType:FillType){
-        
+    setFillType(fillType: FillType) {
+
         return this._path.setFillType(fillType)
     }
     /**
      * 
      * @param {import('./pathkit.d.ts').StrokeOptions} opts 
      */
-    stroke(opts:StrokeOptions){
+    stroke(opts: StrokeOptions) {
         this._path.stroke(opts)
-    
+
     }
     /**
      * 
      * @param {SKPath2D} otherPath 
      * @param {import('./pathkit.d.ts').PathKit.PathOp} operation 
      */
-    op(otherPath:SKPath2D, operation:PathKitLib.PathOp){
-        this._path.op(otherPath._path,operation)
+    op(otherPath: SKPath2D, operation: PathKitLib.PathOp) {
+        this._path.op(otherPath._path, operation)
         return this
     }
-    contains(x:number,y:number){
-        return this._path.contains(x,y)
+    contains(x: number, y: number) {
+        return this._path.contains(x, y)
     }
-    simplify(){
+    simplify() {
         this._path.simplify()
         return this
     }
-    transform(...args:Parameters<SkPath['transform']>){
+    transform(...args: Parameters<SkPath['transform']>) {
         this._path.transform(...args)
         return this
     }
-    toPath2D(){
+    toPath2D() {
         return this._path.toPath2D()
     }
-    toSVGString(){
+    toSVGString() {
         return this._path.toSVGString()
     }
-    getBounds(){
+    getBounds() {
         return this._path.getBounds()
     }
-    computeTightBounds(){
+    computeTightBounds() {
         return this._path.computeTightBounds()
     }
-    toCanvas(ctx:CanvasRenderingContext2D){
+    toCanvas(ctx: CanvasRenderingContext2D) {
         return this._path.toCanvas(ctx)
     }
 } 

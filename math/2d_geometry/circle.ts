@@ -13,6 +13,17 @@ export class Circle{
     contains(point:Vector2):boolean{
         return this.center.distanceToSquared(point)<=this.radius*this.radius
     }
+    strokeContains(point:Vector2,width:number,alignment:number=0.5):boolean{
+        if (this.radius === 0){
+            return false;
+        }
+        const dx = (this.center.x - point.x);
+        const dy = (this.center.y - point.y);
+        const radius = this.radius;
+        const outerWidth = (1 - alignment) * width;
+        const distance = Math.sqrt((dx * dx) + (dy * dy));
+        return distance <=(radius + outerWidth)&&distance > (radius-(width-outerWidth));
+    }
     intersectionFromCircle(circle:Circle):Vector2[]{
         const intersections:Vector2[]=[]
         const d=this.center.distanceTo(circle.center)

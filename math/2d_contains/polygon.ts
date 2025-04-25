@@ -2,7 +2,7 @@ type Point = { x: number; y: number };
 
 type FillRule="evenodd" | "nonzero" 
 // 点是否在多边形内
-const pointInPolygon2 = (point: Point,polygon: Point[],fillRule:FillRule='nonzero'): boolean => {
+export const pointInPolygon2 = (point: Point,polygon: Point[],fillRule:FillRule='nonzero'): boolean => {
   let winding = 0;
   for (let i = 0; i < polygon.length; i++) {
       const p1 = polygon[i];
@@ -113,7 +113,7 @@ export function isPointInPolygon(point: Point, polygon: Point[]): boolean {
 /**
  * 判断点是否在线段上（简化版，不含误差）
  */
-export function isPointOnLineSegment(p: Point, a: Point, b: Point): boolean {
+export function isPointOnLineSegment2(p: Point, a: Point, b: Point): boolean {
   // 检查点是否在线段的包围盒内
   if (Math.min(a.x, b.x) > p.x || p.x > Math.max(a.x, b.x) ||
       Math.min(a.y, b.y) > p.y || p.y > Math.max(a.y, b.y)) {

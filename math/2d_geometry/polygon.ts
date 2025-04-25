@@ -1,4 +1,6 @@
+import { squaredDistanceToLineSegment } from "../math/math";
 import { Vector2 } from "../math/vec2";
+import { BoundingRect } from "../math/bounding_rect";
 
 
 /**
@@ -6,7 +8,7 @@ import { Vector2 } from "../math/vec2";
  * 对于 fillRule=="evenodd"，采用奇偶规则；
  * 对于 fillRule=="nonzero"，采用绕数（winding number）判断法。
  */
-function pointInPolygon(
+export function pointInPolygon(
     x: number,
     y: number,
     polygon: number[][],
@@ -49,6 +51,7 @@ function pointInPolygon(
 }
 export class Polygon {
     points: Vector2[]
+    closePath:boolean=true
     constructor(points: Vector2[]) {
         this.points = points
     }
@@ -69,5 +72,67 @@ export class Polygon {
             }
         }
         return (wind % 2) !== 0;
+    }
+    /**
+     * Checks whether the x and y coordinates given are contained within this polygon including the stroke.
+     * @param x - The X coordinate of the point to test
+     * @param y - The Y coordinate of the point to test
+     * @param strokeWidth - The width of the line to check
+     * @param alignment - The alignment of the stroke, 0.5 by default
+     * @returns Whether the x/y coordinates are within this polygon
+     */
+    public strokeContains(x: number, y: number, strokeWidth: number, alignment = 0.5): boolean
+    {
+        const strokeWidthSquared = strokeWidth * strokeWidth;
+        const rightWidthSquared = strokeWidthSquared * (1 - alignment);
+        const leftWidthSquared = strokeWidthSquared - rightWidthSquared;
+
+        const { points } = this;
+        const iterationLength = points.length - (this.closePath ? 0 : 2);
+
+        for (let i = 0; i < iterationLength; i += 2)
+        {
+            const x1 = points[i].x;
+            const y1 = points[i].y;
+
+            const x2 = points[(i + 1) % points.length].x;
+            const y2 = points[(i + 1) % points.length].y;
+
+            const distanceSquared = squaredDistanceToLineSegment(x, y, x1, y1, x2, y2);
+
+            const sign = Math.sign(((x2 - x1) * (y - y1)) - ((y2 - y1) * (x - x1)));
+
+            if (distanceSquared <= (sign < 0 ? leftWidthSquared : rightWidthSquared))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    public isClockwise(): boolean
+    {
+        let area = 0;
+        const points = this.points;
+        const length = points.length;
+
+        for (let i = 0; i < length; i += 2)
+        {
+            const x1 = points[i].x;
+            const y1 = points[i].y;
+            const x2 = points[(i + 1) % length].x;
+            const y2 = points[(i + 1) % length].y;
+
+            area += (x2 - x1) * (y2 + y1);
+        }
+
+        return area < 0;
+    }
+    public getBounds(out?: BoundingRect): BoundingRect
+    {
+        out ||= new BoundingRect();
+        out.setFromPoints(this.points)
+
+        return out;
     }
 }

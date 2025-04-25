@@ -831,7 +831,7 @@ export class Matrix4 {
             0,s,tx,0,
             0,0,0,1
         )
-        const 
+      
     }
 
     makeScale(x, y, z) {

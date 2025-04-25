@@ -1,3 +1,4 @@
+// @ts-ignore
 import { Path } from "./path";
 import { PathDirection, PathFillType, PathSegmentMask, PathVerb } from "./path_types";
 import { Point } from "./point";

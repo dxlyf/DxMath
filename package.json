@@ -1,17 +1,55 @@
 {
-  "name": "tiny-skia-ts",
-  "private": true,
+  "name": "@dxyl/math",
+  "private": false,
   "version": "0.0.0",
   "type": "module",
+  "files": ["./dist","./package.json"],
+  "exports":{
+    ".":{
+      "import": "./dist/math.es.js",
+      "require": "./dist/math.cjs.js"
+    },
+    "./canvaskit":{
+      "import": "./dist/canvaskit.es.js",
+      "require": "./dist/canvaskit.cjs.js"
+    },
+    "./skia_path":{
+      "import": "./dist/skia_path.es.js",
+      "require": "./dist/skia_path.cjs.js"
+    },
+    "./2d_geometry":{
+      "import": "./dist/2d_geometry.es.js",
+      "require": "./dist/2d_geometry.cjs.js"
+    },
+    "./2d_contains":{
+      "import": "./dist/2d_contains.es.js",
+      "require": "./dist/2d_contains.cjs.js"
+    },
+    "./2d_path":{
+      "import": "./dist/2d_path.es.js",
+      "require": "./dist/2d_path.cjs.js"
+    },
+    "./2d_scanning_algorithm":{
+      "import": "./dist/2d_scanning_algorithm.es.js",
+      "require": "./dist/2d_scanning_algorithm.cjs.js"
+    },
+    "./3d_scanning_algorithm":{
+      "import": "./dist/3d_scanning_algorithm.es.js",
+      "require": "./dist/3d_scanning_algorithm.cjs.js"
+    }
+    
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "publish": "node ./scripts/publish.mjs"
   },
   "dependencies": {
     "@types/node": "^22.13.5",
     "@types/three": "^0.170.0",
+    "canvaskit-wasm": "^0.40.0",
     "lil-gui": "^0.20.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -29,6 +67,7 @@
     "globals": "^15.9.0",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.1"
+    "vite": "^5.4.1",
+    "vite-plugin-dts": "^4.5.3"
   }
 }

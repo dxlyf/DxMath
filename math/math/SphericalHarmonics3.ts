@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { Vector3 } from './vec3';
 
 /**

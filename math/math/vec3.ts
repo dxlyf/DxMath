@@ -340,7 +340,7 @@ export class Vector3 {
         return this.set(a.x*(1-t)+b.x*t,a.y*(1-t)+b.y*t,a.z*(1-t)+b.z*t)
     }
 
-    splat(x){
+    splat(x:number){
         return this.set(x,x,x)
     }
     inverse(){
@@ -535,7 +535,7 @@ export class Vector3 {
         return this.set(x,y,z)
     }
     // 贝塞曲线递归法
-    bezierDeCasteljau(points:Vector3[], t:number){
+    bezierDeCasteljau(points:Vector3[], t:number):Vector3{
         if(points.length===1){
             return this.set(points[0].x, points[0].y,points[0].z)
         }
@@ -562,7 +562,7 @@ export class Vector3 {
 		return this;
 
 	}
-    setFromMatrixScale( m ) {
+    setFromMatrixScale( m:Matrix4) {
 
 		const sx = this.setFromMatrixColumn( m, 0 ).length();
 		const sy = this.setFromMatrixColumn( m, 1 ).length();
@@ -582,7 +582,7 @@ export class Vector3 {
 
 	}
 
-	setFromMatrix3Column( m, index ) {
+	setFromMatrix3Column( m:Matrix3, index:number ) {
 
 		return this.fromArray( m.elements, index * 3 );
 

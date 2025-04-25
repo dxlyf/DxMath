@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { Box3 } from './box3';
 import { Vector3 } from './vec3';
 

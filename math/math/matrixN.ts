@@ -1,7 +1,7 @@
 type MatrixNData = Float32Array | number[];
 
 // 行主序的矩阵类
-class MatrixN {
+export class MatrixN {
     readonly n: number;
     readonly elements: Float32Array;
     private static readonly EPSILON = 1e-6;

@@ -1,5 +1,6 @@
 import { clamp } from './math.js';
-
+import {Matrix4} from './mat4.js'
+import {Quaternion} from './quad'
 class Vector4 {
     isVector4=true
     x:number
@@ -37,7 +38,7 @@ class Vector4 {
 
 	}
 
-	set( x, y, z, w ) {
+	set( x:number,y:number,z:number,w:number ) {
 
 		this.x = x;
 		this.y = y;
@@ -48,7 +49,7 @@ class Vector4 {
 
 	}
 
-	setScalar( scalar ) {
+	setScalar( scalar:number ) {
 
 		this.x = scalar;
 		this.y = scalar;
@@ -59,7 +60,7 @@ class Vector4 {
 
 	}
 
-	setX( x ) {
+	setX( x:number ) {
 
 		this.x = x;
 
@@ -67,7 +68,7 @@ class Vector4 {
 
 	}
 
-	setY( y ) {
+	setY( y:number ) {
 
 		this.y = y;
 
@@ -75,7 +76,7 @@ class Vector4 {
 
 	}
 
-	setZ( z ) {
+	setZ( z:number ) {
 
 		this.z = z;
 
@@ -83,7 +84,7 @@ class Vector4 {
 
 	}
 
-	setW( w ) {
+	setW( w:number) {
 
 		this.w = w;
 
@@ -91,7 +92,7 @@ class Vector4 {
 
 	}
 
-	setComponent( index, value ) {
+	setComponent( index:number, value:number ) {
 
 		switch ( index ) {
 
@@ -107,7 +108,7 @@ class Vector4 {
 
 	}
 
-	getComponent( index ) {
+	getComponent( index:number ) {
 
 		switch ( index ) {
 
@@ -123,11 +124,11 @@ class Vector4 {
 
 	clone() {
 
-		return new this.constructor( this.x, this.y, this.z, this.w );
+		return new (this.constructor as typeof Vector4)( this.x, this.y, this.z, this.w );
 
 	}
 
-	copy( v ) {
+	copy( v:Vector4 ) {
 
 		this.x = v.x;
 		this.y = v.y;
@@ -138,7 +139,7 @@ class Vector4 {
 
 	}
 
-	add( v ) {
+	add( v:Vector4 ) {
 
 		this.x += v.x;
 		this.y += v.y;
@@ -149,7 +150,7 @@ class Vector4 {
 
 	}
 
-	addScalar( s ) {
+	addScalar( s:number ) {
 
 		this.x += s;
 		this.y += s;
@@ -160,7 +161,7 @@ class Vector4 {
 
 	}
 
-	addVectors( a, b ) {
+	addVectors( a:Vector4, b:Vector4 ) {
 
 		this.x = a.x + b.x;
 		this.y = a.y + b.y;
@@ -171,7 +172,7 @@ class Vector4 {
 
 	}
 
-	addScaledVector( v, s ) {
+	addScaledVector( v:Vector4, s:number ) {
 
 		this.x += v.x * s;
 		this.y += v.y * s;
@@ -182,7 +183,7 @@ class Vector4 {
 
 	}
 
-	sub( v ) {
+	sub( v:Vector4 ) {
 
 		this.x -= v.x;
 		this.y -= v.y;
@@ -193,7 +194,7 @@ class Vector4 {
 
 	}
 
-	subScalar( s ) {
+	subScalar( s:number ) {
 
 		this.x -= s;
 		this.y -= s;
@@ -204,7 +205,7 @@ class Vector4 {
 
 	}
 
-	subVectors( a, b ) {
+	subVectors( a:Vector4, b:Vector4 ) {
 
 		this.x = a.x - b.x;
 		this.y = a.y - b.y;
@@ -215,7 +216,7 @@ class Vector4 {
 
 	}
 
-	multiply( v ) {
+	multiply( v:Vector4 ) {
 
 		this.x *= v.x;
 		this.y *= v.y;
@@ -226,7 +227,7 @@ class Vector4 {
 
 	}
 
-	multiplyScalar( scalar ) {
+	multiplyScalar( scalar:number ) {
 
 		this.x *= scalar;
 		this.y *= scalar;
@@ -237,7 +238,7 @@ class Vector4 {
 
 	}
 
-	applyMatrix4( m ) {
+	applyMatrix4( m:Matrix4) {
 
 		const x = this.x, y = this.y, z = this.z, w = this.w;
 		const e = m.elements;
@@ -251,7 +252,7 @@ class Vector4 {
 
 	}
 
-	divide( v ) {
+	divide( v:Vector4 ) {
 
 		this.x /= v.x;
 		this.y /= v.y;
@@ -262,13 +263,13 @@ class Vector4 {
 
 	}
 
-	divideScalar( scalar ) {
+	divideScalar( scalar:number ) {
 
 		return this.multiplyScalar( 1 / scalar );
 
 	}
 
-	setAxisAngleFromQuaternion( q ) {
+	setAxisAngleFromQuaternion( q:Quaternion) {
 
 		// http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToAngle/index.htm
 
@@ -296,7 +297,7 @@ class Vector4 {
 
 	}
 
-	setAxisAngleFromRotationMatrix( m ) {
+	setAxisAngleFromRotationMatrix( m:Matrix4 ) {
 
 		// http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToAngle/index.htm
 
@@ -426,7 +427,7 @@ class Vector4 {
 
 	}
 
-	setFromMatrixPosition( m ) {
+	setFromMatrixPosition( m:Matrix4 ) {
 
 		const e = m.elements;
 
@@ -439,7 +440,7 @@ class Vector4 {
 
 	}
 
-	min( v ) {
+	min( v:Vector4 ) {
 
 		this.x = Math.min( this.x, v.x );
 		this.y = Math.min( this.y, v.y );
@@ -450,7 +451,7 @@ class Vector4 {
 
 	}
 
-	max( v ) {
+	max( v:Vector4) {
 
 		this.x = Math.max( this.x, v.x );
 		this.y = Math.max( this.y, v.y );
@@ -461,7 +462,7 @@ class Vector4 {
 
 	}
 
-	clamp( min, max ) {
+	clamp( min:Vector4, max:Vector4 ) {
 
 		// assumes min < max, componentwise
 
@@ -474,7 +475,7 @@ class Vector4 {
 
 	}
 
-	clampScalar( minVal, maxVal ) {
+	clampScalar( minVal:number, maxVal:number ) {
 
 		this.x = clamp( this.x, minVal, maxVal );
 		this.y = clamp( this.y, minVal, maxVal );
@@ -485,7 +486,7 @@ class Vector4 {
 
 	}
 
-	clampLength( min, max ) {
+	clampLength( min:number, max:number ) {
 
 		const length = this.length();
 
@@ -548,7 +549,7 @@ class Vector4 {
 
 	}
 
-	dot( v ) {
+	dot( v:Vector4 ) {
 
 		return this.x * v.x + this.y * v.y + this.z * v.z + this.w * v.w;
 
@@ -578,13 +579,13 @@ class Vector4 {
 
 	}
 
-	setLength( length ) {
+	setLength( length:number ) {
 
 		return this.normalize().multiplyScalar( length );
 
 	}
 
-	lerp( v, alpha ) {
+	lerp( v:Vector4, alpha:number ) {
 
 		this.x += ( v.x - this.x ) * alpha;
 		this.y += ( v.y - this.y ) * alpha;
@@ -595,7 +596,7 @@ class Vector4 {
 
 	}
 
-	lerpVectors( v1, v2, alpha ) {
+	lerpVectors( v1:Vector4, v2:Vector4, alpha:number ) {
 
 		this.x = v1.x + ( v2.x - v1.x ) * alpha;
 		this.y = v1.y + ( v2.y - v1.y ) * alpha;
@@ -606,13 +607,13 @@ class Vector4 {
 
 	}
 
-	equals( v ) {
+	equals( v:Vector4 ) {
 
 		return ( ( v.x === this.x ) && ( v.y === this.y ) && ( v.z === this.z ) && ( v.w === this.w ) );
 
 	}
 
-	fromArray( array, offset = 0 ) {
+	fromArray( array:number[], offset = 0 ) {
 
 		this.x = array[ offset ];
 		this.y = array[ offset + 1 ];
@@ -634,7 +635,7 @@ class Vector4 {
 
 	}
 
-	fromBufferAttribute( attribute, index ) {
+	fromBufferAttribute( attribute:any, index:number ) {
 
 		this.x = attribute.getX( index );
 		this.y = attribute.getY( index );
