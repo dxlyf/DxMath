@@ -25,9 +25,9 @@ export default defineConfig({
       },
     //  name:'Dx',
       formats:['es','cjs'],
-      
       fileName:(format,entryName)=>`${entryName}.${format}.js`,
     },
+    minify:false,// 不压缩和混淆
     rollupOptions: {
       // 确保外部化处理那些
       // 你不想打包进库的依赖

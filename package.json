@@ -1,9 +1,11 @@
 {
   "name": "@dxyl/math",
   "private": false,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "files": ["./dist","./package.json"],
+  "homepage": "https://github.com/dxlyf/DxMath",
+  "description": "2D Mathematics and Geometry, Path Tool Class",
   "exports":{
     ".":{
       "import": "./dist/math.es.js",
@@ -44,7 +46,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "publish": "node ./scripts/publish.mjs"
+    "publish": "tsc -b && vite build"
   },
   "dependencies": {
     "@types/node": "^22.13.5",

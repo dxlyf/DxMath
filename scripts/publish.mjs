@@ -22,13 +22,14 @@ if (pkg.scripts?.build) {
 const bump = process.argv[2] || "patch"; // patch / minor / major
 
 console.log(`📈 升级版本号 (${bump})...`);
-execSync(`npm version ${bump}`, { stdio: "inherit" });
+//execSync(`npm version ${bump}`, { stdio: "inherit" });
 
 // =============================
 // ✅ 3. 发布到 NPM
 // =============================
 console.log("📤 发布中...");
-execSync("npm publish --access public", { stdio: "inherit" });
+//execSync("npm publish --access public", { stdio: "inherit" });
+execSync("npm publish", { stdio: "inherit" });
 
 // =============================
 // ✅ 4. 推送 Git（可选）
