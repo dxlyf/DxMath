@@ -943,6 +943,13 @@ function pointOnSegmentDistance(pt: Vector2, a: Vector2, b: Vector2) {
     const t = Math.max(0, Math.min(ap.dot(ab) / ab.lengthSq(), 1))
     return ap.distanceToSquared(ab.multiplyScalar(t))
 }
+// 点到直线的距离（不带符号）
+function pointOnLineDistance(pt: Vector2, a: Vector2, b: Vector2) {
+    const ab = b.clone().sub(a)
+  //  const ap = pt.clone().sub(a)
+    const A=ab.y,B=-ab.x,C=ab.cross(a) //a.y*ab.x-a.x*ab.y
+    return Math.abs(A * pt.x + B * pt.y + C) / Math.sqrt(A * A + B * B)
+}
 // 点到直线的距离（带符号）
 function distancePointToLine(p: Point, a: Point, b: Point): number {
     // Ax+By+C=0

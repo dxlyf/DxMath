@@ -1,5 +1,6 @@
 import { Matrix2D } from "../math/mat2d"
 
+const PI_2=Math.PI*2
 
 
 export enum PathVerb {
@@ -744,6 +745,14 @@ function pointOnSegmentDistance(pt: Point, a: Point, b: Point) {
     const t = Math.max(0, Math.min(ap.dot(ab) / ab.lengthSquared(), 1))
     return ap.distanceTo(ab.multiplyScalar(t))
 }
+
+// 点到直线的距离（不带符号）
+function pointOnLineDistance(pt: Point, a: Point, b: Point) {
+    const ab = b.clone().sub(a)
+  //  const ap = pt.clone().sub(a)
+    const A=ab.y,B=-ab.x,C=ab.cross(a) //a.y*ab.x-a.x*ab.y
+    return Math.abs(A * pt.x + B * pt.y + C) / Math.sqrt(A * A + B * B)
+}
 // 二次贝塞尔曲线扁平化转成线段
 export function quadraticCurveToLines(p0: Point, p1: Point, p2: Point, tessellationTolerance: number = 0.5) {
     const points: Point[] = []
@@ -1112,7 +1121,7 @@ export class PathBuilder {
         let verbs = path.verbs, i = verbs.length;
         let k = points.length;
 
-        while (i++ > 0) {
+        while (i-- > 0) {
             let type = verbs[i]
             let n = PtsInVerb(type);
 
@@ -1345,10 +1354,16 @@ export class PathBuilder {
 
         // 调整角度：确保角度跨度正确
         let deltaAngle = endAngle - startAngle;
-        if (!anticlockwise && deltaAngle < 0) {
-            deltaAngle += 2 * Math.PI;
-        } else if (anticlockwise && deltaAngle > 0) {
-            deltaAngle -= 2 * Math.PI;
+        if(Math.abs(deltaAngle-PI_2)>1e-6){
+            if (!anticlockwise && deltaAngle < 0) {
+                while(deltaAngle<0){
+                    deltaAngle += PI_2
+                }
+            } else if (anticlockwise && deltaAngle > 0) {
+                while(deltaAngle>0){
+                    deltaAngle -= PI_2
+                }
+            }
         }
         // 如果当前路径为空，先 moveTo 起始点
         const startPt = pointOnEllipse(cx, cy, rx, ry, rotation, startAngle);
@@ -1357,6 +1372,7 @@ export class PathBuilder {
         } else {
             this.lineTo(startPt);
         }
+
         // 分段，每段角度不超过 π/2
         const segments = Math.ceil(Math.abs(deltaAngle) / (Math.PI / 2));
         const segAngle = deltaAngle / segments;
@@ -1801,7 +1817,24 @@ export class PathBuilder {
         return { min, max }
 
     }
-
+    isPointInPath(x: number, y: number,fillRule:FillRule) {
+        const bounds=this.getBounds()
+        if(x<bounds.min.x || x>bounds.max.x || y<bounds.min.y || y>bounds.max.y){
+            return false
+        }
+        let w=0,lastPoint=Point.default()
+        this.visit({
+            moveTo: (d) => {
+                lastPoint.copy(d.p0!)
+             },
+            lineTo: (d) => { 
+                
+            },
+            quadraticCurveTo: (d) => { },
+            bezierCurveTo: (d) => { },
+            closePath: (d) => { }
+        })
+    }
     fatten() {
         let path = PathBuilder.default()
 
@@ -1813,11 +1846,11 @@ export class PathBuilder {
                 path.lineTo(d.p0!.x, d.p0!.y)
             },
             quadraticCurveTo: (d) => {
-                const points = quadraticCurveToLines(d.p0!, d.p1!, d.p2!)
+                const points = quadraticCurveToLines(d.p0!, d.p1!, d.p2!,0.1)
                 points.forEach(p => path.lineTo(p.x, p.y))
             },
             bezierCurveTo: (d) => {
-                const points = cubicCurveToLines(d.p0!, d.p1!, d.p2!, d.p3!)
+                const points = cubicCurveToLines(d.p0!, d.p1!, d.p2!, d.p3!,0.1)
                 points.forEach(p => path.lineTo(p.x, p.y))
             },
             closePath: () => {

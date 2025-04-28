@@ -29,6 +29,6 @@
 
     }
   },
-  "include": ["src","lib","math"],
-  "exclude": ["math/skia_path_ts","math/math/fixed.ts","math/lib","src"]
+  "include": ["src","lib","math","examples"],
+  "exclude": ["math/skia_path_ts","math/math/fixed.ts","math/lib"]
 }
