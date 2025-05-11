@@ -246,14 +246,15 @@ export class PathBuilder{
        // debug_assert_eq!(other.verbs[0], PathVerb::Move);
 
         let  points_offset = other.points.length - 1;
-        for(let verb of other.verbs) {
+        let verbs=other.verbs.slice().reverse()
+        for(let verb of verbs) {
             switch(verb) {
                 case PathVerb.Move:{
-                    // if the path has multiple contours, stop after reversing the last
+                   //如果路径有多个轮廓，请在倒最后一个轮廓后停止
                     break;
                 }
                 case PathVerb.Line: {
-                    // We're moving one point back manually, to prevent points_offset overflow.
+                    //我们正在手动移动一个点，以防止points_offset溢出。
                     let pt = other.points[points_offset - 1];
                     points_offset -= 1;
                     self.line_to(pt.x, pt.y);

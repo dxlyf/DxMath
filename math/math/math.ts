@@ -6,8 +6,68 @@ export const DEGREES_RADIAN = PI / 180
 export const INVERT_DEGREES_RADIAN = 1 / DEGREES_RADIAN
 export const EPSILON = 1e-6
 export const ScalarNearlyZero = 1e-6;
-const Scalar1=1;
-const ScalarSinCosNearlyZero =(Scalar1 / (1 << 16))
+const Scalar1 = 1;
+const ScalarSinCosNearlyZero = (Scalar1 / (1 << 16))
+
+// 两个向量间的夹角0-pi
+export function angleTo(a: Vector2, b: Vector2) {
+    return Math.acos(a.dot(b) / (a.length() * b.length()))
+}
+// 两个向量间的夹角-pi到pi
+export function atan2To(a: Vector2, b: Vector2) {
+    return Math.atan2(b.y, b.x) - Math.atan2(a.y, a.x)
+}
+// 两个向量间的夹角-pi到pi
+export function atan2To2(a: Vector2, b: Vector2) {
+    return Math.atan2(b.cross(a), a.dot(b))
+}
+export function atan2To3(a: Vector2, b: Vector2) {
+    const sign = b.cross(a)>=0?1:-1// 如果大于0，顺时针，否则逆时针
+    return sign*Math.acos(a.dot(b)/(a.length()*b.length()))
+}
+
+
+export function atan(x:number){
+    if(x===Infinity){
+        return Math.PI/2
+    }else if(x===-Infinity){
+        return -Math.PI/2
+    }
+    if(x===0){
+        return 0
+    }
+    if(x>1){
+        return Math.PI/2-atan(1/x)
+    }
+    if(x<0){
+        return -atan(-x)
+    }
+    let term=x
+    let sum=x
+    for(let i=1;i<=50;i++){
+        term*=-x*x
+        sum+=term/(2*i+1)
+    }
+    return sum
+}
+export function atan2(y: number, x: number) {
+    return Math.atan2(y,x)
+}
+export function atan2_2(y: number, x: number) {
+    if(x>=0){
+        return Math.atan(y/x)
+    }else if(x*y<=0){
+        return Math.atan(y/x)+PI
+    }else{
+        return Math.atan(y/x)-PI
+    }
+}
+export function atan_3(y: number, x: number) {
+    const start = Vector2.create(1, 0)
+    const normalize = Vector2.create(x, y).normalize()
+    const sign = start.cross(normalize)>=0?1:-1// 如果大于0，顺时针，否则逆时针
+    return sign*Math.acos(start.dot(normalize))
+}
 
 // 点到线段的最短距离平方
 
@@ -15,8 +75,7 @@ export function squaredDistanceToLineSegment(
     x: number, y: number,
     x1: number, y1: number,
     x2: number, y2: number
-): number
-{
+): number {
     const a = x - x1;
     const b = y - y1;
     const c = x2 - x1;
@@ -26,27 +85,23 @@ export function squaredDistanceToLineSegment(
     const lenSq = (c * c) + (d * d);
     let param = -1;
 
-    if (lenSq !== 0)
-    {
+    if (lenSq !== 0) {
         param = dot / lenSq;
     }
 
     let xx; let
         yy;
 
-    if (param < 0)
-    {
+    if (param < 0) {
         xx = x1;
         yy = y1;
     }
-    else if (param > 1)
-    {
+    else if (param > 1) {
         xx = x2;
         yy = y2;
     }
 
-    else
-    {
+    else {
         xx = x1 + (param * c);
         yy = y1 + (param * d);
     }
@@ -57,39 +112,42 @@ export function squaredDistanceToLineSegment(
     return (dx * dx) + (dy * dy);
 }
 
-export function alignSize(n:number){
-    return (n+7)&~7; // 对齐到8字节边界
+export function alignSize(n: number) {
+    return (n + 7) & ~7; // 对齐到8字节边界
+}
+export function paddingRound(x: number, y: number) {
+    return x & (~(y - 1))
 }
 // 计算以最小percision单位，增加值.保证都是precision的倍数
 // 和alignSize差不多
 
 export function ceiling(num: number, precision: number): number {
     return (((num / precision) | 0) + 1) * precision;
-  }
-  
-export function scalarNearlyEqual(x:number,y:number,tolerance = ScalarNearlyZero) {
-    return Math.abs(x-y) <= tolerance;
 }
 
-export function nearly_equal(a:Vector2,b:Vector2) {
-   return scalarNearlyEqual(a.x, b.x)
-       && scalarNearlyEqual(a.y, b.y);
+export function scalarNearlyEqual(x: number, y: number, tolerance = ScalarNearlyZero) {
+    return Math.abs(x - y) <= tolerance;
 }
-export function scalarNearlyZero( x:number, tolerance = ScalarNearlyZero) {
+
+export function nearly_equal(a: Vector2, b: Vector2) {
+    return scalarNearlyEqual(a.x, b.x)
+        && scalarNearlyEqual(a.y, b.y);
+}
+export function scalarNearlyZero(x: number, tolerance = ScalarNearlyZero) {
     return Math.abs(x) <= tolerance;
 }
-export function scalarSinSnapToZero( radians:number) {
+export function scalarSinSnapToZero(radians: number) {
     let v = Math.sin(radians);
     return scalarNearlyZero(v, ScalarSinCosNearlyZero) ? 0 : v;
 }
-export function scalarCosSnapToZero(radians:number) {
+export function scalarCosSnapToZero(radians: number) {
     let v = Math.cos(radians);
     return scalarNearlyZero(v, ScalarSinCosNearlyZero) ? 0 : v;
 }
-export function almostEqual(a:number, b:number,tolerance = ScalarNearlyZero) {
-    return Math.abs(a - b) <=tolerance
+export function almostEqual(a: number, b: number, tolerance = ScalarNearlyZero) {
+    return Math.abs(a - b) <= tolerance
 }
-export const equals = (a: number, b: number,tolerance = ScalarNearlyZero) => {
+export const equals = (a: number, b: number, tolerance = ScalarNearlyZero) => {
     return Math.abs(a - b) <= tolerance
 }
 // 三态函数，判断两个double在eps精度下的大小关系
@@ -99,58 +157,58 @@ export function dcmp(x: number) {
     }
     return x < 0 ? -1 : 1;
 }
-export  const bezier2=(controls:Vector2[],t:number)=>{
-    const n=controls.length-1
-    const c=controls.slice().map(d=>d.clone())
-    for(let i=0;i<n;i++){
-        for(let j=0;j<n-i;j++){
-            c[j].x=(1-t)*c[j].x+t*c[j+1].x
-            c[j].y=(1-t)*c[j].y+t*c[j+1].y
+export const bezier2 = (controls: Vector2[], t: number) => {
+    const n = controls.length - 1
+    const c = controls.slice().map(d => d.clone())
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n - i; j++) {
+            c[j].x = (1 - t) * c[j].x + t * c[j + 1].x
+            c[j].y = (1 - t) * c[j].y + t * c[j + 1].y
         }
     }
     return c[0]
 }
-export  const bezier=(controls:Vector2[],t:number)=>{
-    const n=controls.length-1
-    let x=0,y=0
-    for(let i=0;i<=n;i++){
-            let b=bernstein(n,i,t)
-            x+=b*controls[i].x
-            y+=b*controls[i].y
+export const bezier = (controls: Vector2[], t: number) => {
+    const n = controls.length - 1
+    let x = 0, y = 0
+    for (let i = 0; i <= n; i++) {
+        let b = bernstein(n, i, t)
+        x += b * controls[i].x
+        y += b * controls[i].y
 
     }
-    return Vector2.create(x,y)
+    return Vector2.create(x, y)
 }
 // 有理贝塞尔曲线
 
-export  const rationalBezier=(controls:Vector2[],weight:number[],t:number)=>{
-    const n=controls.length-1
-    let x=0,y=0
-    for(let i=0;i<=n;i++){
-            let b=bernstein(n,i,t)*weight[i]
-            x+=b*controls[i].x/b
-            y+=b*controls[i].y/b
+export const rationalBezier = (controls: Vector2[], weight: number[], t: number) => {
+    const n = controls.length - 1
+    let x = 0, y = 0
+    for (let i = 0; i <= n; i++) {
+        let b = bernstein(n, i, t) * weight[i]
+        x += b * controls[i].x / b
+        y += b * controls[i].y / b
 
     }
-    return Vector2.create(x,y)
+    return Vector2.create(x, y)
 }
 // 求一个函数的导数
 // 数值微分，求近似导数
 // 中心差分= ∫'(x)=dy/dx
 // dy=dx*∫'(x)
-export const centralDifference = (fn:any, h: number, ...args:any[]) => {
+export const centralDifference = (fn: any, h: number, ...args: any[]) => {
     return (fn(...args.map(d => d + h)) - fn(...args.map(d => d - h))) / (2 * h)
 }
 // 求导
 // 计算 d/dx f(x)
-export function derivative(f:(x:number)=>number, x:number, h:number = 1e-5) {
+export function derivative(f: (x: number) => number, x: number, h: number = 1e-5) {
     return (f(x + h) - f(x - h)) / (2 * h);
 }
 // 多变量偏导 d/dx, d/dy, d/dt
 // 示例
 // const g = (x, y) => x ** 2 + y ** 3;
 // console.log(partialDerivative(g, 0, [2, 3])); // ∂g/∂x ≈4
-export function partialDerivative(f:(...args:number[])=>number, varIndex:number, point:number[], h = 1e-5) {
+export function partialDerivative(f: (...args: number[]) => number, varIndex: number, point: number[], h = 1e-5) {
     const shifted = [...point];
     shifted[varIndex] += h;
     const fPlus = f(...shifted);
@@ -161,17 +219,17 @@ export function partialDerivative(f:(...args:number[])=>number, varIndex:number,
 
 
 // 前向差分
-export const forwardDifferential = (fn:any, h:number, ...args:any[]) => {
+export const forwardDifferential = (fn: any, h: number, ...args: any[]) => {
     return (fn(...args.map(d => d + h)) - fn(...args)) / h
 }
 // 后向差分
-export const backwardDifferential = (fn:any, h:number, ...args:any[]) => {
+export const backwardDifferential = (fn: any, h: number, ...args: any[]) => {
     return (fn(...args) - fn(...args.map(d => d - h))) / h
 }
-export const degreesToRadian = (degrees:number) => {
+export const degreesToRadian = (degrees: number) => {
     return degrees * DEGREES_RADIAN
 }
-export const radianToDegrees = (radian:number) => {
+export const radianToDegrees = (radian: number) => {
     return radian * INVERT_DEGREES_RADIAN
 }
 
@@ -193,32 +251,32 @@ export const randomCeil = (min: number, max: number) => {
 export const randomRound = (min: number, max: number) => {
     return Math.round(min + (max - min) * Math.random())
 }
-export const fract = (v:number) => {
+export const fract = (v: number) => {
     return v - Math.trunc(v)
 }
 // 向上取模 10%100=-90  -10%100=-10 
 // 返回的永远是负数
-export const ceilMod=(v:number,m:number)=>{
+export const ceilMod = (v: number, m: number) => {
     return v - Math.ceil(v / m) * m
 }
 
 // 向下取模 10%100=10 -10%100=90
 // 返回的永远是正数
-export const floorMod=(v:number,m:number)=>{
+export const floorMod = (v: number, m: number) => {
     return v - Math.floor(v / m) * m
 }
 // 给定偏移和缩放和单位，计算起始坐标值
 // 用于标尺或网格的计算起点坐标值
-export const calcStartCoordinateValue=(unit:number,offset:number,scalar:number)=>{
-  //  const scalarUnit=unit*scalar
-     // return offset>0?offset-scalarUnit:offset
+export const calcStartCoordinateValue = (unit: number, offset: number, scalar: number) => {
+    //  const scalarUnit=unit*scalar
+    // return offset>0?offset-scalarUnit:offset
     //return offset-Math.ceil(offset/scalarUnit)*scalarUnit
-    return ceilMod(offset,unit*scalar)
+    return ceilMod(offset, unit * scalar)
 }
 // 计算起始刻度值
-export const calcStartGraduationValue=(unit:number,offset:number,scalar:number)=>{
+export const calcStartGraduationValue = (unit: number, offset: number, scalar: number) => {
     // return Math.floor(-offset/(unit*scalar))*unit
-     return -Math.ceil(offset/(unit*scalar))*unit
+    return -Math.ceil(offset / (unit * scalar)) * unit
 }
 // -2%10 -2 2%10=2
 export const mod = (v: number, m: number) => {
@@ -418,12 +476,12 @@ export const Hath = {
             return 0; // 或者 NaN
         }
     },
-    atan3(y:number,x:number){
-        const sign=y>=0?1:-1
-        const len=Math.sqrt(x*x+y*y);
-        const cos=Math.max(-1,Math.min(1,x/len))
-        const angle=Math.acos(cos)
-        return sign*angle
+    atan3(y: number, x: number) {
+        const sign = y >= 0 ? 1 : -1
+        const len = Math.sqrt(x * x + y * y);
+        const cos = Math.max(-1, Math.min(1, x / len))
+        const angle = Math.acos(cos)
+        return sign * angle
 
     },
     // 绝对值
@@ -687,7 +745,7 @@ export const Hath = {
 
 // 排除r行和c列的矩阵，不包括行列的元素。
 
-export function createLowMatrix(r:number, c:number, n:number, m:Float32Array|number[]) {
+export function createLowMatrix(r: number, c: number, n: number, m: Float32Array | number[]) {
     let len = (n - 1) ** 2
     let temp = new Float32Array(len)
     let mlen = m.length
@@ -701,7 +759,7 @@ export function createLowMatrix(r:number, c:number, n:number, m:Float32Array|num
     }
     return temp
 }
-export function determinantFromNthMatrix(m:Float32Array|number[]) {
+export function determinantFromNthMatrix(m: Float32Array | number[]) {
     let n = Math.sqrt(m.length)
     if (n === 2) {
         return m[0] * m[3] - m[1] * m[2]
@@ -724,7 +782,7 @@ export function determinantFromNthMatrix(m:Float32Array|number[]) {
     return det
 }
 // 转置矩阵
-export function transposeFromNthMatrix(m:Float32Array|number[]) {
+export function transposeFromNthMatrix(m: Float32Array | number[]) {
     let n = Math.sqrt(m.length)
     let l = m.length
     let out = new Float32Array(l)
@@ -737,7 +795,7 @@ export function transposeFromNthMatrix(m:Float32Array|number[]) {
     return out
 }
 // 伴随矩阵
-export function adjointFromNthMatrix(m:Float32Array|number[]) {
+export function adjointFromNthMatrix(m: Float32Array | number[]) {
     let n = Math.sqrt(m.length)
     let l = m.length
     let out = new Float32Array(l)
@@ -754,7 +812,7 @@ export function adjointFromNthMatrix(m:Float32Array|number[]) {
     }
     return out
 }
-export function invertFromNMatrix(m:Float32Array|number[]) {
+export function invertFromNMatrix(m: Float32Array | number[]) {
     let det = determinantFromNthMatrix(m) // 计算行列式值
     let adjoinM = adjointFromNthMatrix(m)// 计算伴随矩阵
 
@@ -764,77 +822,77 @@ export function invertFromNMatrix(m:Float32Array|number[]) {
     return invertMatrix
 }
 
-export function identityMatrix(out:Float32Array|number[],n:number) {
+export function identityMatrix(out: Float32Array | number[], n: number) {
     for (let i = 0; i < n; i++) {
-        out[i+i*n]=1;
+        out[i + i * n] = 1;
     }
     return out
 }
 // 初等行变换求逆矩阵
-export function invertFromNMatrixByElementary(m:Float32Array|number[]) {
+export function invertFromNMatrixByElementary(m: Float32Array | number[]) {
     let n = Math.sqrt(m.length)
     let l = m.length
     let out = new Float32Array(l);
     // 初始化成单位矩阵
     for (let i = 0; i < n; i++) {
-        out[i+i*n]=1;
+        out[i + i * n] = 1;
     }
 
     // 将a，通过倍增，减，交换行，变成单位矩阵
-    let matrix= new Float32Array(m)
-   
+    let matrix = new Float32Array(m)
+
 
     // 交换行
-    const swapRow=(matrix:Float32Array|number[],n:number,from:number,to:number)=>{
-        for(let i=0;i<n;i++){
-            let col=i*n
-            let tmp=matrix[from+col];
-            matrix[from+col]=matrix[to+col];
-            matrix[to+col]=tmp;
+    const swapRow = (matrix: Float32Array | number[], n: number, from: number, to: number) => {
+        for (let i = 0; i < n; i++) {
+            let col = i * n
+            let tmp = matrix[from + col];
+            matrix[from + col] = matrix[to + col];
+            matrix[to + col] = tmp;
         }
     }
- 
-    // 迭代对角线元素
-    for(let j=0;j<n;j++){
-        let main_value=matrix[j+j*n];// 主元，对角线元素
-        if(main_value===0){// 主元为0，则寻找下个不为0的对角元素，则交换行
-            let swap=false
-            for(let k=j+1;j<n;k++){
 
-                if(matrix[k+k*n]!==0){// 找到不为零的行，交换
-                    swapRow(matrix,n,j,k)
-                    swapRow(out,n,j,k)
+    // 迭代对角线元素
+    for (let j = 0; j < n; j++) {
+        let main_value = matrix[j + j * n];// 主元，对角线元素
+        if (main_value === 0) {// 主元为0，则寻找下个不为0的对角元素，则交换行
+            let swap = false
+            for (let k = j + 1; j < n; k++) {
+
+                if (matrix[k + k * n] !== 0) {// 找到不为零的行，交换
+                    swapRow(matrix, n, j, k)
+                    swapRow(out, n, j, k)
                     // 更新主元
-                    main_value=matrix[j+j*n]
-                    swap=true;
+                    main_value = matrix[j + j * n]
+                    swap = true;
                     break;
                 }
             }
-            if(!swap){
+            if (!swap) {
                 throw new Error("矩阵不可逆")
-            }  
+            }
         }
         // 当前行除以主元，使当前主元归一化
-        for(let i=0;i<n;i++){
-            matrix[j+i*n]/=main_value
-            out[j+i*n]/=main_value;    
+        for (let i = 0; i < n; i++) {
+            matrix[j + i * n] /= main_value
+            out[j + i * n] /= main_value;
         }
         // 其他行减当前行乘以主元倍数，使其他行的对角线所在列的元素为0
 
-        for(let i=0;i<n;i++){
-            if(i!==j){
-                let value=matrix[i+j*n]
-                for(let k=0;k<n;k++){
-                    matrix[i+k*n]-=value*matrix[j+k*n];
-                    out[i+k*n]-=value*out[j+k*n];   
+        for (let i = 0; i < n; i++) {
+            if (i !== j) {
+                let value = matrix[i + j * n]
+                for (let k = 0; k < n; k++) {
+                    matrix[i + k * n] -= value * matrix[j + k * n];
+                    out[i + k * n] -= value * out[j + k * n];
                 }
             }
         }
-    }     
+    }
 
     return out
 }
-export function multiplyMatrices(result:Float32Array|number[],a:Float32Array|number[], b:Float32Array|number[]) {
+export function multiplyMatrices(result: Float32Array | number[], a: Float32Array | number[], b: Float32Array | number[]) {
 
     let aRow = Math.sqrt(a.length)
     let bCol = Math.sqrt(b.length)
@@ -842,13 +900,13 @@ export function multiplyMatrices(result:Float32Array|number[],a:Float32Array|num
     if (aRow !== bCol) {
         throw new Error("矩阵维度不匹配，无法相乘");
     }
-   result =result|| new Float32Array(aRow * bCol);
+    result = result || new Float32Array(aRow * bCol);
 
     for (let i = 0; i < aRow; i++) {
         for (let j = 0; j < bCol; j++) {
-            let sum =0
-            for(let k=0;k<aRow;k++){
-                sum+=a[i+k*aRow]*b[k+j*bCol]
+            let sum = 0
+            for (let k = 0; k < aRow; k++) {
+                sum += a[i + k * aRow] * b[k + j * bCol]
             }
             result[i + j * aRow] = sum;
         }
@@ -857,17 +915,17 @@ export function multiplyMatrices(result:Float32Array|number[],a:Float32Array|num
 }
 
 // LU求逆
-export function invertFromNMatrixByLU(matrix:Float32Array|number[]) {
+export function invertFromNMatrixByLU(matrix: Float32Array | number[]) {
     let n = Math.sqrt(matrix.length)
     let l = matrix.length
     let out = new Float32Array(l);
-    let L=new Float32Array(l) // 设成单位矩阵下三角矩阵
-    let U=new Float32Array(l) // 设成为0的上三角矩阵
-    
+    let L = new Float32Array(l) // 设成单位矩阵下三角矩阵
+    let U = new Float32Array(l) // 设成为0的上三角矩阵
+
 
     // 初始化成单位矩阵
     for (let i = 0; i < n; i++) {
-        L[i+i*n]=1;
+        L[i + i * n] = 1;
     }
 
     /***
@@ -880,105 +938,105 @@ export function invertFromNMatrixByLU(matrix:Float32Array|number[]) {
     计算L的第k列元素：对于行索引i从k+1到n，计算L[i, k] = (A[i, k] - ∑(L[i, m] * U[m, k])) / U[k, k]，其中m从1到k-1。
     完成分解：经过上述步骤，矩阵A被分解为L和U的乘积，即A = LU。
      */
-    for(let k=0;k<n;k++){
-            for(let j=k;j<n;j++){
-                let sum=0
-                for(let m=0;m<k;m++){
-                    sum+=L[k+m*n]*U[m+j*n]
-                }
-                U[k+j*n]=matrix[k+j*n]-sum;
+    for (let k = 0; k < n; k++) {
+        for (let j = k; j < n; j++) {
+            let sum = 0
+            for (let m = 0; m < k; m++) {
+                sum += L[k + m * n] * U[m + j * n]
             }
-            for(let i=k+1;i<n;i++){
-                let sum=0
-                for(let m=0;m<k;m++){
-                    sum+=L[i+m*n]*U[m+k*n]
-                }
-                L[i+k*n]=(matrix[i+k*n]-sum)/U[k+k*n];
+            U[k + j * n] = matrix[k + j * n] - sum;
+        }
+        for (let i = k + 1; i < n; i++) {
+            let sum = 0
+            for (let m = 0; m < k; m++) {
+                sum += L[i + m * n] * U[m + k * n]
             }
+            L[i + k * n] = (matrix[i + k * n] - sum) / U[k + k * n];
+        }
 
     }
-   // 利用前向替换法求解下三角矩阵系统 L * x = b
-// L 为下三角矩阵（对角线非0，通常为1），b 为列向量
-function forwardSubstitution(L:Float32Array|number[], b:number[]) {
-    const n = Math.sqrt(L.length);
-    const x = new Float32Array(n)
-    for (let i = 0; i < n; i++) {
-      let sum = 0;
-      for (let j = 0; j < i; j++) {
-        sum += L[i+j*n] * x[j];
-      }
-      x[i] = (b[i] - sum) / L[i+i*n];
+    // 利用前向替换法求解下三角矩阵系统 L * x = b
+    // L 为下三角矩阵（对角线非0，通常为1），b 为列向量
+    function forwardSubstitution(L: Float32Array | number[], b: number[]) {
+        const n = Math.sqrt(L.length);
+        const x = new Float32Array(n)
+        for (let i = 0; i < n; i++) {
+            let sum = 0;
+            for (let j = 0; j < i; j++) {
+                sum += L[i + j * n] * x[j];
+            }
+            x[i] = (b[i] - sum) / L[i + i * n];
+        }
+        return x;
     }
-    return x;
-  }
-  
-  // 利用后向替换法求解上三角矩阵系统 U * x = b
-  function backwardSubstitution(U:Float32Array|number[], b:number[]) {
-    const n =Math.sqrt( U.length);
-    const x = new Float32Array(n);
-    for (let i = n - 1; i >= 0; i--) {
-      let sum = 0;
-      for (let j = i + 1; j < n; j++) {
-        sum += U[i+j*n] * x[j];
-      }
-      if (U[i+i*n] === 0) {
-        throw new Error("零主元，无法进行后向替换");
-      }
-      x[i] = (b[i] - sum) / U[i+i*n];
-    }
-    return x;
-  }
-  // 生成 n 阶单位矩阵
-function identityMatrix(n:number) {
-    const I = new Float32Array(n*n);
-    for (let i = 0; i < n; i++) {
-        I[i+i*n] = 1; // 对角线元素为1，其余为0
 
+    // 利用后向替换法求解上三角矩阵系统 U * x = b
+    function backwardSubstitution(U: Float32Array | number[], b: number[]) {
+        const n = Math.sqrt(U.length);
+        const x = new Float32Array(n);
+        for (let i = n - 1; i >= 0; i--) {
+            let sum = 0;
+            for (let j = i + 1; j < n; j++) {
+                sum += U[i + j * n] * x[j];
+            }
+            if (U[i + i * n] === 0) {
+                throw new Error("零主元，无法进行后向替换");
+            }
+            x[i] = (b[i] - sum) / U[i + i * n];
+        }
+        return x;
     }
-    return I;
-  }
-  function extractColumn(matrix:Float32Array|number[], colIndex:number) {
-    const n = Math.sqrt(matrix.length);
-    const column:number[] = new Array(n);
-    for (let i = 0; i < n; i++) {
-      column[i] = matrix[i+colIndex*n]
-    }
-    return column;
-  }
-  // 求下三角矩阵 L 的逆：逐列求解 L * x = e_i
-  function invertLowerTriangular(L:Float32Array|number[]) {
-    const n = Math.sqrt(L.length);
-    const L_inv = new Float32Array(n*n);
+    // 生成 n 阶单位矩阵
+    function identityMatrix(n: number) {
+        const I = new Float32Array(n * n);
+        for (let i = 0; i < n; i++) {
+            I[i + i * n] = 1; // 对角线元素为1，其余为0
 
-    const I = identityMatrix(n);
-    for (let i = 0; i < n; i++) {
-      // 求解 L * x = e_i
-      const x = forwardSubstitution(L,extractColumn(I,i)); // 取第 i 列的单位向量
-      for (let j = 0; j < n; j++) {
-        L_inv[j+i*n] = x[j];
-      }
+        }
+        return I;
     }
-    return L_inv;
-  }
-  
-  // 求上三角矩阵 U 的逆：逐列求解 U * x = e_i
-  function invertUpperTriangular(U:Float32Array|number[]) {
-    const n = Math.sqrt(U.length);
-    const U_inv = new Float32Array(n*n)
-  
-    const I = identityMatrix(n);
-    for (let i = 0; i < n; i++) {
-      // 求解 U * x = e_i，利用后向替换
-      const x = backwardSubstitution(U,extractColumn(I,i));
-      for (let j = 0; j < n; j++) {
-        U_inv[j+i*n] = x[j];
-      }
+    function extractColumn(matrix: Float32Array | number[], colIndex: number) {
+        const n = Math.sqrt(matrix.length);
+        const column: number[] = new Array(n);
+        for (let i = 0; i < n; i++) {
+            column[i] = matrix[i + colIndex * n]
+        }
+        return column;
     }
-    return U_inv;
-  }
-   // let a=multiplyMatrices(null,L,U)
-    
-    return multiplyMatrices(null,invertUpperTriangular(U),invertLowerTriangular(L))
+    // 求下三角矩阵 L 的逆：逐列求解 L * x = e_i
+    function invertLowerTriangular(L: Float32Array | number[]) {
+        const n = Math.sqrt(L.length);
+        const L_inv = new Float32Array(n * n);
+
+        const I = identityMatrix(n);
+        for (let i = 0; i < n; i++) {
+            // 求解 L * x = e_i
+            const x = forwardSubstitution(L, extractColumn(I, i)); // 取第 i 列的单位向量
+            for (let j = 0; j < n; j++) {
+                L_inv[j + i * n] = x[j];
+            }
+        }
+        return L_inv;
+    }
+
+    // 求上三角矩阵 U 的逆：逐列求解 U * x = e_i
+    function invertUpperTriangular(U: Float32Array | number[]) {
+        const n = Math.sqrt(U.length);
+        const U_inv = new Float32Array(n * n)
+
+        const I = identityMatrix(n);
+        for (let i = 0; i < n; i++) {
+            // 求解 U * x = e_i，利用后向替换
+            const x = backwardSubstitution(U, extractColumn(I, i));
+            for (let j = 0; j < n; j++) {
+                U_inv[j + i * n] = x[j];
+            }
+        }
+        return U_inv;
+    }
+    // let a=multiplyMatrices(null,L,U)
+
+    return multiplyMatrices(null, invertUpperTriangular(U), invertLowerTriangular(L))
 }
 export const MyMath = (function () {
     // 常量
@@ -1193,7 +1251,7 @@ export const MyMath = (function () {
         // x === 0 的情况
         return numY > 0 ? HALF_PI : numY < 0 ? -HALF_PI : 0;
     }
-    
+
 
     return {
         PI,

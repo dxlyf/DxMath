@@ -572,7 +572,11 @@ export class Path {
     injectMoveToIfNeeded() {
         this.fIsA = IsA.kIsA_MoreThanMoves
         if (this.needsMoveVerb) {
-            this.moveTo(this.lastMovePoint)
+            if(this.isEmpty()){
+                this.moveTo(0,0)
+            }else{
+                this.moveTo(this.lastMovePoint)
+            }
         }
         return this;
     }
@@ -1309,6 +1313,7 @@ export class Path {
         let bounds = BoundingRect.fromLTRB(x - radiusX, y - radiusY, x + radiusX, y + radiusY);
 
         const sweep = radianToDegrees(endAngle - startAngle) - (360 * (ccw ? 1 : 0));
+
         const temp = new Path();
         temp.addArc(bounds, radianToDegrees(startAngle), sweep);
 

@@ -236,9 +236,9 @@ export class Stroker {
 	// cr and jr specify how to end and connect path segments.
 	cr!: Capper
 	jr!: Joiner
-	// r is the reverse path. Stroking a path involves constructing two
-	// parallel paths 2*u apart. The first path is added immediately to p,
-	// the second path is accumulated in r and eventually added in reverse.
+	//r是反向路径。抚摸一条路径涉及建造两个
+	//平行路径2*U分开。第一个路径立即添加到p，
+	//第二路径累积在R中，最终以相反的方式添加。
 	r: Path = new Path()
 	// a is the most recent segment point. anorm is the segment normal of
 	// length u at that point.

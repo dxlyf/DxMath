@@ -272,6 +272,7 @@ export class Vector2 {
         const angle = Math.acos(cos)
         return sign * angle
     }
+    // 两个向量之间夹角（0-360）
     angleToVectors(a: Vector2, b: Vector2) {
         return Math.atan2(b.cross(a), a.dot(b))
     }
@@ -281,15 +282,17 @@ export class Vector2 {
         const angle = Math.acos(cos)
         return sign * angle
     }
+
     angleTo(v: Vector2) {
         // cross=AxB=|A||B|sin(θ)=平行四边的面积=宽乘高
         // dot=A•B =|A||B|cos(θ)
-        return this.angleToVectors(this, v)
+        return this.acos(v)
     }
     cos(v: Vector2) {
         //this.normalize().dot(v.normalize())
         return this.dot(v) / (this.length() * v.length())
     }
+    // 夹角 0-180
     acos(v: Vector2) {
         return Math.acos(this.cos(v))
     }
