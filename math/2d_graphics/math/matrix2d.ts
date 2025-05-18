@@ -101,8 +101,8 @@ function decompose(out: Matrix2dLike, a: Matrix2dLike) {
     const ty = a05;
 
     // 提取缩放值
-    const scaleX = Math.sqrt(a00 * a00 + a01 * a01);
-    const scaleY = Math.sqrt(a02 * a02 + a03 * a03);
+    let scaleX = Math.sqrt(a00 * a00 + a01 * a01);
+    let scaleY = Math.sqrt(a02 * a02 + a03 * a03);
 
     // 提取旋转值
     let rotation = Math.atan2(a01, a00);
@@ -166,7 +166,49 @@ function invert(out: Matrix2dLike, a: Matrix2dLike) {
     out[5] = (a01 * a04 - a00 * a05) * invDet;
     return out;
 }
+function mapPoint(out: Vector2Like, a: Matrix2dLike, v: Vector2Like) {
+    const x = v[0];
+    const y = v[1];
+    out[0] = a[0] * x + a[2] * y + a[4];
+    out[1] = a[1] * x + a[3] * y + a[5];
+    return out;
+}
+function mapPoints(out: Vector2Like[], a: Matrix2dLike, v: Vector2Like[]) {
+    for (let i = 0; i < v.length; i += 2) {
+        mapPoint(out[i], a, v[i]);
+    }
+    return out;
+}
+
+function hasIdentity(a: Matrix2dLike) {
+    return a[0] === 1 && a[1] === 0 && a[2] === 0 && a[3] === 1 && a[4] === 0 && a[5] === 0;
+}
+function hasTranslation(a: Matrix2dLike) {
+    return a[4] !== 0 || a[5] !== 0;
+}
+function hasRotation(a: Matrix2dLike) {
+    return a[0] !== 1 || a[1] !== 0 || a[2] !== 0 || a[3] !== 1;
+}
+function hasScale(a:Matrix2dLike){
+    return a[0]!==1||a[3]!==1
+}
 export class Matrix2D extends Float32Array {
+    static identity=identity
+    static multiply=multiply
+    static invert=invert
+    static makeTranslation=makeTranslation
+    static makeRotation=makeRotation
+    static makeScale=makeScale
+    static makeTranslationRotationScale=makeTranslationRotationScale
+    static makeTranslationRotationScaleOrigin=makeTranslationRotationScaleOrigin
+    static extractTranslation=extractTranslation
+    static extractRotation=extractRotation
+    static extractScale=extractScale
+    static extractOrigin=extractOrigin
+    static decompose=decompose
+    static mapPoint=mapPoint
+    static mapPoints=mapPoints
+
     constructor() {
         super(6);
         identity(this);
@@ -213,5 +255,19 @@ export class Matrix2D extends Float32Array {
     extractOrigin(out: Vector2Like) {
       return   extractOrigin(out, this);
     }
-
+    mapPoint(v: Vector2Like,out=v) {
+        return  mapPoint(out, this, v);
+    }
+    mapPoints(v: Vector2Like[],out=v) {
+        return  mapPoints(out, this, v);
+    }
+    hasIdentity(){
+        return hasIdentity(this)
+    }
+    hasRotation(){
+        return hasRotation(this)
+    }
+    hasScale(){
+        return hasScale(this)
+    }
 }

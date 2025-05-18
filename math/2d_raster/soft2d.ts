@@ -1132,7 +1132,7 @@ export class PathBuilder {
         return this.verbs.length
     }
     get isClosedPath() {
-        return this.verbs.some(d => d == PathVerb.ClosePath)
+        return this.verbs.some(d => d == PathVerb.Close)
 
     }
     reset() {
@@ -1176,6 +1176,9 @@ export class PathBuilder {
     }
     clone() {
         return PathBuilder.default().copy(this)
+    }
+    toReversePath(){
+        return PathBuilder.default().addReversePath(this)
     }
     addPath(path: PathBuilder, matrix?: number[]) {
         path = path.clone()
@@ -1231,6 +1234,7 @@ export class PathBuilder {
                     console.error("unexpected verb");
             }
         }
+        return this
 
     }
     offset(x: number, y: number) {
@@ -1588,10 +1592,14 @@ export class PathBuilder {
         let p2 = Point.from(x2, y2)
 
         // need double precision for these calcs.
+        
+        // 计算上个点与x1,y1,x2,y2 之间的方向
+        // start>p1的方向
         let befored = Point.from(p1.x - start.x, p1.y - start.y).normalize()
+        // p1>p2的方向
         let afterd = Point.from(p2.x - p1.x, p2.y - p1.y).normalize()
-        let cosh = befored.dot(afterd)
-        let sinh = befored.cross(afterd)
+        let cosh = befored.dot(afterd) // 两个的cos夹角
+        let sinh = befored.cross(afterd) // 两个的sin夹角
         //如果上点等于第一个点，则将其拟合化。
         //如果两个点相等，则将其置于拟态度。
         //如果第二点等于第一个点，则SINH为零。
@@ -1925,6 +1933,7 @@ export class PathBuilder {
         })
         return path
     }
+ 
     visit(_visitor: Partial<PathVisitor>) {
         const visitor: PathVisitor = Object.assign({
             moveTo: () => { },

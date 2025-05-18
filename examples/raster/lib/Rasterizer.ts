@@ -384,10 +384,9 @@ export class Rasterizer {
         })
     }
     stroke(bitmap: Bitmap, path: PathBuilder, paint: Paint) {
-        let stroke=new Stroker()
-        let strokePath=stroke.stroke(path,paint)
 
-        this.fill(bitmap, strokePath, paint,FillRule.NonZero)
+
+        this.fill(bitmap, path, paint,FillRule.NonZero)
     }
     buildContours() {
 

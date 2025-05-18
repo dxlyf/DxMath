@@ -245,7 +245,40 @@ function fromValues(out:Matrix3Like,m00:number,m01:number,m02:number,m10:number,
     out[2] = m20; out[5] = m21; out[8] = m22;
     return out
 }
+function mapPoint(out: Vector2Like, a:Matrix3Like, v: Vector2Like) {
+    out[0] = a[0] * v[0] + a[3] * v[1] + a[6];
+    out[1] = a[1] * v[0] + a[4] * v[1] + a[7];
+    return out;
+}
+function mapPoints(out: Vector2Like[], a: Matrix3Like, v: Vector2Like[]) {
+    for (let i = 0; i < v.length; i += 2) {
+        mapPoint(out[i], a, v[i]);
+    }
+    return out;
+}
+
 export class Matrix3 extends Float32Array{
+    static identity=identity
+    static multiply=multiply
+    static invert=invert
+    static makeTranslation=makeTranslation
+    static makeRotation=makeRotation
+    static makeScale=makeScale
+    static makeTranslationRotationScale=makeTranslationRotationScale
+    static makeTranslationRotationScaleOrigin=makeTranslationRotationScaleOrigin
+    static extractTranslation=extractTranslation
+    static extractRotation=extractRotation
+    static extractScale=extractScale
+    //static extractOrigin=extractOrigin
+    static decompose=decompose
+    static adjugate=adjugate
+    static determinant=determinant
+    static transpose=transpose
+    static fromValues=fromValues
+    static makeSkew=makeSkew
+    static mapPoint=mapPoint
+    static mapPoints=mapPoints
+
     constructor(){
         super(9);
         identity(this); 
@@ -300,5 +333,11 @@ export class Matrix3 extends Float32Array{
     }
     hasIdentity(){
         return hasIdentity(this);
+    }
+    mapPoint(v: Vector2Like,out=v) {
+        return  mapPoint(out, this, v);
+    }
+    mapPoints(v: Vector2Like[],out=v) {
+        return  mapPoints(out, this, v);
     }
 }

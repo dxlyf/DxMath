@@ -36,4 +36,14 @@ export class Paint{
         this.paintStyle=style
         return this
     }
+    toCanvas(ctx:CanvasRenderingContext2D){
+        ctx.lineJoin=this.lineJoin
+        ctx.lineCap=this.lineCap
+        ctx.miterLimit=this.miterLimit
+        ctx.lineWidth=this.lineWidth
+
+
+
+
+    }
 }

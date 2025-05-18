@@ -16,7 +16,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "allowJs": true,
-    "noCheck": true,
+    "noCheck": false,
     /* Linting */
     "strict": true,
     "noUnusedLocals": false,
@@ -30,5 +30,5 @@
     }
   },
   "include": ["src","lib","math","examples"],
-  "exclude": ["math/skia_path_ts","math/math/fixed.ts","math/lib"]
+  "exclude": ["math/skia_path_ts","math/math/fixed.ts"]
 }
