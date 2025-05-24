@@ -230,7 +230,7 @@ export const fillPolygon = (polygons: Vector2[], setPixel: (x: number, y: number
                 const startX = Math.floor(x1);
                 const endX = Math.ceil(x2);
 
-                for (let x = startX; x <= endX; x++) {
+                for (let x = startX; x < endX; x++) {
                     const pixelLeft = x;          // 像素左边界
                     const pixelRight = x + 1;     // 像素右边界
                     // 计算覆盖范围

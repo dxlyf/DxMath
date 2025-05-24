@@ -100,6 +100,9 @@ export class Point {
     static from(x: number, y: number) {
         return new Point(x, y)
     }
+    static create(x: number, y: number) {
+        return new Point(x, y)
+    }
     static lerp(a: Point, b: Point, t: number) {
         return this.from(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
     }
@@ -264,6 +267,9 @@ export class Point {
     }
     applyTransform(a: number, b: number, c: number, d: number, tx: number, ty: number) {
         return this.set(a * this.x + c * this.y + tx, b * this.x + d * this.y + ty)
+    }
+    applyMatrix2D(m: Matrix2D) {
+       return this.set(this.x * m.a + this.y * m.c + m.e, this.x * m.b + this.y * m.d + m.f)
     }
 
 }
@@ -1414,6 +1420,57 @@ export class PathBuilder {
             this.bezierCurveTo(curve[2], curve[3], curve[4], curve[5], curve[6], curve[7])
         }
     }
+    ellipseArc3(x1: number, y1: number, x2: number, y2: number,
+        _rx: number, _ry: number, xAxisRotation: number,
+        largeArcFlag: number, sweepFlag: number) {
+        const { cx, cy, rx, ry, theta1, deltaTheta } = endPointToCenter(x1, y1, x2, y2, _rx, _ry, xAxisRotation, largeArcFlag, sweepFlag)
+    
+    
+    
+    
+        const segments = Math.ceil(Math.abs(deltaTheta) / (Math.PI / 2))
+        const delta = deltaTheta / segments
+        let startTheta = theta1
+    
+        const pointTransform = Matrix2D.fromRotate(xAxisRotation)
+        pointTransform.preScale(rx, ry)
+    
+        // const beiers=ellipseArcToCubicBezier(x1,y1,x2,y2,_rx,_ry,xAxisRotation,largeArcFlag,sweepFlag)
+        // for(let b of beiers){
+        //    this.bezierCurveTo(b[2],b[3],b[4],b[5],b[6],b[7])
+        // }
+        const k = 4 / 3 * Math.tan(delta / 4) // 控制点的延伸长度
+        // 计算弧
+        for (let i = 0; i < segments; i++) {
+            let endTheta = startTheta + delta
+    
+            // 椭圆标准参数方程
+            const p0 = Point.create(Math.cos(startTheta), Math.sin(startTheta))
+            const p3 = Point.create(Math.cos(endTheta), Math.sin(endTheta))
+    
+            // const p1=p0.clone().add(p0.clone().rotateCCW().multiplyScalar(k))
+            // const p2=p3.clone().add(p3.clone().rotateCW().multiplyScalar(k))
+            const p1 = p0.clone().add(p0.clone().rotate(Math.PI / 2).multiplyScalar(k))
+            const p2 = p3.clone().add(p3.clone().rotate(-Math.PI / 2).multiplyScalar(k))
+    
+    
+            // p0.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
+            // p1.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
+            // p2.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
+            // p3.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
+    
+    
+            p0.applyMatrix2D(pointTransform).translate(cx, cy)
+            p1.applyMatrix2D(pointTransform).translate(cx, cy)
+            p2.applyMatrix2D(pointTransform).translate(cx, cy)
+            p3.applyMatrix2D(pointTransform).translate(cx, cy)
+            this.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y)
+            startTheta = endTheta
+        }
+    
+        return this
+    }
+    
     /**
     * 在当前路径中添加一段椭圆弧
     * @param cx 椭圆中心 x 坐标
@@ -1851,6 +1908,29 @@ export class PathBuilder {
         }
         return this
     }
+    conicTo2(x1: number, y1: number, x: number, y: number, weight: number): this {
+        if (!(weight > 0.0)) {
+            this.lineTo(x, y);
+        } else if (!Number.isFinite(weight)) {
+            this.lineTo(x1, y1);
+            this.lineTo(x, y);
+        } else if (weight == 1.0) {
+            this.quadraticCurveTo(x1, y1, x, y);
+        } else {
+            this.ensureMove()
+            let last = this.lastPoint!
+            let k = 4.0 * weight / (3.0 * (1.0 + weight));
+
+            let cp1x=last.x+(x1-last.x)*k;
+            let cp1y=last.y+(y1-last.y)*k;
+            let cp2x=x+(x1-x)*k;
+            let cp2y=y+(y1-y)*k;
+
+            this.bezierCurveTo(cp1x,cp1y,cp2x,cp2y,x,y);
+
+        }
+        return this
+    }
     getBounds() {
         const min = Point.from(Infinity, Infinity), max = Point.from(-Infinity, -Infinity)
         this.points.forEach(p => {
@@ -1892,22 +1972,98 @@ export class PathBuilder {
 
     }
     isPointInPath(x: number, y: number, fillRule: FillRule) {
-        const bounds = this.getBounds()
+        const bounds = this.getBounds();
         if (x < bounds.min.x || x > bounds.max.x || y < bounds.min.y || y > bounds.max.y) {
-            return false
+            return false;
         }
-        let w = 0, lastPoint = Point.default()
+
+        let windingNumber = 0; // 非零环绕数规则使用
+        let intersectionCount = 0; // 奇偶规则使用
+        let lastPoint = Point.default();
+
         this.visit({
             moveTo: (d) => {
-                lastPoint.copy(d.p0!)
+                lastPoint.copy(d.p0!);
             },
             lineTo: (d) => {
-
+                const currentPoint = d.p0!;
+                // 射线法判断点与线段的相交情况
+                if ((lastPoint.y > y) !== (currentPoint.y > y)) {
+                    const xIntersect = (currentPoint.x - lastPoint.x) * (y - lastPoint.y) / (currentPoint.y - lastPoint.y) + lastPoint.x;
+                    if (x < xIntersect) {
+                        if (lastPoint.y < currentPoint.y) {
+                            windingNumber++;
+                        } else {
+                            windingNumber--;
+                        }
+                        intersectionCount++;
+                    }
+                }
+                lastPoint.copy(currentPoint);
             },
-            quadraticCurveTo: (d) => { },
-            bezierCurveTo: (d) => { },
-            closePath: (d) => { }
-        })
+            quadraticCurveTo: (d) => {
+                // 二次贝塞尔曲线细分处理
+                const segments = quadraticCurveToLines(d.p0!, d.p1!, d.p2!);
+                for (let i = 0; i < segments.length - 1; i++) {
+                    const start = segments[i];
+                    const end = segments[i + 1];
+                    if ((start.y > y) !== (end.y > y)) {
+                        const xIntersect = (end.x - start.x) * (y - start.y) / (end.y - start.y) + start.x;
+                        if (x < xIntersect) {
+                            if (start.y < end.y) {
+                                windingNumber++;
+                            } else {
+                                windingNumber--;
+                            }
+                            intersectionCount++;
+                        }
+                    }
+                }
+                lastPoint.copy(d.p2!);
+            },
+            bezierCurveTo: (d) => {
+                // 三次贝塞尔曲线细分处理
+                const segments = cubicCurveToLines(d.p0!, d.p1!, d.p2!, d.p3!);
+                for (let i = 0; i < segments.length - 1; i++) {
+                    const start = segments[i];
+                    const end = segments[i + 1];
+                    if ((start.y > y) !== (end.y > y)) {
+                        const xIntersect = (end.x - start.x) * (y - start.y) / (end.y - start.y) + start.x;
+                        if (x < xIntersect) {
+                            if (start.y < end.y) {
+                                windingNumber++;
+                            } else {
+                                windingNumber--;
+                            }
+                            intersectionCount++;
+                        }
+                    }
+                }
+                lastPoint.copy(d.p3!);
+            },
+            closePath: (d) => {
+                // 闭合路径时，连接最后一个点和起始点
+                const currentPoint = d.lastMovePoint;
+                if ((lastPoint.y > y) !== (currentPoint.y > y)) {
+                    const xIntersect = (currentPoint.x - lastPoint.x) * (y - lastPoint.y) / (currentPoint.y - lastPoint.y) + lastPoint.x;
+                    if (x < xIntersect) {
+                        if (lastPoint.y < currentPoint.y) {
+                            windingNumber++;
+                        } else {
+                            windingNumber--;
+                        }
+                        intersectionCount++;
+                    }
+                }
+                lastPoint.copy(currentPoint);
+            }
+        });
+
+        if (fillRule === FillRule.NonZero) {
+            return windingNumber !== 0;
+        } else {
+            return (intersectionCount % 2) === 1;
+        }
     }
     fatten() {
         let path = PathBuilder.default()

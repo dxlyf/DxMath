@@ -3,14 +3,14 @@ import { Matrix3 } from "./mat3"
 
 
 export class Vector2 {
-    static AreFinite(v: Vector2[]) {
+    static areFinite(v: Vector2[]) {
         return !v.some(d => !d.isFinite())
     }
-    static CanNormalize(dx: number, dy: number) {
+    static canNormalize(dx: number, dy: number) {
         return Number.isFinite(dx) && Number.isFinite(dy) && (dx || dy);
     }
-    static EqualsWithinTolerance(p1: Vector2, p2: Vector2) {
-        return !this.CanNormalize(p1.x - p2.x, p1.y - p2.y);
+    static equalsWithinTolerance(p1: Vector2, p2: Vector2) {
+        return !this.canNormalize(p1.x - p2.x, p1.y - p2.y);
     }
 
     static makeZeroArray(n: number) {
@@ -236,6 +236,10 @@ export class Vector2 {
 
     length() {
         return Math.sqrt(this.squaredLength())
+    }
+    magnitude(){
+        return this.length()
+        
     }
     manhattanLength() {
         return Math.abs(this.x) + Math.abs(this.y);
@@ -657,9 +661,11 @@ export class Vector2 {
     almostEqual(other: Vector2) {
         return !(this.clone().sub(other).canNormalize())
     }
+    // before在after右边
     isClockwiseVectors(before: Vector2, after: Vector2) {
         return before.x * after.y > before.y * after.x
     }
+    //当前在b的右边，表示顺时针方向
     isClockwise(b: Vector2) {
         return this.isClockwiseVectors(this, b)
     }

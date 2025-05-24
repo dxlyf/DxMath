@@ -197,9 +197,8 @@ export class EventTarget<Events extends Record<string,any>=any> {
             }
         }
       
-        let shouldBubble = true;
+   
         let index = eventPathTarget.length - 1
-
         CaptureAllEvent:
         for (const listeners of captureListeners) {
             const target = eventPathTarget[index--]
@@ -217,26 +216,19 @@ export class EventTarget<Events extends Record<string,any>=any> {
                 if (listener.once) {
                     target.removeEventListener(event.type, listener.handle)
                 }
-
-                // 如果事件取消冒泡，则不再继续向下传播
-                if (event.cancelBubble) {
-                    shouldBubble = false
-                }
                 // 如果事件取消冒泡，则不再继续向上传播
                 if (event.stopImmediatePropagationInternal) {
-                    shouldBubble = false
-                    break CaptureAllEvent
+                    break
                 }
             }
-            // 如果事件取消冒泡，则不再继续向上传播
-
-            if (!shouldBubble) {
+            // 如果事件取消冒泡，则不再继续向下传播
+            if (event.cancelBubble) {
                 break CaptureAllEvent;
             }
         }
 
         // Bubble phase
-        if (shouldBubble) {
+        if (!event.cancelBubble) {
             let index = 0
             BubbleAllEvent:
             for (const listeners of bubbleListeners) {
@@ -253,17 +245,12 @@ export class EventTarget<Events extends Record<string,any>=any> {
                     if (listener.once) {
                         target.removeEventListener(event.type, listener.handle)
                     }
-
-                    if (event.cancelBubble) {
-                        shouldBubble = false
-                    }
-                    if (event.stopImmediatePropagationInternal||!event.bubbles) {
-                        shouldBubble = false
-                        break BubbleAllEvent
+                    if (event.stopImmediatePropagationInternal) {
+                        break
                     }
                 }
-                if (!shouldBubble) {
-                    break BubbleAllEvent;
+                if (event.cancelBubble||!event.bubbles) {
+                    break;
                 }
             }
         }

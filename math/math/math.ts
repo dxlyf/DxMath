@@ -157,7 +157,8 @@ export function dcmp(x: number) {
     }
     return x < 0 ? -1 : 1;
 }
-export const bezier2 = (controls: Vector2[], t: number) => {
+// 德卡斯特劳贝塞尔曲线
+export const deCasteljauBezier = (controls: Vector2[], t: number) => {
     const n = controls.length - 1
     const c = controls.slice().map(d => d.clone())
     for (let i = 0; i < n; i++) {
@@ -168,6 +169,8 @@ export const bezier2 = (controls: Vector2[], t: number) => {
     }
     return c[0]
 }
+// 伯恩斯坦多项求贝塞尔曲线
+
 export const bezier = (controls: Vector2[], t: number) => {
     const n = controls.length - 1
     let x = 0, y = 0
