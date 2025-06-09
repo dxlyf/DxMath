@@ -88,7 +88,7 @@ export class Rasterizer {
 
         let i = this.cellIndex[this.yi];
         let prev = -1;
-
+        // 按x升序，找到等于或小于当前xi前面的cell
         while (i !== -1 && this.cell[i].xi <= xi) {
             if (this.cell[i].xi === xi) {
                 return i;
@@ -104,7 +104,9 @@ export class Rasterizer {
         // } else {
         //     this.cell[c] = Cell.from(xi,0,0,i)
         // }
+        // 创建一个x cell
         this.cell[c] = Cell.from(xi, 0, 0, i)
+        // 链表形式存储
         if (prev === -1) {
             this.cellIndex[this.yi] = c;
         } else {
@@ -117,7 +119,7 @@ export class Rasterizer {
     saveCell() {
         const r = this
         if (r.area != 0 || r.cover != 0) {
-            let i = r.findCell()
+            let i = r.findCell() //找到或创建一个cell,返回cell Index
             if (i != -1) {
                 r.cell[i].area += r.area
                 r.cell[i].cover += r.cover
@@ -129,6 +131,7 @@ export class Rasterizer {
     // setCell sets the (xi, yi) cell that r is accumulating area/coverage for.
     setCell(xi: int, yi: int) {
         const r = this
+        // 更新cell
         if (r.xi != xi || r.yi != yi) {
             r.saveCell()
             r.xi=xi
@@ -151,7 +154,8 @@ export class Rasterizer {
         const dx = x1 - x0;
         const dy = y1f - y0f;
 
-        // 单单元格扫描
+        // 单单元格扫描 
+        // 如果是同一个单元格，则直接累加面积和覆盖率。
         if (x0i === x1i) {
             this.area += Math.trunc((x0f + x1f) * dy);
             this.cover += Math.trunc(dy);
@@ -242,6 +246,7 @@ export class Rasterizer {
         const y1i = Math.trunc(y1 / 64);
         const y1f = y1 - y1i * 64;
 
+        // 如果y相同，则只有一条扫描线需要处理。
         if (y0i === y1i) {
             // 只有一条扫描线
             this.scan(y0i, x0, y0f, x1, y1f);
@@ -532,6 +537,7 @@ export class Rasterizer {
         let s = 0;
         for (let yi = 0; yi < this.cellIndex.length; yi++) {
             let xi = 0, cover = 0;
+            // 生成span跨度
             for (let c = this.cellIndex[yi]; c !== -1; c = this.cell[c].next) {
                 if (cover !== 0 && this.cell[c].xi > xi) {
                     let alpha = this.areaToAlpha(cover * 64 * 2);

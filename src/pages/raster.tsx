@@ -38,8 +38,8 @@ function testNewRasterizer(ctx:CanvasExpose){
     pathBuilder.lineTo(400,100)
     pathBuilder.lineTo(300,400)
    // pathBuilder.rect(100,100,200,200)
-   pathBuilder.quadraticCurveTo(200,200,300,200)
-    pathBuilder.transform([2,0,0,2,0,0])
+    pathBuilder.quadraticCurveTo(200,200,300,200)
+    //pathBuilder.transform([2,0,0,2,0,0])
 
 
    // pathBuilder.transform([64,0,0,64,0,0])
@@ -74,6 +74,12 @@ function testNewRasterizer(ctx:CanvasExpose){
     r.Rasterize(paint)
 
     ctx.ctx?.putImageData(paint.image.imageData,0,0)
+
+
+    ctx.ctx?.beginPath()
+    ctx.ctx!.lineWidth=10
+    pathBuilder.toCanvas(ctx.ctx!)
+  //  ctx.ctx!.stroke()
 }
 export default () => {
 
@@ -86,5 +92,5 @@ export default () => {
         })
 
     }
-    return <Canvas width={500} height={500} onInit={onInit}></Canvas>
+    return <Canvas width={500} height={500} dpr={1} onInit={onInit}></Canvas>
 }

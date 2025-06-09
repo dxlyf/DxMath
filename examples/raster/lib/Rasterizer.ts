@@ -71,7 +71,7 @@ export class Rasterizer {
                     const x1 = intersections[i].x;
                     const x2 = intersections[i + 1].x;
                     const startX = Math.floor(x1);
-                    const endX = Math.ceil(x2);
+                    const endX = Math.floor(x2);
 
                     for (let x = startX; x <= endX; x++) {
                         const pixelLeft = x;          // 像素左边界

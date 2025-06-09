@@ -20,18 +20,18 @@ export type PathVerbData = {
     p3?: Point
 }
 export enum LineJoin {
-    Miter,
-    Round,
-    Bevel,
+    Miter='miter',
+    Round='round',
+    Bevel='bevel',
 }
 export enum LineCap {
-    Butt,
-    Round,
-    Square,
+    Butt='butt',
+    Round='round',
+    Square='square',
 }
 export enum FillRule {
-    NonZero,
-    EvenOdd,
+    NonZero='nonzero',
+    EvenOdd='evenodd',
 }
 export enum TextAlign {
     Left,
@@ -51,7 +51,7 @@ export enum PathDirection {
     CCW,
     CW,
 }
-export enum PaintType {
+export enum FillStyle {
     Color,
     LinearGradient,
     RadialGradient,
@@ -308,7 +308,7 @@ export class Paint {
     dashArray: number[] = []
     fillRule: FillRule = FillRule.NonZero
     blend: BlendMode = BlendMode.SrcOver
-    paintType: PaintType = PaintType.Color
+    fillStyle: FillStyle = FillStyle.Color
     paintStyle: PaintStyle = PaintStyle.Stroke
 
     copy(p: Paint) {
@@ -1097,7 +1097,7 @@ type PathVisitor = {
     lineTo: (record: { type: PathVerb, p0: Point, index: number }) => void
     quadraticCurveTo: (record: { type: PathVerb, p0: Point, p1: Point, p2: Point, index: number }) => void
     bezierCurveTo: (record: { type: PathVerb, p0: Point, p1: Point, p2: Point, p3: Point, index: number }) => void
-    closePath: (record: { type: PathVerb, lastMovePoint: Point, index: number }) => void
+    closePath: (record: { type: PathVerb,p0:Point, lastMovePoint: Point, index: number }) => void
 }
 export const PtsInVerb = (v: PathVerb) => {
     switch (v) {
@@ -2115,7 +2115,7 @@ export class PathBuilder {
                     visitor.bezierCurveTo({ type: d.type, p0: d.p0!, p1: d.p1!, p2: d.p2!, p3: d.p3!, index });
                     break
                 case PathVerb.Close:
-                    visitor.closePath({ type: d.type, lastMovePoint: d.p0!, index })
+                    visitor.closePath({ type: d.type,p0:d.p0!, lastMovePoint: d.p1!, index })
                     break
             }
             index++
@@ -2147,7 +2147,7 @@ export class PathBuilder {
                     yield { type: verb, p0: points[k - 4], p1: points[k - 3], p2: points[k - 2], p3: points[k - 1] }
                     break;
                 case PathVerb.Close:
-                    yield { type: verb, p0: lastMovePoint?.clone() }
+                    yield { type: verb, p0:points[k-1],p1:lastMovePoint?.clone() }
                     break;
             }
         }
@@ -2261,7 +2261,7 @@ export class PixelImage {
     }
     width: number
     height: number
-    colorBuffer: Uint8ClampedArray
+    colorBuffer: ImageDataArray
     imageData: ImageData
     constructor(width: number, height: number) {
         this.width = width

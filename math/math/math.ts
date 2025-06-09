@@ -221,6 +221,34 @@ export function partialDerivative(f: (...args: number[]) => number, varIndex: nu
 }
 
 
+/**
+ * 计算梯形面积
+ * @param {number} x0 - 边起点的 x 坐标
+ * @param {number} y0 - 边起点的 y 坐标
+ * @param {number} x1 - 边终点的 x 坐标
+ * @param {number} y1 - 边终点的 y 坐标
+ * @returns {number} - 返回有符号面积
+ */
+export function computeEdgeContribution(x0:number, y0:number, x1:number, y1:number) {
+    // 忽略水平边
+    if (y0 === y1) return 0;
+  
+    // 确保 y0 < y1
+    if (y0 > y1) {
+      [x0, x1] = [x1, x0];
+      [y0, y1] = [y1, y0];
+    }
+  
+    // 计算交点的 x 坐标
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+  
+    // 计算梯形的面积
+    const area = (x0 + x1) * dy / 2;
+  
+    // 根据边的方向确定符号
+    return dx > 0 ? area : -area;
+  }
 // 前向差分
 export const forwardDifferential = (fn: any, h: number, ...args: any[]) => {
     return (fn(...args.map(d => d + h)) - fn(...args)) / h

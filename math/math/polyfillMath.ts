@@ -2,6 +2,191 @@ import BigNumber from './bignumber'
 // cordic Volder算法
 // https://zh.wikipedia.org/wiki/CORDIC
 
+
+/**
+ * 圆周系统(Circular System)旋转模式
+ * 使用CORDIC算法计算向量旋转后的坐标
+ * @param {number} x - 初始x坐标
+ * @param {number} y - 初始y坐标
+ * @param {number} angle - 旋转角度(弧度)
+ * @param {number} [iterations=20] - 迭代次数
+ * @returns {number[]} 旋转后的坐标[x, y]
+ */
+export function circularRotation(x:number, y:number, angle:number, iterations = 20) {
+    let currentAngle = 0;
+    let factor = 1;
+    const angles = [];
+    let pow = 1;
+
+    // 预计算旋转角度和增益因子
+    for (let i = 0; i < iterations; i++) {
+        angles.push(Math.atan(pow));
+        pow /= 2;
+        factor *= Math.sqrt(1 + 2 ** (-2 * i));
+    }
+    factor = 1 / factor;
+
+    // CORDIC核心迭代
+    pow = 1;
+    for (let i = 0; i < iterations; i++) {
+        const direction = currentAngle < angle ? 1 : -1;
+        [x, y] = [
+            x - y * direction * pow,
+            y + x * direction * pow
+        ];
+        currentAngle += direction * angles[i];
+        pow /= 2;
+    }
+    return [x * factor, y * factor];
+}
+
+/**
+ * 圆周系统向量模式
+ * 计算向量的极坐标参数
+ * @param {number} x - x坐标
+ * @param {number} y - y坐标
+ * @param {number} [iterations=20] - 迭代次数
+ * @returns {{magnitude: number, angle: number}} 幅度和角度
+ */
+export function circularVector(x:number, y:number, iterations = 20) {
+    let angle = 0;
+    let pow = 1;
+
+    // CORDIC核心迭代
+    for (let i = 0; i < iterations; i++) {
+        const direction = y > 0 ? -1 : 1;
+        [x, y] = [
+            x - y * direction * pow,
+            y + x * direction * pow
+        ];
+        angle -= direction * Math.atan(pow);
+        pow /= 2;
+    }
+    return {
+        magnitude: x * (1 / Math.sqrt(1 + 2 ** (-2 * iterations))),
+        angle
+    };
+}
+
+/**
+ * 线性系统(Linear System)旋转模式
+ * 使用CORDIC实现乘法运算
+ * @param {number} x - 被乘数
+ * @param {number} z - 乘数
+ * @param {number} [iterations=20] - 迭代次数
+ * @returns {number} 乘积结果
+ */
+export function linearRotation(x:number, z:number, iterations = 20) {
+    let y = 0;
+    let pow = 1;
+
+    for (let i = 0; i < iterations; i++) {
+        const direction = z >= 0 ? 1 : -1;
+        y += direction * x * pow;
+        z -= direction * pow;
+        pow /= 2;
+    }
+    return y;
+}
+
+/**
+ * 线性系统向量模式
+ * 使用CORDIC实现除法运算
+ * @param {number} x - 被除数
+ * @param {number} y - 除数
+ * @param {number} [iterations=20] - 迭代次数
+ * @returns {number} 商值
+ */
+export function linearVector(x:number, y:number, iterations = 20) {
+    let z = 0;
+    let pow = 1;
+
+    for (let i = 0; i < iterations; i++) {
+        const direction = y <= x ? 1 : -1;
+        y += direction * x * pow;
+        z += direction * pow;
+        pow /= 2;
+    }
+    return z;
+}
+
+/**
+ * 双曲系统(Hyperbolic System)旋转模式
+ * 使用CORDIC计算双曲函数
+ * @param {number} x - 初始x坐标
+ * @param {number} y - 初始y坐标
+ * @param {number} angle - 双曲旋转角度
+ * @param {number} [iterations=20] - 迭代次数
+ * @returns {number[]} 旋转后的坐标[x, y]
+ */
+export function hyperbolicRotation(x:number, y:number, angle:number, iterations = 20) {
+    let currentAngle = 0;
+    let factor = 1;
+    const angles = [];
+    let pow = 0.5;
+
+    // 预计算角度和增益因子(需要重复特定迭代)
+    for (let i = 1, k = 3; i <= iterations; i++) {
+        angles.push(Math.atanh(pow));
+        factor *= Math.sqrt(1 - 2 ** (-2 * i));
+        if (i === k) {  // 重复迭代保证收敛
+            angles.push(Math.atanh(pow));
+            factor *= Math.sqrt(1 - 2 ** (-2 * i));
+            k = 2 * k + 1;
+        }
+        pow /= 2;
+    }
+    factor = 1 / factor;
+
+    // CORDIC核心迭代
+    pow = 0.5;
+    for (let i = 0; i < iterations; i++) {
+        const direction = currentAngle < angle ? 1 : -1;
+        [x, y] = [
+            x + y * direction * pow,
+            y + x * direction * pow
+        ];
+        currentAngle += direction * angles[i];
+        pow /= 2;
+    }
+    return [x * factor, y * factor];
+}
+
+/**
+ * 双曲系统向量模式
+ * 计算双曲极坐标参数
+ * @param {number} x - x坐标
+ * @param {number} y - y坐标
+ * @param {number} [iterations=20] - 迭代次数
+ * @returns {{magnitude: number, angle: number}} 幅度和双曲角度
+ */
+export function hyperbolicVector(x:number, y:number, iterations = 20) {
+    let angle = 0;
+    let pow = 0.5;
+
+    for (let i = 1, k = 3; i <= iterations; i++) {
+        const direction = y > 0 ? -1 : 1;
+        [x, y] = [
+            x + y * direction * pow,
+            y + x * direction * pow
+        ];
+        angle -= direction * Math.atanh(pow);
+        if (i === k) {  // 重复迭代
+            [x, y] = [
+                x + y * direction * pow,
+                y + x * direction * pow
+            ];
+            angle -= direction * Math.atanh(pow);
+            k = 2 * k + 1;
+        }
+        pow /= 2;
+    }
+    return {
+        magnitude: x * (1 / Math.sqrt(1 - 2 ** (-2 * iterations))),
+        angle
+    };
+}
+
 function createMathTrigonometric() {
 
     const PI = Math.PI
@@ -17,6 +202,7 @@ function createMathTrigonometric() {
     for (let i = 0; i < iters; i++) {
         tanTable[i] = Math.pow(2, -i)
         arctanTable[i] = Math.atan(tanTable[i])
+
         k *= 1 / Math.sqrt(1 + Math.pow(2, -2 * i))
     }
     function perp(x: number, y: number) {
@@ -127,9 +313,9 @@ function createMathTrigonometric() {
     return { rotate, vector,cos,sin,tan,atan2 }
 
 }
-const myMath= createMathTrigonometric()
-const  { rotate, vector,cos,sin,tan } =myMath
-window.myMath=myMath
+// const myMath= createMathTrigonometric()
+// const  { rotate, vector,cos,sin,tan } =myMath
+// window.myMath=myMath
 //console.log('vector', vector(-1, -1))
 // for(let i=-180;i<=180;i+=1){
 //     let angle = i / 180 * Math.PI
