@@ -372,3 +372,42 @@ void renderSubpixelAA(Triangle tri) {
 如果你正在设计自己的 2D 引擎，可以选择其中一种作为基础（比如 CPU 精度高、WebGL 更流畅），甚至实现混合架构：用 CPU 构造路径，GPU 快速填充显示。这在现代浏览器/引擎中越来越常见。
 
 需要架构建议或样板代码，我可以继续帮助你。
+
+
+不同的图形库采用的抗锯齿技术有所不同，主要分为**灰度抗锯齿（Gray-Scale Anti-Aliasing）**和**亚像素抗锯齿（Subpixel Anti-Aliasing）**。以下是几个主流图形库的抗锯齿方案分析：
+
+### **1. FreeType（字体渲染）**
+- **默认抗锯齿**：FreeType 主要使用**灰度抗锯齿**，通过计算字符边缘的像素覆盖比例来调整灰度值，使边缘平滑。
+- **支持亚像素渲染**：FreeType 也可以结合 **LCD 子像素渲染**（如 ClearType），利用 RGB 子像素结构提高水平方向的分辨率，但需要额外的配置（如 `FT_Library_SetLcdFilter`）。
+
+### **2. Cairo（2D 矢量图形库）**
+- **默认抗锯齿**：Cairo 主要使用**灰度抗锯齿**，适用于通用图形渲染，如 SVG、PDF 输出。
+- **亚像素支持**：Cairo 可以通过 `CAIRO_ANTIALIAS_SUBPIXEL` 选项启用亚像素渲染，但通常需要配合 LCD 屏幕优化（如 XRender 后端）。
+
+### **3. Skia（Google 的 2D 图形引擎，用于 Chrome、Flutter 等）**
+- **默认抗锯齿**：Skia 支持**灰度抗锯齿**（如 `SkPaint::kAntiAlias_Flag`），适用于通用图形渲染。
+- **亚像素支持**：Skia 也支持**LCD 子像素渲染**（`SkPaint::kLCDRenderText_Flag`），主要用于字体渲染以提高清晰度。
+
+### **4. AGG（Anti-Grain Geometry）**
+- **抗锯齿方式**：AGG 主要采用**灰度抗锯齿**，通过超采样（Supersampling）或覆盖计算（Coverage-Based AA）来平滑边缘。
+- **亚像素支持**：AGG 本身不直接支持亚像素渲染，但可以通过自定义算法实现类似效果。
+
+### **5. R 语言的 `ragg` 包**
+- **抗锯齿方式**：`ragg` 默认使用**灰度抗锯齿**，但有时会因混合计算产生白色边缘（可通过调整 `gpar(col = fill)` 缓解）。
+- **与 Cairo 对比**：`ragg` 基于 AGG，而 Cairo 可能在某些情况下提供更平滑的亚像素优化。
+
+### **总结对比**
+| 图形库 | 默认抗锯齿 | 亚像素支持 | 主要应用场景 |
+|--------|------------|------------|--------------|
+| **FreeType** | 灰度 AA | 支持（需配置） | 字体渲染 |
+| **Cairo** | 灰度 AA | 可选（需后端支持） | SVG/PDF/2D 图形 |
+| **Skia** | 灰度 AA | 支持（LCD 文本） | Chrome/Flutter/Android |
+| **AGG** | 灰度 AA | 不支持（需自定义） | 2D 图形渲染 |
+| **ragg** | 灰度 AA | 不支持 | R 语言图形输出 |
+
+### **如何选择？**
+- **需要高精度字体渲染**（如 UI/Web）→ **FreeType + 亚像素** 或 **Skia LCD 模式**。
+- **通用矢量图形**（如 SVG/PDF）→ **Cairo** 或 **AGG**（纯灰度 AA）。
+- **跨平台图形**（如 Flutter/Chrome）→ **Skia**（支持多种 AA 模式）。
+
+如果需要更详细的实现方式（如代码配置），可以参考各库的官方文档或相关优化指南。

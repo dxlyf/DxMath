@@ -133,12 +133,7 @@ export class TBand {
     max: TPos = 0
 };
 
-export class FT_Span {
-    x: int = 0;
-    len: int = 0;
-    y: int = 0;
-    coverage: uchar = 0;
-};
+
 export type FT_SpanFunc = (count: int, spans: FT_Span[], user: any) => void
 type FT_Raster_Span_Func = FT_SpanFunc
 export const FT_RASTER_FLAG_DEFAULT = 0x0
@@ -146,12 +141,18 @@ export const FT_RASTER_FLAG_AA = 0x1
 export const FT_RASTER_FLAG_DIRECT = 0x2
 export const FT_RASTER_FLAG_CLIP = 0x4
 
-
+export class FT_Span {
+    x: int = 0;              // 起始像素的 x 坐标
+    len: int = 0;            // 像素段长度，从 x 开始向右延伸 len 像素
+    y: int = 0;              // 当前 span 所在的 y 坐标（扫描线行号）
+    coverage: uchar = 0;     // 灰度覆盖值（0-255），表示此 span 的覆盖程度
+};
 export class TCell {
-    x: int = 0
-    cover: int = 0
-    area: TArea = 0
-    next: TCell | null = null
+    x: int = 0                // 当前 cell 的 x 坐标（整数像素位置）
+    cover: int = 0            // 覆盖计数器（累加 y 子像素上的覆盖值）
+    area: TArea = 0           // 面积累加器（用于精细抗锯齿灰度计算）
+    next: TCell | null = null // 链表中的下一个 cell（用于冲突处理或 y-bucket 索引）
+
     copy(source: TCell) {
         this.x = source.x;
         this.cover = source.cover;
@@ -166,6 +167,51 @@ export class TCell {
     }
 }
 
+export class TWorker {
+    ex: TCoord = 0;               // 当前点的 x 坐标（子像素精度）
+    ey: TCoord = 0;               // 当前点的 y 坐标（子像素精度）
+
+    min_ex: TPos = 0              // 所有轮廓点中的最小 x（边界框）
+    max_ex: TPos = 0;             // 最大 x
+    min_ey: TPos = 0              // 最小 y
+    max_ey: TPos = 0;             // 最大 y
+
+    count_ex: TPos = 0            // 扫描线宽度（x 像素数量）
+    count_ey: TPos = 0;           // 扫描线高度（y 像素数量）
+
+    area: TArea = 0;              // 当前正在处理的单元格的临时面积值
+    cover: int = 0;               // 当前单元格的覆盖值
+
+    invalid: int = 0;             // 标记某些内部状态是否失效（通常用于调试或跳过无效单元格）
+
+    cells: TCell[] = [];          // 所有 cell 的缓冲区，用于构建覆盖图像
+    max_cells: FT_PtrDist = 0;    // 最大允许的 cell 数量（缓冲区大小）
+    num_cells: FT_PtrDist = 0;    // 当前已使用的 cell 数量
+
+    x: TPos = 0                   // 逻辑处理用的当前像素 x 坐标
+    y: TPos = 0;                  // 当前像素 y 坐标（整数）
+
+    outline!: FT_Outline;         // 要扫描转换的轮廓路径
+    clip_box!: FT_BBox;           // 可选裁剪框（bounding box）
+
+    gray_spans: FT_Span[] = new Array(FT_MAX_GRAY_SPANS).fill(0).map(() => new FT_Span());
+                                  // 缓存生成的灰度 span，用于最终输出或回调
+    num_gray_spans: int = 0;      // 当前灰度 span 数量
+    skip_spans: int = 0;          // 是否跳过 span 渲染（例如用于裁剪）
+
+    render_span: FT_Raster_Span_Func | null = null;
+                                  // 渲染 span 的回调函数（最终输出 span）
+
+    render_span_data: any;        // 渲染 span 时附带的数据（例如目标缓冲区、上下文等）
+
+    band_size: int = 0;           // 单个扫描带的高度（用于分带处理）
+    band_shoot: int = 0;          // 当前处理的带偏移量
+
+    // jump_buffer / buffer / buffer_size: 可能用于异常处理或优化分配，已注释
+
+    ycells: (TCell | null)[] = [];// 每个 y 扫描线所对应的 cell 链表头指针
+    ycount: TPos = 0;             // 当前 ycells 的总行数（即 scanline 数）
+}
 
 
 export class FT_Raster_Params {
@@ -186,38 +232,6 @@ export function setCurrentWorker(worker: TWorker | null) {
     return prev
 }
 
-export class TWorker {
-    ex: TCoord = 0;
-    ey: TCoord = 0;
-    min_ex: TPos = 0
-    max_ex: TPos = 0;
-    min_ey: TPos = 0
-    max_ey: TPos = 0;
-    count_ex: TPos = 0
-    count_ey: TPos = 0;
-    area: TArea = 0;
-    cover: int = 0;
-    invalid: int = 0;
-    cells: TCell[] = [];
-    max_cells: FT_PtrDist = 0;
-    num_cells: FT_PtrDist = 0;
-    x: TPos = 0
-    y: TPos = 0;
-    outline!: FT_Outline;
-    clip_box!: FT_BBox;
-    gray_spans: FT_Span[] = new Array(FT_MAX_GRAY_SPANS).fill(0).map(() => new FT_Span());
-    num_gray_spans: int = 0;
-    skip_spans: int = 0;
-    render_span: FT_Raster_Span_Func | null = null;
-    render_span_data: any;
-    band_size: int = 0;
-    band_shoot: int = 0;
-    // jump_buffer: any;
-    // buffer: any
-    // buffer_size: long = 0;
-    ycells: (TCell | null)[] = [];
-    ycount: TPos = 0;
-}
 function gray_init_cells(buffer: any, byte_size: float64) {
     let ras = currentWorker!
     ras.ycells = [];
