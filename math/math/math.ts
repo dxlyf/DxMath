@@ -314,9 +314,16 @@ export const mod = (v: number, m: number) => {
     //return v % modulo
     return v - Math.trunc(v / m) * m
 }
+
+// 正数向上取整，负数向下取整
+// 2%10=-8 -2%10=-2
+export const  modUp=(a:number,b:number)=>{
+    return a-Math.ceil(a/b)*b
+}
+// 正数向下取整，负数向向取整
 // -2%10 8 2%10=2 remainder
-export const modPositiveInteger = (v: number, m: number) => {
-    return v - Math.floor(v / m) * m
+export const  modDown=(a:number,b:number)=>{
+    return a-Math.floor(a/b)*b
 }
 export const clamp = (v: number, min: number, max: number) => {
     return Math.max(Math.min(v, max), min)
@@ -347,7 +354,7 @@ export const isFinite = (x: any) => {
     return Number.isFinite(x)
 }
 // 阶乘
-export const factorial = (x: number) => {
+export const factorial = (x: number):number => {
     const sign = Math.sign(1 / x)
     const absValue = Math.abs(x)
     if (absValue <= 1) {
@@ -355,7 +362,7 @@ export const factorial = (x: number) => {
     }
     return x * factorial(absValue - 1)
 }
-export const fastFactorial = (x: number) => {
+export const fastFactorial = (x: number):number => {
     if (x <= 1) {
         return 1;
     }
@@ -459,6 +466,7 @@ function bSplineCurve(controlPoints, degree, knots, t) {
 }
 
 // 生成B样条曲线
+// @ts-ignore
 function generateBSpline(controlPoints, degree, numPoints = 100) {
     const n = controlPoints.length;
     const knots = [];

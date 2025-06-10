@@ -9,18 +9,23 @@ export const ErrRaster_Memory_Overflow = -4
 export const ErrRaster_OutOfMemory = -6
 
 const PIXEL_BITS = 8
-const ONE_PIXEL = (1 << PIXEL_BITS)
-const TRUNC = (x: number) => ((x) >> PIXEL_BITS)
-const FRACT = (x: number) => ((x) & (ONE_PIXEL - 1))
-const UPSCALE = (x: number) => ((x) * (ONE_PIXEL >> 6))
+const ONE_PIXEL = (1 << PIXEL_BITS) // 256
+const TRUNC = (x: number) => ((x) >> PIXEL_BITS) // 除以256,向下取整
+const FRACT = (x: number) => ((x) & (ONE_PIXEL - 1)) // 取小数部分（0-255）
+// 之前路径左位移了6位（64），这再左移2位，相当共同左位移了8位（256）
+const UPSCALE = (x: number) => ((x) * (ONE_PIXEL >> 6)) // 将坐标乘以4，将像素单元格化分成4*4
 const DOWNSCALE = (x: number) => ((x) >> (PIXEL_BITS - 6))
-const FT_DIV_MOD = (type: any, dividend: number, divisor: number, quotient: RefValue<number>, remainder: RefValue<number>) => {
-    quotient.value = type(Math.floor(dividend / divisor));
-    remainder.value = type(dividend % divisor);
 
+
+// 这个函数把取模变成:a-Math.floor(a/b)*b // 正数向下取整，负数向取整
+const FT_DIV_MOD = (type: any, dividend: number, divisor: number, quotient: RefValue<number>, remainder: RefValue<number>) => {
+    quotient.value = type(Math.floor(dividend / divisor));// 商的整数
+    remainder.value = type(dividend % divisor); // 余数
+    //正常 -14%10=-4 14%10=4
+    // 当前负数向上取整 
     if (remainder.value < 0) {
         quotient.value--;
-        remainder.value += type(divisor);
+        remainder.value += type(divisor); // -14%10=-4+10=6
     }
 
 }
@@ -168,9 +173,11 @@ export class TCell {
 }
 
 export class TWorker {
+    // 屏幕坐标，相对最小边界
     ex: TCoord = 0;               // 当前点的 x 坐标（子像素精度）
     ey: TCoord = 0;               // 当前点的 y 坐标（子像素精度）
 
+    // 屏幕坐标
     min_ex: TPos = 0              // 所有轮廓点中的最小 x（边界框）
     max_ex: TPos = 0;             // 最大 x
     min_ey: TPos = 0              // 最小 y
@@ -188,19 +195,21 @@ export class TWorker {
     max_cells: FT_PtrDist = 0;    // 最大允许的 cell 数量（缓冲区大小）
     num_cells: FT_PtrDist = 0;    // 当前已使用的 cell 数量
 
-    x: TPos = 0                   // 逻辑处理用的当前像素 x 坐标
+    // 为24.8 格式，乘以了256
+    // 当前单元格起始坐标
+    x: TPos = 0                   // 当前像素 x 坐标
     y: TPos = 0;                  // 当前像素 y 坐标（整数）
 
     outline!: FT_Outline;         // 要扫描转换的轮廓路径
     clip_box!: FT_BBox;           // 可选裁剪框（bounding box）
 
     gray_spans: FT_Span[] = new Array(FT_MAX_GRAY_SPANS).fill(0).map(() => new FT_Span());
-                                  // 缓存生成的灰度 span，用于最终输出或回调
+    // 缓存生成的灰度 span，用于最终输出或回调
     num_gray_spans: int = 0;      // 当前灰度 span 数量
     skip_spans: int = 0;          // 是否跳过 span 渲染（例如用于裁剪）
 
     render_span: FT_Raster_Span_Func | null = null;
-                                  // 渲染 span 的回调函数（最终输出 span）
+    // 渲染 span 的回调函数（最终输出 span）
 
     render_span_data: any;        // 渲染 span 时附带的数据（例如目标缓冲区、上下文等）
 
@@ -276,11 +285,14 @@ function gray_compute_cbox() {
     ras.max_ey = (ras.max_ey + 63) >> 6;
 }
 
+// 查找当前ex对应的cell，如果没有则创建新的cell并插入到链表中
+// Cell链表以x从小到大插入排序
+// 并且将cell和当前y行关联起来
 function gray_find_cell(): TCell {
     const ras = currentWorker!
 
     let x = ras.ex;
-
+    // 如果超出扫描线的范围，则设置为最大ex值
     if (x > ras.count_ex) {
         x = ras.count_ex;
     }
@@ -308,7 +320,7 @@ function gray_find_cell(): TCell {
     newCell.x = x;
     newCell.area = 0;
     newCell.cover = 0;
-    newCell.next = cell
+    newCell.next = cell // 当前cell比当前x大不为null,否则为null
     if (prev === null) {
         ras.ycells[ras.ey] = newCell;
     } else {
@@ -318,69 +330,105 @@ function gray_find_cell(): TCell {
 }
 function gray_record_cell() {
     const ras = currentWorker!
+    // 如果当前单元面积和y轴覆盖行数不为0，则记录单元格面积和覆盖行数
     if (ras.area | ras.cover) {
         let cell = gray_find_cell();
         cell.area += ras.area;
         cell.cover += ras.cover;
     }
 }
+/**
+ * @param ex 起点x坐标
+ * @param ey 起点y坐标
+ */
 function gray_set_cell(ex: TCoord, ey: TCoord) {
     let ras = currentWorker!
+    // 减去偏移
     ey -= ras.min_ey;
     if (ex > ras.max_ex) {
         ex = ras.max_ex;
     }
     ex -= ras.min_ex;
+    // 如果为负数，代表超出边界，设置为-1，不绘制该单元格
     if (ex < 0) {
         ex = -1;
     }
+    // 如果不是当前start cell单元，就记录上一个单元格，并重置当前单元数据
     if (ex != ras.ex || ey != ras.ey) {
+        // 如果当前单元格激活，则记录当前单元格
         if (!ras.invalid) {
             gray_record_cell();
         }
+        // 当前单元的数据已记录，就重置单元数据，准备下一个单元格的绘制
         ras.area = 0;
         ras.cover = 0;
         ras.ex = ex;
         ras.ey = ey;
     }
+    // 如果x或y达到扫描线最大边界，则设置为无效单元
     ras.invalid = Number(ey >= ras.count_ey || ex >= ras.count_ex);
 }
 
+/**
+ * 记录当前单元格，当前单初
+ * @param ex 
+ * @param ey 
+ */
 function gray_start_cell(ex: TCoord, ey: TCoord) {
     let ras = currentWorker!
-    if (ex > ras.max_ex)
+    // 如果当前坐标大于边界，限制在边界内
+    if (ex > ras.max_ex) {
         ex = (ras.max_ex);
-    if (ex < ras.min_ex)
+    }
+    if (ex < ras.min_ex) {
         ex = (ras.min_ex - 1);
+    }
     ras.area = 0;
     ras.cover = 0;
-    ras.ex = ex - ras.min_ex;
+    // 记录相对边界的坐标，减去偏移量
+    ras.ex = ex - ras.min_ex;// 减去偏移，相对绘制边界
     ras.ey = ey - ras.min_ey;
-    ras.invalid = 0;
+    ras.invalid = 0;// 激活单元
     gray_set_cell(ex, ey);
 }
 
+/**
+ * 绘制水平线段.可能y小数部分不相同
 
+ * @param ey 起始y坐标
+ * @param x1 起始x坐标
+ * @param y1 起始y坐标，小数部分
+ * @param x2 结束x坐标
+ * @param y2 结束y坐标，小数部分
+ * @returns 
+ */
 function gray_render_scanline(ey: TCoord, x1: TPos, y1: TCoord, x2: TPos, y2: TCoord) {
     let ras = currentWorker!
     let ex1, ex2, fx1 = 0, fx2 = 0, first, dy, delta = 0, mod = 0;
     let p, dx;
     let incr;
 
-    ex1 = TRUNC(x1);
-    ex2 = TRUNC(x2);
+    ex1 = TRUNC(x1); // 起始x屏幕坐标 ，除以256
+    ex2 = TRUNC(x2); // 结束x屏幕坐标
+
+    // 如果连小位数相同，则只绘制一个单元格.
     if (y1 == y2) {
         gray_set_cell(ex2, ey);
         return;
     }
-    fx1 = FRACT(x1);
-    fx2 = FRACT(x2);
+    fx1 = FRACT(x1);// x起始坐标小数部分.
+    fx2 = FRACT(x2);// x结束坐标小数部分.
+    // 如果是垂直线段，
     if (ex1 == ex2) {
         return End()
     }
     dx = x2 - x1;
     dy = y2 - y1;
+    // 如果是正方向
     if (dx > 0) {
+        // 计算当前像素的面积
+        // 256-小数部分*dy=当前像表该y的水平覆盖面积
+
         p = (ONE_PIXEL - fx1) * dy;
         first = ONE_PIXEL;
         incr = 1;
@@ -393,6 +441,7 @@ function gray_render_scanline(ey: TCoord, x1: TPos, y1: TCoord, x2: TPos, y2: TC
     }
     let deltaRef = RefValue.from(delta)
     let modRef = RefValue.from(mod)
+    // 
     FT_DIV_MOD(Number, p, dx, deltaRef, modRef);
     delta = deltaRef.value
     mod = modRef.value
@@ -422,32 +471,43 @@ function gray_render_scanline(ey: TCoord, x1: TPos, y1: TCoord, x2: TPos, y2: TC
     fx1 = ONE_PIXEL - first;
 
     function End() {
-        dy = y2 - y1;
+        dy = y2 - y1;// 小数部分差值
         ras.area += ((fx1 + fx2) * dy);
         ras.cover += dy;
     }
     End()
 }
+/**
+ * 
+ * @param {TPos} to_x 线段结束x坐标
+ * @param {TPos} to_y 线段结束y坐标
+ * @returns 
+ */
 function gray_render_line(to_x: TPos, to_y: TPos) {
     let ras = currentWorker!
     let ey1 = 0, ey2 = 0, fy1 = 0, fy2 = 0, first = 0, delta = RefValue.from(0), mod = RefValue.from(0);
     let p, dx, dy, x, x2;
     let incr;
 
-    ey1 = TRUNC(ras.y);
-    ey2 = TRUNC(to_y);
-    if ((ey1 >= ras.max_ey && ey2 >= ras.max_ey) || (ey1 < ras.min_ey && ey2 < ras.min_ey))
+    ey1 = TRUNC(ras.y);// 当前线段起始y，除以256，还原到屏幕坐标值
+    ey2 = TRUNC(to_y); // 线段终止y
+    // 如果线段在边界外，则不绘制线段
+    if ((ey1 >= ras.max_ey && ey2 >= ras.max_ey) || (ey1 < ras.min_ey && ey2 < ras.min_ey)) {
         return End()
-    fy1 = FRACT(ras.y);
-    fy2 = FRACT(to_y);
+    }
+    fy1 = FRACT(ras.y);// 计算起始y的小数部分
+    fy2 = FRACT(to_y); // 计算终止y的小数部分
+    // 如果是水平线段，直接绘制扫描线返回
     if (ey1 == ey2) {
         gray_render_scanline(ey1, ras.x, fy1, to_x, fy2);
         return End();
     }
     dx = to_x - ras.x;
     dy = to_y - ras.y;
+    // 如果是垂直线段，
     if (dx == 0) {
         let ex = TRUNC(ras.x);
+        
         let two_fx = FRACT(ras.x) << 1;
         let area, max_ey1;
 
@@ -712,9 +772,12 @@ function gray_move_to(to: FT_Vector) {
     if (!ras.invalid) {
         gray_record_cell();
     }
-    x = UPSCALE(to.x);
+    x = UPSCALE(to.x);// 将坐标转换为24.8格式，取整
     y = UPSCALE(to.y);
+    // 当定点坐标，转为屏幕坐标，取整
+    // 除以256
     gray_start_cell(TRUNC(x), TRUNC(y));
+    // 记录原始坐标
     ras.x = x;
     ras.y = y;
     return 0;
@@ -723,12 +786,15 @@ function gray_move_to(to: FT_Vector) {
 function gray_hline(x: TCoord, y: TCoord, area: TPos, acount: int) {
     let ras = currentWorker!
     let coverage;
-
+    // 将面积转换为覆盖值，面积除以512
     coverage = Number(BigInt(area) >> (BigInt(PIXEL_BITS) * 2n + 1n - 8n));
-    if (coverage < 0)
+    if (coverage < 0) {
         coverage = -coverage;
+    }
+    // 如果是奇偶填充规则，则将覆盖值转换为0-255之间的值
     if (ras.outline.flags & FT_OUTLINE_EVEN_ODD_FILL) {
-        coverage &= 511;
+        coverage &= 511; // 0-511之间
+        // 如果覆盖值大于256，则将其转换为255-0之间的值
         if (coverage > 256) {
             coverage = 512 - coverage;
         }
@@ -741,6 +807,7 @@ function gray_hline(x: TCoord, y: TCoord, area: TPos, acount: int) {
             coverage = 255;
         }
     }
+    // 加上偏移量
     y += ras.min_ey;
     x += ras.min_ex;
     if (x >= (1 << 23)) {
@@ -789,6 +856,7 @@ function gray_sweep() {
     if (ras.num_cells == 0) {
         return;
     }
+    // 对每行扫描线
     for (yindex = 0; yindex < ras.ycells.length; yindex++) {
         if (!ras.ycells[yindex]) {
             continue
@@ -879,8 +947,11 @@ function FT_Outline_Decompose(outline: FT_Outline) {
                 case FT_CURVE_TAG_ON:
                     {
                         let vec = FT_Vector.default();
+
                         vec.x = SCALED(point.value.x);
                         vec.y = SCALED(point.value.y);
+                        // 原始坐标放大256倍
+                        // 这里原来放大了64,这再再放大4倍，
                         gray_render_line(UPSCALE(vec.x), UPSCALE(vec.y));
                         continue;
                     }
@@ -982,6 +1053,7 @@ function gray_convert_glyph() {
     if (ras.max_ey > clip.yMax) {
         ras.max_ey = clip.yMax;
     }
+    // 扫描线的宽度和高度
     ras.count_ex = ras.max_ex - ras.min_ex;
     ras.count_ey = ras.max_ey - ras.min_ey;
     // 分块处理
