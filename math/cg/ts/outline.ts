@@ -1,7 +1,7 @@
 import { Context } from "./ctx";
 import { Dash, dash_path } from "./dash";
 import { FT_Vector, RefValue } from "./ft/math";
-import { FT_CURVE_TAG_CUBIC, FT_CURVE_TAG_ON, FT_Outline, FT_OUTLINE_EVEN_ODD_FILL, FT_OUTLINE_NONE, FT_RASTER_FLAG_AA, FT_RASTER_FLAG_CLIP, FT_RASTER_FLAG_DIRECT, FT_Raster_Params, FT_Raster_Render, FT_Span } from "./ft/raster";
+import { FT_CURVE_TAG_CUBIC, FT_CURVE_TAG_ON, FT_Outline, FT_OUTLINE_EVEN_ODD_FILL, FT_OUTLINE_NONE, FT_OUTLINE_REVERSE_FILL, FT_RASTER_FLAG_AA, FT_RASTER_FLAG_CLIP, FT_RASTER_FLAG_DIRECT, FT_Raster_Params, FT_Raster_Render, FT_Span } from "./ft/raster";
 import { FT_Stroker, FT_Stroker_LineCap, FT_Stroker_LineJoin } from "./ft/stroker";
 import { Matrix, Point, Rect } from "./matrix";
 import { FillRule, LineCap, LineJoin } from "./paint";

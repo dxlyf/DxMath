@@ -204,7 +204,7 @@ export class Context {
         return this;
     }
     clip() {
-
+        this.clipPreserve()
         this.newPath()
     }
     clipPreserve() {

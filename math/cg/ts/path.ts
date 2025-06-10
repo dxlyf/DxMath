@@ -52,14 +52,12 @@ export class Path {
     }
     lineTo(x: float64, y: float64) {
         this.elements.push(PathElement.LINE_TO)
-        this.contours += 1
         this.points.push(Point.create(x, y))
 
         return this
     }
     curveTo(x1: float64, y1: float64, x2: float64, y2: float64, x3: float64, y3: float64) {
         this.elements.push(PathElement.CURVE_TO)
-        this.contours += 1
         this.points.push(Point.create(x1, y1))
         this.points.push(Point.create(x2, y2))
         this.points.push(Point.create(x3, y3))
@@ -210,7 +208,7 @@ export class Path {
                     k += 1
                     break
                 case PathElement.LINE_TO:
-                    result.moveTo(points[k].x, points[k].y)
+                    result.lineTo(points[k].x, points[k].y)
                     k += 1
                     break
                 case PathElement.CURVE_TO:

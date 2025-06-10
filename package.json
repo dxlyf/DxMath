@@ -49,7 +49,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "publish": "tsc -b && vite build",
-    "docs:dev": "vitepress dev docs",
+    "docs:dev": "vitepress dev docs --port=5468",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
   },

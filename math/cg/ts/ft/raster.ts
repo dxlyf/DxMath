@@ -215,7 +215,7 @@ export class TWorker {
     // jump_buffer: any;
     // buffer: any
     // buffer_size: long = 0;
-    ycells: (TCell|null)[] = [];
+    ycells: (TCell | null)[] = [];
     ycount: TPos = 0;
 }
 function gray_init_cells(buffer: any, byte_size: float64) {
@@ -271,17 +271,17 @@ function gray_find_cell(): TCell {
         x = ras.count_ex;
     }
 
-    let prev:TCell|null=null
-    let cell:TCell|null = ras.ycells[ras.ey];
+    let prev: TCell | null = null
+    let cell: TCell | null = ras.ycells[ras.ey];
     // 找到比当前x大的cell
-     while(cell){
+    while (cell) {
         if (cell.x > x) {
             break;
         }
         if (cell!.x == x) {
             return cell!
         }
-        prev=cell;
+        prev = cell;
         cell = cell!.next;
     }
 
@@ -295,10 +295,10 @@ function gray_find_cell(): TCell {
     newCell.area = 0;
     newCell.cover = 0;
     newCell.next = cell
-    if (prev===null) {
+    if (prev === null) {
         ras.ycells[ras.ey] = newCell;
     } else {
-        prev.next=newCell
+        prev.next = newCell
     }
     return newCell;
 }
@@ -710,26 +710,31 @@ function gray_hline(x: TCoord, y: TCoord, area: TPos, acount: int) {
     let ras = currentWorker!
     let coverage;
 
-    coverage = (area >> (PIXEL_BITS * 2 + 1 - 8));
+    coverage = Number(BigInt(area) >> (BigInt(PIXEL_BITS) * 2n + 1n - 8n));
     if (coverage < 0)
         coverage = -coverage;
     if (ras.outline.flags & FT_OUTLINE_EVEN_ODD_FILL) {
         coverage &= 511;
-        if (coverage > 256)
+        if (coverage > 256) {
             coverage = 512 - coverage;
-        else if (coverage == 256)
+        }
+        else if (coverage == 256) {
             coverage = 255;
+        }
     }
     else {
-        if (coverage >= 256)
+        if (coverage >= 256) {
             coverage = 255;
+        }
     }
     y += ras.min_ey;
     x += ras.min_ex;
-    if (x >= (1 << 23))
+    if (x >= (1 << 23)) {
         x = (1 << 23) - 1;
-    if (y >= (1 << 23))
+    }
+    if (y >= (1 << 23)) {
         y = (1 << 23) - 1;
+    }
     if (coverage) {
 
         let count;

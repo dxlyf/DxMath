@@ -21,28 +21,28 @@ export function combine_opacity(color: Color, opacity: float64) {
 export function premultiply_pixel(color: uint32) {
     let ccolor=toBigInt(color)
     let a =BigInt(getAlpha(color)>>0);
-    let r = (ccolor >> 16n) & 0xffn;
+    let b = (ccolor >> 16n) & 0xffn;
     let g = (ccolor >> 8n) & 0xffn;
-    let b = (ccolor >> 0n) & 0xffn;
+    let r = (ccolor >> 0n) & 0xffn;
     let pr = (r * a) / 255n;
     let pg = (g * a) / 255n;
     let pb = (b * a) / 255n;
     return Number((a << 24n) | (pb << 16n) | (pg << 8n) | (pr));
 }
 
-export function interpolate_pixel(x: any, a: any, y: any, b: any) {
-    x=toBigInt(x)
-    a=toBigInt(a)
-    y=toBigInt(y)
-    b=toBigInt(b)
-    let t = (x & 0xff00ffn) * a + (y & 0xff00ffn) * b;
+export function interpolate_pixel(src: any, srcAlpha: any, dst: any,dstAlpha: any) {
+    src=toBigInt(src)
+    srcAlpha=toBigInt(srcAlpha)
+    dst=toBigInt(dst)
+    dstAlpha=toBigInt(dstAlpha)
+    let t = (src & 0xff00ffn) * srcAlpha + (dst & 0xff00ffn) * dstAlpha;
     t = (t + ((t >> 8n) & 0xff00ffn) + 0x800080n) >> 8n;
     t &= 0xff00ffn;
-    x = ((x >> 8n) & 0xff00ffn) * a + ((y >> 8n) & 0xff00ffn) * b;
-    x = (x + ((x >> 8n) & 0xff00ffn) + 0x800080n);
-    x &= 0xff00ff00n;
-    x |= t;
-    return Number(x);
+    src = ((src >> 8n) & 0xff00ffn) * srcAlpha + ((dst >> 8n) & 0xff00ffn) * dstAlpha;
+    src = (src + ((src >> 8n) & 0xff00ffn) + 0x800080n);
+    src &= 0xff00ff00n;
+    src |= t;
+    return Number(src);
 }
 export function memfill32(dst: uint32[] | Uint32Array, val: uint32, len: int) {
     for (let i = 0; i < len; i++) {

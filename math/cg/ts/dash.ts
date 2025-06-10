@@ -37,7 +37,11 @@ export function dash_path(dash: Dash, path: Path) {
         }
         ++elementsIndex;
         ++pointsIndex;
-        while ((elements < end) && (elements == PathElement.LINE_TO)) {
+        points = flat.points[pointsIndex];
+        elements = flat.elements[elementsIndex];
+        while ((elementsIndex < end) && (elements == PathElement.LINE_TO)) {
+            points = flat.points[pointsIndex];
+            elements = flat.elements[elementsIndex];
             let dx = points.x - x0;
             let dy = points.y - y0;
             let dist0 = Math.sqrt(dx * dx + dy * dy);
@@ -57,7 +61,9 @@ export function dash_path(dash: Dash, path: Path) {
                 iphase = 0;
                 ioffset += 1;
                 if (ioffset == dash.size)
+                  {
                     ioffset = 0;
+                  }
             }
             iphase += dist0 - dist1;
             x0 = points.x;
