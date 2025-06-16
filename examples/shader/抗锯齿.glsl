@@ -1,5 +1,6 @@
 
-const  float SCALE =64.;
+const  float SCALE =32.;
+const float SUB_SCALE = SCALE/4.;
 const int EVEN_ODD = 0;
 const int NON_ZERO = 1;
 vec2 projectCoord(vec2 uv,float scale) {
@@ -58,11 +59,30 @@ vec2 toFloat(ivec2 uv) {
 }
 
 vec2 logicCoordToScreen(vec2 uv) {
-    return round((uv+0.5)*SCALE);
+    return round((uv)*SCALE);
 }
 vec2 screenToLogicCoord(vec2 uv) {
     return uv/SCALE;
 }
+float fillSubGrid(vec2 uv){
+    return sdRect(uv,vec2(0.5));
+}
+float fillGrid(vec2 uv){
+    return sdRect(uv,vec2(.5));
+}
+vec3 blend(vec3 src,vec3 dst,float a) {
+    return src*a+(1.-a)*dst;
+}
+struct Edge{
+    float y0,y1;
+    float x;
+    float dy;
+    float invertSlope;
+    float winding;
+    bool  hasActive;
+};
+
+
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
@@ -71,13 +91,18 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float offset=0.;
     float zoom=1.0;
     float gap=float(SCALE);
-    vec2 idx=floor(uv/SCALE);
+    vec2 fuv=uv/SCALE;
 
-    vec3 col=vec3(0);
-    if(mod(uv.y,SCALE/4.)==0.){
+    vec2 id=floor(uv/SCALE);
+    vec2 fd=fract(uv/SCALE);
+    vec2 rd=mod(floor(uv),SCALE);
+    vec2 subIdx=floor(uv/SUB_SCALE);
+
+    vec3 col=vec3(0,0,0);
+    if(mod(uv.y,SUB_SCALE)==0.){
         col.rgb=vec3(0.5);
     }
-    if(mod(uv.x,SCALE/4.)==0.){
+    if(mod(uv.x,SUB_SCALE)==0.){
         col.rgb=vec3(0.5);
     }
     if(mod(uv.y,SCALE)==0.){
@@ -86,18 +111,94 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     if(mod(uv.x,SCALE)==0.){
          col.rgb=vec3(1);
     }
-    vec2 p0=logicCoordToScreen(vec2(1,5));
-    vec2 p1=logicCoordToScreen(vec2(6,5));
-    vec2 p2=logicCoordToScreen(vec2(6,1));
+    if(sdCirlce(fd-0.5,0.05)<=0.){
+       // col.r=1.;
+    }
+ 
+    vec2 p0=(vec2(8,1));
+    vec2 p1=(vec2(15,10));
+    vec2 p2=(vec2(3,10));
+  
+    vec2 sp0=logicCoordToScreen(p0);
+    vec2 sp1=logicCoordToScreen(p1);
+    vec2 sp2=logicCoordToScreen(p2);
+
+
     
-    float ret=min(sdSegment(uv,p0,p1,2.),sdSegment(uv,p1,p2,2.));
-    ret=min(ret,sdSegment(uv,p2,p0,2.));
+
+    vec2 pts[20];
+    pts[0]=sp0;
+    pts[1]=sp1;
+    pts[2]=sp2;
+
+ 
+   float ret=min(sdSegment(uv,sp0,sp1,2.),sdSegment(uv,sp1,sp2,2.));
+    ret=min(ret,sdSegment(uv,sp2,sp0,2.));
     if(ret<=0.) {
         col.rgb=vec3(0.5,0.5,1);
     }
-    if(sdRect(uv-logicCoordToScreen(vec2(1,5)),vec2(SCALE/2.))<=0.){
-            col.r=1.;
+
+    Edge edges[3];
+    
+    for(int i=0,j=2;i<3;j=i++){
+          vec2 sp0=pts[j];
+          vec2 sp1=pts[i];
+          edges[i].y0=min(sp0.y,sp1.y);
+          edges[i].y1=max(sp0.y,sp1.y);
+          edges[i].dy=sp1.y-sp0.y;
+          edges[i].x=sp0.y<sp1.y?sp0.x:sp1.x;
+          edges[i].invertSlope=(sp1.x-sp0.x)/(sp1.y-sp0.y);
+          edges[i].hasActive=false; 
+
     }
+    Edge activeEdge[3];
+    // 扫描线填充
+    for(int i=0;i<3;i++){
+        Edge edge=edges[i];
+        if(edge.dy!=0.){
+            if(edge.y0<=uv.y&&edge.y1>=uv.y){
+                activeEdge[i].hasActive=true;
+                activeEdge[i].x=edge.invertSlope*(uv.y-edge.y0)+edge.x;
+            }
+
+        }
+    }
+    float coverage=0.;
+    for(int i=1;i<2;i++){
+        Edge edge=activeEdge[i-1];
+        Edge edge2=activeEdge[i];
+        if(edge.hasActive&&edge2.hasActive){
+            
+        }
+    }
+
+
+    // 超采样
+//    float coverage=0.;
+//    for(float y=0.;y<2.;y++){
+//         for(float x=0.;x<2.;x++){
+//             float tx=x/2.+0.25;
+//             float ty=y/2.+0.25;
+//             vec2 p=idx+vec2(tx,ty);
+//             if(sdCirlce(fuv-p,0.05)<=0.){
+//                 col.rgb=vec3(1,0,0);
+//             }
+//             if(pointInPolygon(p,pts,3,1,EVEN_ODD)){
+//                 coverage++;
+//             }
+//         }
+//     }
+
+    // if(coverage>0.){
+    //     col.rgb=blend(vec3(0,0,1),vec3(0,0,0),coverage/4.);
+    // }   
+ 
+    // if(pointInPolygon(idx+0.5,pts,3,1,EVEN_ODD)){
+    //     col.b=1.;
+    // }
+
+
+
     // // 棋盘
     // if(mod(idx.x+idx.y,2.)==0.) {
     //     col.rgb=vec3(1);

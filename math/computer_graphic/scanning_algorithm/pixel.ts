@@ -7,7 +7,7 @@ export class PixelRenderer {
     ctx: CanvasRenderingContext2D
     width: number = 0
     height: number = 0
-    colorBuffer: Uint8ClampedArray
+    colorBuffer: ImageDataArray
     imageData: ImageData
     constructor(opts: PixelRendererOptions) {
         this.ctx = opts.ctx

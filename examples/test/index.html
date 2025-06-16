@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGG-Style Anti-Aliased Rasterizer</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { display: flex; flex-direction: column; align-items: center; }
+        canvas { border: 1px solid #ccc; margin-bottom: 10px; }
+        .info { margin: 10px 0; max-width: 600px; }
+        button { padding: 8px 16px; font-size: 16px; cursor: pointer; }
+        h1, h2 { color: #333; }
+        p { line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>高效灰度抗锯齿光栅化</h1>
+        <p class="info">
+            此演示展示了类似AGG(Anti-Grain Geometry)和Freetype的高效灰度抗锯齿光栅化算法。
+            算法使用边缘扫描技术直接计算覆盖值，避免了对每个像素的点包含测试。
+        </p>
+        
+        <canvas id="rasterCanvas" width="800" height="600"></canvas>
+        
+        <div class="info">
+            <h2>算法特点：</h2>
+            <ul>
+                <li>使用固定点数运算(24.8格式)提高精度和性能</li>
+                <li>基于边缘扫描算法，避免逐像素点包含测试</li>
+                <li>使用活动边表(AET)高效管理边缘</li>
+                <li>直接计算覆盖值而非依赖超采样</li>
+                <li>生成紧凑的span表示，减少内存占用</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="main.ts"></script>
+</body>
+</html>

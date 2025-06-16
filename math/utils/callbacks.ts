@@ -9,14 +9,14 @@ type Options={
 
 
 }
-type Callback<P extends any[]>=(result:T)=>void
+type Callback<T extends any[]=any[]>=(...result:T)=>void
 export class Callbacks<T,P extends any[]>{
     private options:Options
     private callbacks:Callback[]=[]
     private fired:boolean=false
     private locked:boolean=false // 不能add,可以fire
     private disabled:boolean=false // 不能fire,不能add
-    private lastArgs:p|null=null
+    private lastArgs:P|null=null
     constructor( options:Options={}){
         this.options={
             memory:false,
@@ -38,7 +38,7 @@ export class Callbacks<T,P extends any[]>{
         }
         if(this.options.memory&&this.lastArgs!==null){
             callbacks.forEach((cb)=>{
-                 cb(...this.lastArgs)
+                 cb(...this.lastArgs as P[])
             })
         }
         this.callbacks.push(...callbacks)

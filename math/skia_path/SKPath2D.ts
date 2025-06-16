@@ -42,6 +42,12 @@ export enum FillType {
 }
 
 export class SKPath2D {
+    static StrokeJoin=StrokeJoin
+    static StrokeCap=StrokeCap
+    static PathOp=PathOp
+    static FillType=FillType
+
+
     static async initializePathKit(){
           await getPathKit() 
     }

@@ -1,5 +1,5 @@
 import { Matrix2D } from "../math/mat2d"
-
+import {Conic} from '../curve/conic'
 const PI_2 = Math.PI * 2
 
 
@@ -20,18 +20,19 @@ export type PathVerbData = {
     p3?: Point
 }
 export enum LineJoin {
-    Miter='miter',
-    Round='round',
-    Bevel='bevel',
+    Miter = 'miter',
+    Round = 'round',
+    Bevel = 'bevel',
+    MiterClip = 'miter-clip',
 }
 export enum LineCap {
-    Butt='butt',
-    Round='round',
-    Square='square',
+    Butt = 'butt',
+    Round = 'round',
+    Square = 'square',
 }
 export enum FillRule {
-    NonZero='nonzero',
-    EvenOdd='evenodd',
+    NonZero = 'nonzero',
+    EvenOdd = 'evenodd',
 }
 export enum TextAlign {
     Left,
@@ -48,8 +49,8 @@ export enum TextDirection {
     RTL,
 }
 export enum PathDirection {
-    CCW,
     CW,
+    CCW,
 }
 export enum FillStyle {
     Color,
@@ -199,11 +200,13 @@ export class Point {
     }
     // 逆时针方向向量
     ccw() {
-        return this.set(-this.y, this.x)
+      //  return this.set(-this.y, this.x)
+      return this.set(this.y, -this.x)
     }
     // 顺时针方向向量
     cw() {
-        return this.set(this.y, -this.x)
+       // return this.set(this.y, -this.x)
+       return this.set(-this.y, this.x)
     }
     interpolate(a: Point, b: Point, t: number) {
         return this.set(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
@@ -269,7 +272,13 @@ export class Point {
         return this.set(a * this.x + c * this.y + tx, b * this.x + d * this.y + ty)
     }
     applyMatrix2D(m: Matrix2D) {
-       return this.set(this.x * m.a + this.y * m.c + m.e, this.x * m.b + this.y * m.d + m.f)
+        return this.set(this.x * m.a + this.y * m.c + m.e, this.x * m.b + this.y * m.d + m.f)
+    }
+    equals(v: Point) {
+        return this.x == v.x && this.y == v.y
+    }
+    equalsEpsilon(v: Point, epsilon: number=1e-6) {
+        return Math.abs(this.x - v.x) < epsilon && Math.abs(this.y - v.y) < epsilon
     }
 
 }
@@ -520,7 +529,23 @@ export function arcSegmentToCubic(
         transformX(x2, y2), transformY(x2, y2)
     ];
 }
+export function pointInPolygon(point: Point, polygon: Point[], fillRule: FillRule): boolean {
+    let winding = 0;
+    for (let i = 0; i < polygon.length; i++) {
+        const p1 = polygon[i];
+        const p2 = polygon[(i + 1) % polygon.length];
+        if ((p1.y > point.y && p2.y <= point.y || p2.y > point.y && p1.y <= point.y) &&
+            point.x >= (p2.x - p1.x) * (point.y - p1.y) / (p2.y - p1.y) + p1.x) {
+            if (fillRule === FillRule.EvenOdd) {
+                winding++
+            } else {
+                winding += p1.y < p2.y ? 1 : -1
 
+            }
+        }
+    }
+    return winding % 2 !== 0;
+}
 /**
  * 辅助函数：计算椭圆上给定角度 theta（弧度）处的点，
  * 参数：中心(cx, cy)，半径(rx, ry)，旋转角(rotation)（弧度）
@@ -1097,7 +1122,7 @@ type PathVisitor = {
     lineTo: (record: { type: PathVerb, p0: Point, index: number }) => void
     quadraticCurveTo: (record: { type: PathVerb, p0: Point, p1: Point, p2: Point, index: number }) => void
     bezierCurveTo: (record: { type: PathVerb, p0: Point, p1: Point, p2: Point, p3: Point, index: number }) => void
-    closePath: (record: { type: PathVerb,p0:Point, lastMovePoint: Point, index: number }) => void
+    closePath: (record: { type: PathVerb, p0: Point, lastMovePoint: Point, index: number }) => void
 }
 export const PtsInVerb = (v: PathVerb) => {
     switch (v) {
@@ -1110,13 +1135,13 @@ export const PtsInVerb = (v: PathVerb) => {
 }
 export class PathBuilder {
     static fromSvgPath(svgPath: string) {
-        const path = new PathBuilder()
+        const path = new this()
         buildPathFromSvgPath(svgPath, path)
         return path
 
     }
     static default() {
-        return new PathBuilder()
+        return new this()
     }
     points: Point[] = []
     verbs: PathVerb[] = []
@@ -1146,6 +1171,9 @@ export class PathBuilder {
         this.verbs.length = 0
         this.lastMoveIndex = -1
         this.needMoveVerb = true
+    }
+    clear(){
+        this.reset()
     }
     _copy(path: PathBuilder) {
         path.visit({
@@ -1183,8 +1211,15 @@ export class PathBuilder {
     clone() {
         return PathBuilder.default().copy(this)
     }
-    toReversePath(){
+    toReversePath() {
         return PathBuilder.default().addReversePath(this)
+    }
+    setLastPoint(point:Point){
+        if(this.lastPoint){
+            this.lastPoint.copy(point)
+        }else{
+            this.moveTo(point.x,point.y)
+        }
     }
     addPath(path: PathBuilder, matrix?: number[]) {
         path = path.clone()
@@ -1424,17 +1459,17 @@ export class PathBuilder {
         _rx: number, _ry: number, xAxisRotation: number,
         largeArcFlag: number, sweepFlag: number) {
         const { cx, cy, rx, ry, theta1, deltaTheta } = endPointToCenter(x1, y1, x2, y2, _rx, _ry, xAxisRotation, largeArcFlag, sweepFlag)
-    
-    
-    
-    
+
+
+
+
         const segments = Math.ceil(Math.abs(deltaTheta) / (Math.PI / 2))
         const delta = deltaTheta / segments
         let startTheta = theta1
-    
+
         const pointTransform = Matrix2D.fromRotate(xAxisRotation)
         pointTransform.preScale(rx, ry)
-    
+
         // const beiers=ellipseArcToCubicBezier(x1,y1,x2,y2,_rx,_ry,xAxisRotation,largeArcFlag,sweepFlag)
         // for(let b of beiers){
         //    this.bezierCurveTo(b[2],b[3],b[4],b[5],b[6],b[7])
@@ -1443,23 +1478,23 @@ export class PathBuilder {
         // 计算弧
         for (let i = 0; i < segments; i++) {
             let endTheta = startTheta + delta
-    
+
             // 椭圆标准参数方程
             const p0 = Point.create(Math.cos(startTheta), Math.sin(startTheta))
             const p3 = Point.create(Math.cos(endTheta), Math.sin(endTheta))
-    
+
             // const p1=p0.clone().add(p0.clone().rotateCCW().multiplyScalar(k))
             // const p2=p3.clone().add(p3.clone().rotateCW().multiplyScalar(k))
             const p1 = p0.clone().add(p0.clone().rotate(Math.PI / 2).multiplyScalar(k))
             const p2 = p3.clone().add(p3.clone().rotate(-Math.PI / 2).multiplyScalar(k))
-    
-    
+
+
             // p0.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
             // p1.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
             // p2.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
             // p3.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)                   
-    
-    
+
+
             p0.applyMatrix2D(pointTransform).translate(cx, cy)
             p1.applyMatrix2D(pointTransform).translate(cx, cy)
             p2.applyMatrix2D(pointTransform).translate(cx, cy)
@@ -1467,10 +1502,10 @@ export class PathBuilder {
             this.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y)
             startTheta = endTheta
         }
-    
+
         return this
     }
-    
+
     /**
     * 在当前路径中添加一段椭圆弧
     * @param cx 椭圆中心 x 坐标
@@ -1649,7 +1684,7 @@ export class PathBuilder {
         let p2 = Point.from(x2, y2)
 
         // need double precision for these calcs.
-        
+
         // 计算上个点与x1,y1,x2,y2 之间的方向
         // start>p1的方向
         let befored = Point.from(p1.x - start.x, p1.y - start.y).normalize()
@@ -1921,12 +1956,12 @@ export class PathBuilder {
             let last = this.lastPoint!
             let k = 4.0 * weight / (3.0 * (1.0 + weight));
 
-            let cp1x=last.x+(x1-last.x)*k;
-            let cp1y=last.y+(y1-last.y)*k;
-            let cp2x=x+(x1-x)*k;
-            let cp2y=y+(y1-y)*k;
+            let cp1x = last.x + (x1 - last.x) * k;
+            let cp1y = last.y + (y1 - last.y) * k;
+            let cp2x = x + (x1 - x) * k;
+            let cp2y = y + (y1 - y) * k;
 
-            this.bezierCurveTo(cp1x,cp1y,cp2x,cp2y,x,y);
+            this.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
 
         }
         return this
@@ -2089,7 +2124,7 @@ export class PathBuilder {
         })
         return path
     }
- 
+
     visit(_visitor: Partial<PathVisitor>) {
         const visitor: PathVisitor = Object.assign({
             moveTo: () => { },
@@ -2115,7 +2150,7 @@ export class PathBuilder {
                     visitor.bezierCurveTo({ type: d.type, p0: d.p0!, p1: d.p1!, p2: d.p2!, p3: d.p3!, index });
                     break
                 case PathVerb.Close:
-                    visitor.closePath({ type: d.type,p0:d.p0!, lastMovePoint: d.p1!, index })
+                    visitor.closePath({ type: d.type, p0: d.p0!, lastMovePoint: d.p1!, index })
                     break
             }
             index++
@@ -2147,7 +2182,7 @@ export class PathBuilder {
                     yield { type: verb, p0: points[k - 4], p1: points[k - 3], p2: points[k - 2], p3: points[k - 1] }
                     break;
                 case PathVerb.Close:
-                    yield { type: verb, p0:points[k-1],p1:lastMovePoint?.clone() }
+                    yield { type: verb, p0: points[k - 1], p1: lastMovePoint?.clone() }
                     break;
             }
         }
@@ -2218,6 +2253,1042 @@ export class PathBuilder {
         }
         return polygons
     }
+    segments(){
+        return new PathSegmentsIter({
+            path:this,
+            verbIndex:0,
+            pointsIndex:0,
+            isAutoClose:false
+        })
+    }
+    isZeroLengthSincePoint(start_pt_index:number) {
+        let count = this.points.length - start_pt_index;
+        if(count < 2) {
+            return true;
+        }
+
+        let first = this.points[start_pt_index];
+        for(let i=1;i<count;i++) {
+            if(first.equals(this.points[start_pt_index + i])) {
+                return false;
+            }
+        }
+        return true
+    }
+     finish(){
+        if(this.isEmpty) {
+            return null;
+        }
+
+        // Just a move to? Bail.
+        if(this.verbs.length == 1) {
+            return null;
+        }
+
+        return this
+      
+    }
+}
+
+export class PathSegmentsIter{
+    isAutoClose=false;
+    path!:PathBuilder
+    verbIndex!: number
+    pointsIndex!: number
+    lastMoveTo: Point=Point.default()
+    lastPoint: Point=Point.default()
+    constructor(options:{
+        isAutoClose?:boolean
+        path:PathBuilder
+        verbIndex: number
+        pointsIndex: number
+        lastMoveTo?: Point
+        lastPoint?: Point
+    }){
+        this.isAutoClose=options.isAutoClose??false
+        this.verbIndex=options.verbIndex
+        this.pointsIndex=options.pointsIndex
+        this.path=options.path
+         if(options.lastMoveTo){
+            this.lastMoveTo.copy(options.lastMoveTo)
+         }
+         if(options.lastPoint){
+            this.lastPoint.copy(options.lastPoint)
+         }
+    }
+    get curVerb(){
+        return this.path.verbs[this.verbIndex-1]
+    }
+    get nextVerb(){
+        return this.path.verbs[this.verbIndex]
+    }
+    *[Symbol.iterator]():Iterator<PathVerbData>{
+        const points = this.path.points.map(p => p.clone())
+        const verbs = this.path.verbs
+        let lastMovePoint: Point | null = null
+        while(this.verbIndex<verbs.length){
+            const verb = verbs[this.verbIndex++]
+            switch (verb) {
+                case PathVerb.MoveTo:
+                    this.pointsIndex+=1
+                    lastMovePoint = points[this.pointsIndex - 1]
+                    this.lastMoveTo.copy(lastMovePoint)
+                    this.lastPoint.copy(this.lastMoveTo)
+                    yield { type: verb, p0: points[this.pointsIndex - 1] }
+                    break;
+                case PathVerb.LineTo:
+                    this.pointsIndex+=1
+                    this.lastPoint.copy(points[this.pointsIndex - 1])
+                    yield { type: verb, p0: points[this.pointsIndex - 1] }
+                    break;
+                case PathVerb.QuadTo:
+                    this.pointsIndex+=2
+                    this.lastPoint.copy(points[this.pointsIndex  - 1])
+                    yield { type: verb, p0: points[this.pointsIndex  - 3], p1: points[this.pointsIndex  - 2], p2: points[this.pointsIndex  - 1] }
+                    break;
+                case PathVerb.CubicTo:
+                    this.pointsIndex  += 3
+                    this.lastPoint.copy(points[this.pointsIndex  - 1])
+                    yield { type: verb, p0: points[this.pointsIndex  - 4], p1: points[this.pointsIndex  - 3], p2: points[this.pointsIndex  - 2], p3: points[this.pointsIndex  - 1] }
+                    break;
+                case PathVerb.Close:
+                    const seg=this.autoClose()
+                    this.lastPoint.copy(this.lastMoveTo)
+                    yield seg
+                    break;
+            }
+        }
+    }
+    copy(source:PathSegmentsIter){
+        this.isAutoClose=source.isAutoClose
+        this.verbIndex=source.verbIndex
+        this.pointsIndex=source.pointsIndex
+        this.lastMoveTo.copy(source.lastMoveTo)
+        this.lastPoint.copy(source.lastPoint)
+        return this
+    }
+    clone(){
+        return new PathSegmentsIter({
+            isAutoClose:this.isAutoClose,
+            path:this.path,
+            verbIndex:this.verbIndex,
+            pointsIndex:this.pointsIndex,
+            lastMoveTo:this.lastMoveTo,
+            lastPoint:this.lastPoint
+        })
+    }
+    hasValidTangent(){
+        let  iter = this.clone();
+        for(let d of iter) {
+            
+            switch(d.type) {
+                case PathVerb.MoveTo: {
+                    return false;
+                }
+                case PathVerb.LineTo:{
+                    if (iter.lastPoint.equals(d.p0!)) {
+                        continue;
+                    }
+                    return true;
+                }
+                case PathVerb.QuadTo:{
+                    if(iter.lastPoint.equals(d.p1!)&&iter.lastPoint.equals(d.p2!)){
+                        continue
+                    }
+                    return true
+                }
+                case PathVerb.CubicTo:{
+                    if(iter.lastPoint.equals(d.p1!)&&iter.lastPoint.equals(d.p2!)&&iter.lastPoint.equals(d.p3!)){
+                        continue
+                    }
+                    return true
+                }
+                case PathVerb.Close:{
+                    return false;
+                }
+            }
+        }
+        return false;
+    }
+
+    setAutoClose(value:boolean){
+        this.isAutoClose=value
+    }
+    autoClose():PathVerbData{
+        if(this.isAutoClose &&!this.lastPoint.equals(this.lastMoveTo)) {
+            this.verbIndex -= 1;
+            return {
+                type:PathVerb.LineTo,
+                p0:this.lastMoveTo
+            }
+        } else {
+            return {
+                type:PathVerb.Close,
+                p0:this.lastPoint,
+                p1:this.lastMoveTo
+            }
+        }
+    }
+}
+
+class SwappableBuilders {
+    constructor(public inner: PathBuilder, public outer: PathBuilder) {
+
+    }
+    swap() {
+        [this.inner, this.outer] = [this.outer, this.inner]
+    }
+
+}
+type CapProc = (
+    pivot: Point, // 上一个点
+    normal: Point,
+    stop: Point,
+    other_path: PathBuilder | null | undefined,
+    path: PathBuilder,
+) => void;
+
+type JoinProc = (
+    before_unit_normal: Point, //l0->l1 线段的，旋转-90度的单位法向量
+    pivot: Point,// 上一个lineTo点
+    after_unit_normal: Point, // l1->l2 线段的，旋转-90度的单位法向量
+    radius: number, // 线段宽的一半
+    inv_miter_limit: number,// 1/miter_limit   
+    prev_is_line: boolean, // 上一个绘制命令是否是lineTo
+    curr_is_line: boolean, // 当前绘制命令是否是lineTo
+    builders: SwappableBuilders,
+) => void
+
+const SCALAR_ROOT_2_OVER_2 = 0.707106781;
+const lineCapButt:CapProc=(pivot,normal,stop,other_path,path)=>{
+    path.lineTo(stop.x, stop.y);
+}
+const lineCapRound:CapProc=(pivot,normal,stop,other_path,path)=>{
+    let  parallel = normal.clone();
+    parallel.cw();
+
+    let projected_center = pivot.clone().add(parallel);
+    let projected_center_normal=projected_center.clone().add(normal)
+    path.conicTo(projected_center_normal.x,
+        projected_center_normal.y,
+        projected_center.x,
+        projected_center.y,
+        SCALAR_ROOT_2_OVER_2,
+    );
+    projected_center_normal.copy(projected_center).sub(normal)
+    path.conicTo(projected_center_normal.x,
+        projected_center_normal.y,
+        stop.x,
+        stop.y,
+        SCALAR_ROOT_2_OVER_2,
+    );  
+}
+
+const lineCapSquare:CapProc=(pivot,normal,stop,other_path,path)=>{
+    let  parallel = normal.clone();
+    parallel.cw();
+
+    if(other_path) {
+        path.setLastPoint(Point.create(
+            pivot.x + normal.x + parallel.x,
+            pivot.y + normal.y + parallel.y,
+        ));
+        path.lineTo(
+            pivot.x - normal.x + parallel.x,
+            pivot.y - normal.y + parallel.y,
+        );
+    } else {
+        path.lineTo(
+            pivot.x + normal.x + parallel.x,
+            pivot.y + normal.y + parallel.y,
+        );
+        path.lineTo(
+            pivot.x - normal.x + parallel.x,
+            pivot.y - normal.y + parallel.y,
+        );
+        path.lineTo(stop.x, stop.y);
+    }
+}
+
+enum AngleType {
+    Nearly180,
+    Sharp,
+    Shallow,
+    NearlyLine,
+}
+function isNearlyZero(value:number) {
+    return Math.abs(value)<=SCALAR_NEARLY_ZERO
+}
+function dotToAngleType(dot: number):AngleType {
+    if (dot >= 0.0) {
+        // shallow or line
+        if(isNearlyZero(1.0 - dot) ){
+           return AngleType.NearlyLine
+        } else {
+            return AngleType.Shallow
+        }
+    } else {
+        // sharp or 180
+        if (isNearlyZero(1.0 + dot)) {
+            return AngleType.Nearly180
+        } else {
+            return AngleType.Sharp
+        }
+    }
+}
+function isClockwise(before: Point, after: Point):boolean {
+   return before.x * after.y > before.y * after.x
+}
+function handleInnerJoin(pivot: Point, after: Point, inner:PathBuilder) {
+    // In the degenerate case that the stroke radius is larger than our segments
+    // just connecting the two inner segments may "show through" as a funny
+    // diagonal. To pseudo-fix this, we go through the pivot point. This adds
+    // an extra point/edge, but I can't see a cheap way to know when this is
+    // not needed :(
+    inner.lineTo(pivot.x, pivot.y);
+
+    inner.lineTo(pivot.x - after.x, pivot.y - after.y);
+}
+const lineJoinMiterInner=(
+    before_unit_normal: Point, //l0->l1 线段的，旋转-90度的单位法向量
+    pivot: Point,// 上一个lineTo点
+    after_unit_normal: Point, // l1->l2 线段的，旋转-90度的单位法向量
+    radius: number, // 线段宽的一半
+    inv_miter_limit: number,// 1/miter_limit
+    miter_clip: boolean,  
+    prev_is_line: boolean, // 上一个绘制命令是否是lineTo
+    curr_is_line: boolean, // 当前绘制命令是否是lineTo
+    builders: SwappableBuilders)=>{
+        function do_blunt_or_clipped(
+            builders: SwappableBuilders,
+            pivot: Point,
+            radius: number,
+            prev_is_line: boolean,
+            curr_is_line: boolean,
+             before: Point,
+             mid: Point,
+             after: Point,
+            inv_miter_limit: number,
+            miter_clip: boolean,
+        ) {
+            after=after.clone()
+            after.multiplyScalar(radius);
+    
+            mid=mid.clone()
+            before=before.clone()
+
+            if (miter_clip) {
+                mid.normalize();
+    
+                let cos_beta = before.dot(mid);
+                let sin_beta = before.cross(mid);
+                let x=0
+                if(Math.abs(sin_beta) <= SCALAR_NEARLY_ZERO) {
+                    x=1.0 / inv_miter_limit
+                } else {
+                    x=((1.0 / inv_miter_limit) - cos_beta) / sin_beta
+                };
+    
+                before.multiplyScalar(radius);
+    
+                let  before_tangent = before.clone();
+                before_tangent.cw();
+    
+                let  after_tangent = after.clone();
+                after_tangent.ccw();
+    
+                let c1 = Point.default()
+                c1.addVector(pivot,before).add(before_tangent.clone().multiplyScalar(x))
+                let c2 = Point.default()
+                c1.addVector(pivot,after).add( after_tangent.clone().multiplyScalar(x))
+            
+    
+                if (prev_is_line) {
+                    builders.outer.setLastPoint(c1);
+                } else {
+                    builders.outer.lineTo(c1.x, c1.y);
+                }
+    
+                builders.outer.lineTo(c2.x, c2.y);
+            }
+    
+            if(!curr_is_line){
+                builders.outer.lineTo(pivot.x + after.x, pivot.y + after.y);
+            }
+    
+            handleInnerJoin(pivot, after, builders.inner);
+        }
+    
+        function do_miter(
+            builders: SwappableBuilders,
+            pivot: Point,
+            radius: number,
+            prev_is_line: boolean,
+            curr_is_line: boolean,
+            mid: Point,
+             after: Point,
+        ) {
+            after=after.clone();
+            after.multiplyScalar(radius);
+    
+            if (prev_is_line) {
+                builders
+                    .outer
+                    .setLastPoint(Point.create(pivot.x + mid.x, pivot.y + mid.y));
+            } else {
+                builders.outer.lineTo(pivot.x + mid.x, pivot.y + mid.y);
+            }
+    
+            if( !curr_is_line) {
+                builders.outer.lineTo(pivot.x + after.x, pivot.y + after.y);
+            }
+    
+            handleInnerJoin(pivot, after, builders.inner);
+        }
+    
+        // negate the dot since we're using normals instead of tangents
+        let dot_prod = before_unit_normal.dot(after_unit_normal);
+        let angle_type = dotToAngleType(dot_prod);
+        let  before = before_unit_normal.clone();
+        let  after = after_unit_normal.clone();
+        let  mid=Point.default();
+    
+        if( angle_type == AngleType.NearlyLine) {
+            return;
+        }
+    
+        if (angle_type == AngleType.Nearly180) {
+            curr_is_line = false;
+            mid.subVector(after,before).multiplyScalar(radius / 2.0);
+            do_blunt_or_clipped(
+                builders,
+                pivot,
+                radius,
+                prev_is_line,
+                curr_is_line,
+                before,
+                mid,
+                after,
+                inv_miter_limit,
+                miter_clip,
+            );
+            return;
+        }
+    
+        let ccw = !isClockwise(before, after);
+        if(ccw) {
+            builders.swap();
+            before.negate();
+            after.negate()
+        }
+    
+        // Before we enter the world of square-roots and divides,
+        // check if we're trying to join an upright right angle
+        // (common case for stroking rectangles). If so, special case
+        // that (for speed an accuracy).
+        // Note: we only need to check one normal if dot==0
+        if(dot_prod == 0.0 && inv_miter_limit <= SCALAR_ROOT_2_OVER_2) {
+            mid.addVector(before,after).multiplyScalar(radius)
+            do_miter(
+                builders,
+                pivot,
+                radius,
+                prev_is_line,
+                curr_is_line,
+                mid,
+                after,
+            );
+            return;
+        }
+    
+        // choose the most accurate way to form the initial mid-vector
+        if(angle_type == AngleType.Sharp) {
+            mid = Point.create(after.y - before.y, before.x - after.x);
+            if(ccw) {
+                mid.negate();
+            }
+        } else {
+            mid = Point.create(before.x + after.x, before.y + after.y);
+        }
+    
+        // midLength = radius / sinHalfAngle
+        // if (midLength > miterLimit * radius) abort
+        // if (radius / sinHalf > miterLimit * radius) abort
+        // if (1 / sinHalf > miterLimit) abort
+        // if (1 / miterLimit > sinHalf) abort
+        // My dotProd is opposite sign, since it is built from normals and not tangents
+        // hence 1 + dot instead of 1 - dot in the formula
+        let sin_half_angle = Math.sqrt((1.0 + dot_prod)/2);
+        if (sin_half_angle < inv_miter_limit) {
+            curr_is_line = false;
+            do_blunt_or_clipped(
+                builders,
+                pivot,
+                radius,
+                prev_is_line,
+                curr_is_line,
+                before,
+                mid,
+                after,
+                inv_miter_limit,
+                miter_clip,
+            );
+            return;
+        }
+    
+        mid.setLength(radius / sin_half_angle);
+        do_miter(
+            builders,
+            pivot,
+            radius,
+            prev_is_line,
+            curr_is_line,
+            mid,
+            after,
+        );
+}
+
+const lineJoinBevel:JoinProc=(before_unit_normal,pivot,after_unit_normal,radius,inv_miter_limit,  prev_is_line,curr_is_line,builders)=>{
+    let  after = after_unit_normal.clone().multiplyScalar(radius);
+
+    if(!isClockwise(before_unit_normal, after_unit_normal)) {
+        builders.swap();
+        after.negate();
+    }
+
+    builders.outer.lineTo(pivot.x + after.x, pivot.y + after.y);
+    handleInnerJoin(pivot, after, builders.inner);
+}
+const lineJoinMiter:JoinProc=(before_unit_normal,pivot,after_unit_normal,radius,inv_miter_limit,  prev_is_line,curr_is_line,builders)=>{
+    return lineJoinMiterInner(before_unit_normal,pivot,after_unit_normal,radius,inv_miter_limit,  false,prev_is_line,curr_is_line,builders)
+}
+const lineJoinMiterClip:JoinProc=(before_unit_normal,pivot,after_unit_normal,radius,inv_miter_limit,  prev_is_line,curr_is_line,builders)=>{
+    lineJoinMiterInner(
+        before_unit_normal,
+        pivot,
+        after_unit_normal,
+        radius,
+        inv_miter_limit,
+        true,
+        prev_is_line,
+        curr_is_line,
+        builders,
+    );
+}
+const lineJoinRound:JoinProc=(before_unit_normal,pivot,after_unit_normal,radius,inv_miter_limit,  prev_is_line,curr_is_line,builders)=>{
+    let dot_prod = before_unit_normal.dot(after_unit_normal);
+    let angle_type = dotToAngleType(dot_prod);
+
+    if( angle_type == AngleType.NearlyLine ){
+        return;
+    }
+
+    let  before = before_unit_normal.clone();
+    let  after = after_unit_normal.clone();
+    let  dir = PathDirection.CW;
+
+    if(!isClockwise(before, after) ){
+        builders.swap();
+        before.negate();
+        after.negate();
+        dir = PathDirection.CCW;
+    }
+
+    let ts =Matrix2D.fromRows(radius, 0.0, 0.0, radius, pivot.x, pivot.y);
+
+    let  _conics = new Array(5).fill(0).map(()=>new Conic())
+    let conics = Conic.build_unit_arc(before as any, after as any, dir, ts,_conics);
+    if (conics) {
+        for(let conic of conics) {
+            builders
+                .outer
+                .conicTo(conic.points[1].x,conic.points[1].y,
+                     conic.points[2].x,conic.points[2].y, conic.weight);
+        }
+
+        after.multiplyScalar(radius);
+        handleInnerJoin(pivot, after, builders.inner);
+    }
+}
+
+
+
+function setNormalUnitNormal(
+    before: Point,
+    after: Point,
+    scale: number,
+    radius: number,
+    normal: Point,
+    unit_normal:Point,
+): boolean {
+    if (!unit_normal.setLengthFrom((after.x - before.x) * scale, (after.y - before.y) * scale,1)) {
+        return false;
+    }
+
+    unit_normal.ccw();
+    normal.copy(unit_normal).multiplyScalar(radius);
+    return true
+}
+
+function setNormalUnitNormal2(
+    vec: Point,
+    radius: number,
+    normal: Point,
+    unit_normal: Point,
+):boolean {
+    if (!unit_normal.setLengthFrom(vec.x, vec.y,1) ){
+        return false;
+    }
+    unit_normal.ccw();
+    normal.copy(unit_normal).multiplyScalar(radius);
+    return true
+}
+const joinFactory:{
+    [K in LineJoin]: JoinProc
+}={
+    [LineJoin.Bevel]:lineJoinBevel,
+    [LineJoin.Miter]:lineJoinMiter,
+    [LineJoin.MiterClip]:lineJoinMiterClip,
+    [LineJoin.Round]:lineJoinRound
+}
+const capFactory:{
+    [K in LineCap]: CapProc
+}={
+    [LineCap.Butt]:lineCapButt,
+    [LineCap.Round]:lineCapRound,
+    [LineCap.Square]:lineCapSquare
+}
+
+enum StrokeType {
+    Outer = 1, // use sign-opposite values later to flip perpendicular axis
+    Inner = -1,
+}
+enum ReductionType {
+    Point,       // all curve points are practically identical
+    Line,        // the control point is on the line between the ends
+    Quad,        // the control point is outside the line between the ends
+    Degenerate,  // the control point is on the line but outside the ends
+    Degenerate2, // two control points are on the line but outside ends (cubic)
+    Degenerate3, // three areas of max curvature found (for cubic)
+}
+
+const SCALAR_NEARLY_ZERO=1/(1<<12)
+export class PathStroker {
+    static computeResolutionScale(ts: Matrix2D) {
+        let sx = Point.create(ts.a, ts.b).length();
+        let sy = Point.create(ts.c, ts.d).length();
+        if (Number.isFinite(sx) && Number.isFinite(sy)) {
+            let scale = Math.max(sx, sy);
+            if (scale > 0) {
+                return scale;
+            }
+        }
+        return 1
+    }
+    radius = 0 // 线段宽的一半
+    inv_miter_limit = 0 // 1/miter_limit
+    res_scale = 1 // 分辨率缩放因子
+    inv_res_scale = 1 // 分辨率缩放因子的倒数
+    inv_res_scale_squared = 1 // 分辨率缩放因子的倒数平方
+
+    first_normal = Point.default() // Move->LineTo 旋转-90法向量剩以radius
+    prev_normal = Point.default() // 上一个LineTo->lineTo点旋转-90法向量剩以radius
+    first_unit_normal = Point.default() // Move->LineTo 线段的，旋转-90度的单位法向量
+    prev_unit_normal = Point.default() // 上一个lineTo->LineTo点旋转-90度的单位法向量
+
+    first_pt = Point.default() // moveTo点
+    prev_pt = Point.default()// 上一个lineTo点
+
+    first_outer_pt = Point.default()  // 第一个线段的外侧点
+
+    first_outer_pt_index_in_contour = 0 // 第一个线段的外侧点在轮廓中的索引
+
+    segment_count = -1 // 从MoveTo线段计数
+
+    prev_is_line = false // 上一个绘制命令是否是lineTo
+
+
+    capper!: CapProc
+    joiner!: JoinProc
+
+    inner = PathBuilder.default()
+    outer = PathBuilder.default()
+    cusper = PathBuilder.default()
+    stroke_type = StrokeType.Outer // 线段类型
+    recursion_depth = 0 // 递归深度
+    found_tangents = false // 是否找到切线
+    join_completed = false // 是否完成连接
+    get moveToPt() {
+        return this.first_pt
+    }
+    builders(){
+        return new SwappableBuilders(this.inner, this.outer)
+    }
+    close(is_line: bool) {
+        this.finishContour(true, is_line);
+    }
+    moveTo(p:Point) {
+        if(this.segment_count > 0) {
+            this.finishContour(false, false);
+        }
+
+        this.segment_count = 0;
+        this.first_pt.copy(p);
+        this.prev_pt.copy(p);
+        this.join_completed = false;
+    }
+    finishContour(close: boolean, curr_is_line:boolean) {
+        const self=this
+        if( self.segment_count > 0 ){
+            if(close) {
+                (self.joiner)(
+                    self.prev_unit_normal,
+                    self.prev_pt,
+                    self.first_unit_normal,
+                    self.radius,
+                    self.inv_miter_limit,
+                    self.prev_is_line,
+                    curr_is_line,
+                    self.builders(),
+                );
+                self.outer.closePath();
+
+                // now add inner as its own contour
+                let pt = self.inner.lastPoint??Point.create(0,0);
+                self.outer.moveTo(pt.x, pt.y);
+                self.outer.addReversePath(self.inner);
+                self.outer.closePath();
+            } else {
+                // add caps to start and end
+
+                // cap the end
+                let pt = self.inner.lastPoint??Point.create(0,0);
+                let other_path =curr_is_line?self.inner:null;
+                (self.capper)(
+                    self.prev_pt,
+                    self.prev_normal,
+                    pt,
+                    other_path,
+                     self.outer,
+                );
+                self.outer.addReversePath(self.inner);
+
+                // cap the start
+                 other_path =  self.prev_is_line?self.inner:null;
+                (self.capper)(
+                    self.first_pt,
+                    self.first_normal.clone().negate(),
+                    self.first_outer_pt,
+                    other_path,
+                    self.outer,
+                );
+                self.outer.closePath();
+            }
+
+            if (!self.cusper.isEmpty) {
+                self.outer.addPath(self.cusper);
+                self.cusper.clear();
+            }
+        }
+
+        // since we may re-use `inner`, we rewind instead of reset, to save on
+        // reallocating its internal storage.
+        self.inner.clear();
+        self.segment_count = -1;
+        self.first_outer_pt_index_in_contour = self.outer.points.length;
+    }
+
+    preJoinTo(p: Point,curr_is_line: bool,normal:Point,unit_normal:Point) {
+        const self=this
+        let prev_x = self.prev_pt.x;
+        let prev_y = self.prev_pt.y;
+
+        let normal_set = setNormalUnitNormal(
+            self.prev_pt,
+            p,
+            self.res_scale,
+            self.radius,
+            normal,
+            unit_normal,
+        );
+        if(!normal_set) {
+            if (self.capper===lineCapButt) {
+                return false;
+            }
+            // Square caps and round caps draw even if the segment length is zero.
+            // Since the zero length segment has no direction, set the orientation
+            // to upright as the default orientation.
+            normal.set(self.radius, 0.0)
+            unit_normal.set(1,0)
+        }
+
+        if (self.segment_count == 0) {
+            self.first_normal.copy(normal);
+            self.first_unit_normal.copy(unit_normal);
+            self.first_outer_pt = Point.create(prev_x + normal.x, prev_y + normal.y);
+
+            self.outer.moveTo(self.first_outer_pt.x, self.first_outer_pt.y);
+            self.inner.moveTo(prev_x - normal.x, prev_y - normal.y);
+        } else {
+            // we have a previous segment
+            (self.joiner)(
+                self.prev_unit_normal,
+                self.prev_pt,
+                unit_normal,
+                self.radius,
+                self.inv_miter_limit,
+                self.prev_is_line,
+                curr_is_line,
+                self.builders(),
+            );
+        }
+        self.prev_is_line = curr_is_line;
+        return true
+    }
+    postJoinTo(p: Point, normal: Point, unit_normal: Point) {
+        this.join_completed = true;
+        this.prev_pt.copy(p);
+        this.prev_unit_normal.copy(unit_normal);
+        this.prev_normal.copy(normal);
+        this.segment_count += 1;
+    }
+
+    lineTo(p:Point,iter?:PathSegmentsIter) {
+        const self=this
+        let teeny_line = self
+        .prev_pt
+        .equalsEpsilon(p, SCALAR_NEARLY_ZERO * self.inv_res_scale);
+        if ((self.capper, lineCapButt) && teeny_line) {
+            return;
+        }
+
+        if (teeny_line && (self.join_completed || iter&&iter.hasValidTangent()))
+        {
+            return;
+        }
+
+        let  normal = Point.default();
+        let  unit_normal = Point.default();
+        if(!self.preJoinTo(p, true, normal,unit_normal)) {
+            return;
+        }
+
+        self.outer.lineTo(p.x + normal.x, p.y + normal.y);
+        self.inner.lineTo(p.x - normal.x, p.y - normal.y);
+
+        self.postJoinTo(p, normal, unit_normal);
+    }
+    quadraticCurveTo(p1:Point, p2:Point) {
+        // const self=this
+        // let quad = [self.prev_pt, p1, p2];
+        // let (reduction, reduction_type) = check_quad_linear(&quad);
+        // if reduction_type == ReductionType::Point {
+        //     // If the stroke consists of a moveTo followed by a degenerate curve, treat it
+        //     // as if it were followed by a zero-length line. Lines without length
+        //     // can have square and round end caps.
+        //     self.line_to(p2, None);
+        //     return;
+        // }
+
+        // if reduction_type == ReductionType::Line {
+        //     self.line_to(p2, None);
+        //     return;
+        // }
+
+        // if reduction_type == ReductionType::Degenerate {
+        //     self.line_to(reduction, None);
+        //     let save_joiner = self.joiner;
+        //     self.joiner = round_joiner;
+        //     self.line_to(p2, None);
+        //     self.joiner = save_joiner;
+        //     return;
+        // }
+
+        // debug_assert_eq!(reduction_type, ReductionType::Quad);
+
+        // let mut normal_ab = Point::zero();
+        // let mut unit_ab = Point::zero();
+        // let mut normal_bc = Point::zero();
+        // let mut unit_bc = Point::zero();
+        // if !self.pre_join_to(p1, false, &mut normal_ab, &mut unit_ab) {
+        //     self.line_to(p2, None);
+        //     return;
+        // }
+
+        // let mut quad_points = QuadConstruct::default();
+        // self.init_quad(
+        //     StrokeType::Outer,
+        //     NormalizedF32::ZERO,
+        //     NormalizedF32::ONE,
+        //     &mut quad_points,
+        // );
+        // self.quad_stroke(&quad, &mut quad_points);
+        // self.init_quad(
+        //     StrokeType::Inner,
+        //     NormalizedF32::ZERO,
+        //     NormalizedF32::ONE,
+        //     &mut quad_points,
+        // );
+        // self.quad_stroke(&quad, &mut quad_points);
+
+        // let ok = set_normal_unit_normal(
+        //     quad[1],
+        //     quad[2],
+        //     self.res_scale,
+        //     self.radius,
+        //     &mut normal_bc,
+        //     &mut unit_bc,
+        // );
+        // if !ok {
+        //     normal_bc = normal_ab;
+        //     unit_bc = unit_ab;
+        // }
+
+        // self.post_join_to(p2, normal_bc, unit_bc);
+
+    }
+    bezierCurveTo(p1:Point, p2:Point,p3:Point){
+
+    }
+    closePath() {
+
+    }
+    stroke(path: PathBuilder, paint: Paint) {
+        return this.strokeInner(path,paint.strokeWidth,paint.miterLimit,paint.lineCap,paint.lineJoin,this.res_scale)
+    }
+    strokeInner(path: PathBuilder,
+        width: number,
+        miterLimit: number,
+        lineCap: LineCap,
+        lineJoin: LineJoin,
+        resScale: number) {
+        const self = this;
+        let  inv_miter_limit = 0.0;
+        if(lineJoin == LineJoin.Miter) {
+            if(miterLimit <= 1) {
+                lineJoin = LineJoin.Bevel;
+            } else {
+                inv_miter_limit =1/miterLimit;
+            }
+        }
+
+        if(lineJoin == LineJoin.MiterClip) {
+            inv_miter_limit = 1/miterLimit
+        }
+
+        self.res_scale = resScale;
+        // The '4' below matches the fill scan converter's error term.
+        self.inv_res_scale = 1/(resScale * 4.0);
+        self.inv_res_scale_squared = (self.inv_res_scale**2);
+
+        self.radius = width*0.5;
+        self.inv_miter_limit = inv_miter_limit;
+
+        self.first_normal =Point.default();
+        self.prev_normal =Point.default();
+        self.first_unit_normal = Point.default();
+        self.prev_unit_normal = Point.default();
+
+        self.first_pt = Point.default();
+        self.prev_pt = Point.default();
+
+        self.first_outer_pt = Point.default();
+        self.first_outer_pt_index_in_contour = 0;
+        self.segment_count = -1;
+        self.prev_is_line = false;
+
+        self.capper = capFactory[lineCap];
+        self.joiner = joinFactory[lineJoin];
+
+        // Need some estimate of how large our final result (fOuter)
+        // and our per-contour temp (fInner) will be, so we don't spend
+        // extra time repeatedly growing these arrays.
+        //
+        // 1x for inner == 'wag' (worst contour length would be better guess)
+        self.inner.clear();
+       // self.inner.reserve(path.verbs.len(), path.points.len());
+
+        // 3x for result == inner + outer + join (swag)
+        self.outer.clear();
+        // self.outer
+        //     .reserve(path.verbs.len() * 3, path.points.len() * 3);
+
+        self.cusper.clear();
+
+        self.stroke_type = StrokeType.Outer;
+
+        self.recursion_depth = 0;
+        self.found_tangents = false;
+        self.join_completed = false;
+
+        let  last_segment_is_line = false;
+        let  iter = path.segments();
+        iter.setAutoClose(true);
+        for(let d of iter) {
+            switch(d.type) {
+                case PathVerb.MoveTo:
+                    self.moveTo(d.p0!);
+                    break;
+                case PathVerb.LineTo:
+                    self.lineTo(d.p0!,iter);
+                    last_segment_is_line = true;
+                    break;
+                case PathVerb.QuadTo:
+                    self.quadraticCurveTo(d.p1!, d.p2!);
+                    last_segment_is_line = false;
+                    break;
+                case PathVerb.CubicTo:
+                    self.bezierCurveTo(d.p1!, d.p2!, d.p3!);
+                    last_segment_is_line = false;
+                    break;
+                case PathVerb.Close:
+                    if(lineCap != LineCap.Butt) {
+                        // If the stroke consists of a moveTo followed by a close, treat it
+                        // as if it were followed by a zero-length line. Lines without length
+                        // can have square and round end caps.
+                        if(self.hasOnlyMoveTo()) {
+                            self.lineTo(self.moveToPt);
+                            last_segment_is_line = true;
+                            continue;
+                        }
+
+                        // If the stroke consists of a moveTo followed by one or more zero-length
+                        // verbs, then followed by a close, treat is as if it were followed by a
+                        // zero-length line. Lines without length can have square & round end caps.
+                        if(self.isCurrentContourEmpty()){
+                            last_segment_is_line = true;
+                            continue;
+                        }
+                    }
+
+                    self.close(last_segment_is_line);
+                    break;
+              
+            }
+        }
+
+       return  self.finish(last_segment_is_line)
+    }
+    finish(is_line:boolean){
+        this.finishContour(false, is_line);
+
+        // Swap out the outer builder.
+        let  buf = this.outer.clone()
+        return buf.finish()
+    }
+   
+     hasOnlyMoveTo(){
+       return this.segment_count == 0
+    }
+
+     isCurrentContourEmpty()  {
+       return this.inner.isZeroLengthSincePoint(0)
+            && this
+                .outer
+                .isZeroLengthSincePoint(this.first_outer_pt_index_in_contour)
+    }
+
+
 }
 
 

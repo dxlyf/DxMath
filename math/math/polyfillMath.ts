@@ -200,9 +200,9 @@ function createMathTrigonometric() {
     let k = 1
     // 预计算 arctan 表和缩放因子 k
     for (let i = 0; i < iters; i++) {
-        tanTable[i] = Math.pow(2, -i)
+        tanTable[i] = Math.pow(2, -i) // Math.pow(2, -i)=tan
         arctanTable[i] = Math.atan(tanTable[i])
-
+        // 1 / Math.sqrt(1 + Math.pow(2, -2 * i))=1/sqrt(1+tan^2)=cos
         k *= 1 / Math.sqrt(1 + Math.pow(2, -2 * i))
     }
     function perp(x: number, y: number) {

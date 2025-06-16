@@ -1,5 +1,7 @@
 import { Vector2 } from "./vec2";
 
+export const K=(4*(Math.sqrt(2)-1))/3 // 黄金分割率
+
 export const PI = Math.PI
 export const PI2 = PI * 2;
 export const DEGREES_RADIAN = PI / 180
@@ -27,7 +29,7 @@ export function atan2To3(a: Vector2, b: Vector2) {
 }
 
 
-export function atan(x:number){
+export function atan(x:number):number{
     if(x===Infinity){
         return Math.PI/2
     }else if(x===-Infinity){

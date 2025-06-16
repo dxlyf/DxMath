@@ -217,12 +217,22 @@ export class Vector2 {
     dotVectors(a: Vector2, b: Vector2) {
         return a.x * b.x + a.y * b.y
     }
+    /**
+     * 点乘求dot(a,b)=|a|*|b|*cos(theta)
+     * cos=dot(a,b)/|a|/|b|=dot(normalize(a),normalize(b))
+    */
     dot(v: Vector2) {
         return this.dotVectors(this, v)
     }
     crossVectors(a: Vector2, b: Vector2) {
         return a.x * b.y - a.y * b.x
     }
+    /**
+     * 求面积:area=0.5*abs(crossVectors(a,b))
+     * 求sin:sin=cross(a,b)/|a|*|b|=cross(normalize(a),normalize(b))
+     * @param v 
+     * @returns 
+     */
     cross(v: Vector2) {
         return this.crossVectors(this, v)
     }

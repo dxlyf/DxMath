@@ -1,3 +1,48 @@
+function drawLine2(x0: number, y0: number, x1: number, y1: number,setPixel:(x:number,y:number)=>void){
+    const dx=x1-x0
+    const dy=y1-y0
+    const asbDx=Math.abs(dx)
+    const asbDy=Math.abs(dy)
+
+    const steps=Math.max(asbDx, asbDy)
+
+    for(let i=0;i<=steps;i++){
+        const t=i/steps
+        setPixel(Math.round(x0+dx*t),Math.round(y0+dy*t))
+    }
+
+}
+function drawBresenhamLine2(x0: number, y0: number, x1: number, y1: number,setPixel:(x:number,y:number)=>void){
+
+    let dx=x1>x0?x1-x0:x0-x1;
+    let dy=y1>y0?y1-y0:y0-y1;
+
+    let sx=x0<x1?1:-1;
+    let sy=y0<y1?1:-1;
+    let x=x0,y=y0;
+    let dx2=dx+dx;
+    let dy2=dy+dy;
+    let m=dx>dy?dy2:dx2,error=0;
+    setPixel(x,y)
+    while(x!=x1||y!=y1){
+        error+=m
+        if(dx>dy){
+            if(error>=dx){
+                error-=dx2;
+                y+=sy;
+            }
+            x+=sx;
+        }else{
+            if(error>=dy){
+                error-=dy2;
+                x+=sx;
+            }
+            y+=sy;
+        }
+        setPixel(x,y)
+    }
+}
+
 export const drawDDALine = (x1: number, y1: number, x2: number, y2: number, setPixel: (x: number, y: number) => void) => {
     const dx = x2 - x1;
     const dy = y2 - y1;

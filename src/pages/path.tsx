@@ -2,7 +2,7 @@
 import Canvas, { CanvasExpose } from '../components/Canvas'
 import { Path } from '../../math/2d_path/path'
 import { SKPath2D } from '../../math/skia_path/SKPath2D'
-import { PathBuilder, endPointToCenter,centerToEndPoint } from '../../math/2d_raster/soft2d'
+import { PathBuilder,PathStroker,Paint,LineJoin,LineCap, endPointToCenter,centerToEndPoint } from '../../math/2d_raster/soft2d'
 import { GUI } from 'lil-gui'
 import { Matrix2D } from 'math/math/mat2d'
 import { Vector2 } from 'math/math/vec2'
@@ -277,6 +277,43 @@ function testConic(ctx: CanvasRenderingContext2D) {
 
 
 }
+
+
+function testStroke(ctx: CanvasRenderingContext2D) {
+
+   
+    let points:number[]=[100,200,200,50,300,200,.1]
+    const path =new SKPath2D()
+    let path2 = PathBuilder.default()
+
+    path.moveTo(100,100)
+    path.lineTo(200,100)
+    path.lineTo(200,200)
+    path.stroke({
+        width:10,
+        miter_limit:10,
+        cap:SKPath2D.StrokeCap.ROUND,
+        join:SKPath2D.StrokeJoin.ROUND,
+
+    })
+    
+    path2.moveTo(100,100)
+    path2.lineTo(200,100)
+    path2.lineTo(200,200)
+    let paint=new Paint()
+    paint.strokeWidth=10
+    paint.lineCap=LineCap.Round
+    paint.lineJoin=LineJoin.Round
+
+    let pathStroker=new PathStroker
+    pathStroker.res_scale=PathStroker.computeResolutionScale(Matrix2D.default())
+    let path2_= pathStroker.stroke(path2,paint)
+
+ //  ctx.stroke(path.toPath2D())
+   path2_?.toCanvas(ctx)
+
+    ctx.stroke()
+}
 export default () => {
 
     const onInit = (ctx: CanvasExpose) => {
@@ -286,7 +323,7 @@ export default () => {
 
 
         ctx.drawOnce((ctx) => {
-            testConic(ctx)
+            testStroke(ctx)
             // testEllipseArc(ctx)
         })
 

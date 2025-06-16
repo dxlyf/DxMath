@@ -1,6 +1,6 @@
-import { Context } from 'math/cg/ts/ctx'
-import { FillRule, LineCap, LineJoin } from 'math/cg/ts/paint';
-import {Surface} from 'math/cg/ts/surface'
+import { Context } from 'math/cg/ctx'
+import { FillRule, LineCap, LineJoin } from 'math/cg/paint';
+import {Surface} from 'math/cg/surface'
 
 
 
