@@ -1,6 +1,9 @@
 {
-  "name": "@dxyl/math",
-  "private": false,
+  "name":"dxyl",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "version": "0.1.0",
   "type": "module",
   "files": [
@@ -9,42 +12,9 @@
   ],
   "homepage": "https://github.com/dxlyf/DxMath",
   "description": "2D Mathematics and Geometry, Path Tool Class",
-  "exports": {
-    ".": {
-      "import": "./dist/math.es.js",
-      "require": "./dist/math.cjs.js"
-    },
-    "./canvaskit": {
-      "import": "./dist/canvaskit.es.js",
-      "require": "./dist/canvaskit.cjs.js"
-    },
-    "./skia_path": {
-      "import": "./dist/skia_path.es.js",
-      "require": "./dist/skia_path.cjs.js"
-    },
-    "./2d_geometry": {
-      "import": "./dist/2d_geometry.es.js",
-      "require": "./dist/2d_geometry.cjs.js"
-    },
-    "./2d_contains": {
-      "import": "./dist/2d_contains.es.js",
-      "require": "./dist/2d_contains.cjs.js"
-    },
-    "./2d_path": {
-      "import": "./dist/2d_path.es.js",
-      "require": "./dist/2d_path.cjs.js"
-    },
-    "./2d_scanning_algorithm": {
-      "import": "./dist/2d_scanning_algorithm.es.js",
-      "require": "./dist/2d_scanning_algorithm.cjs.js"
-    },
-    "./3d_scanning_algorithm": {
-      "import": "./dist/3d_scanning_algorithm.es.js",
-      "require": "./dist/3d_scanning_algorithm.cjs.js"
-    }
-  },
   "scripts": {
-    "dev": "vite --port=5467",
+   
+    "dev": "npm --workspace packages/math run dev",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",

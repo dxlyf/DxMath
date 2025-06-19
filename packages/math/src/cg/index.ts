@@ -1,0 +1,7 @@
+export * from './ctx'
+export * from './paint'
+export * from './surface'
+export * from './path'
+export * from './color'
+export * from './matrix'
+export {GradientType} from './gradient'
