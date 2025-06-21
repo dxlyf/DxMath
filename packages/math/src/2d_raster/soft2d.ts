@@ -2322,7 +2322,7 @@ type JoinProc = (
     builders: SwappableBuilders,
 ) => void
 
-const SCALAR_ROOT_2_OVER_2 = 0.707106781;
+const SCALAR_ROOT_2_OVER_2 = 0.707106781;// sqrt(2)/2
 const lineCapButt: CapProc = (pivot, normal, stop, other_path, path) => {
     path.lineTo(stop.x, stop.y);
 }

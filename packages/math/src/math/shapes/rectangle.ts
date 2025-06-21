@@ -25,30 +25,31 @@ export class Rectangle {
     getPerimeter(): number {
         return 2 * (this.width + this.height);
     }
-    distanceTo(point: Vector2) {
+    distanceTo(x:number,y:number) {
         const center=this.getCenter()
         const width=this.width/2,height=this.height/2
-        const dx=Math.abs(point.x-center.x)-width
-        const dy=Math.abs(point.y-center.y)-height
+        const dx=Math.abs(x-center.x)-width
+        const dy=Math.abs(y-center.y)-height
         const max_x=Math.max(0,dx)
         const max_y=Math.max(0,dy)
         if(max_x>0||max_y>0){
             return Math.sqrt(max_x*max_x+max_y*max_y)
         }
-        return 0 //Math.min(0,Math.max(dx,dy))
+        return Math.min(0,Math.max(dx,dy))
     }
     /**
      * 判断一个点是否在矩形内
-     * @param px 点的 x 坐标
-     * @param py 点的 y 坐标
+     * @param x 点的 x 坐标
+     * @param y 点的 y 坐标
      * @returns 如果点在矩形内返回 true，否则返回 false
      */
-    containsPoint(px: number, py: number): boolean {
-        return (
-            px >= this.x &&
-            px <= this.x + this.width &&
-            py >= this.y &&
-            py <= this.y + this.height
-        );
+    containsPoint(x: number, y: number): boolean {
+        return !(x < this.x || x > this.x + this.width || y < this.y || y > this.y + this.height);
+    }
+    containsStroke(x:number,y:number,width:number,alignment:number=0.5) {
+        const dist=this.distanceTo(x,y);
+        const halfWidth=width*0.5
+        const offset=(alignment-0.5)*2*halfWidth
+        return Math.abs(dist-offset)<=halfWidth;
     }
 }

@@ -635,115 +635,6 @@ function calc_cubic_precision(src:Vector2[]):number {
             weight,
         })
     }
-
-    constructor(options?:{
-        points:Vector2[]
-        weight:number
-    }){
-        if(options){
-            Object.assign(this,options)
-        }
-    }
-     compute_quad_pow2(tolerance: f32) {
-        if (tolerance < 0.0 || !Number.isFinite(tolerance)) {
-            return ;
-        }
-        const self=this;
-
-        if (!self.points[0].isFinite() || !self.points[1].isFinite() || !self.points[2].isFinite())
-        {
-            return ;
-        }
-
-        // Limit the number of suggested quads to approximate a conic
-        const MAX_CONIC_TO_QUAD_POW2 = 4;
-
-        // "High order approximation of conic sections by quadratic splines"
-        // by Michael Floater, 1993
-        let a = self.weight - 1.0;
-        let k = a / (4.0 * (2.0 + a));
-        let x = k * (self.points[0].x - 2.0 * self.points[1].x + self.points[2].x);
-        let y = k * (self.points[0].y - 2.0 * self.points[1].y + self.points[2].y);
-
-        let  error = Math.sqrt((x * x + y * y));
-        let  pow2 = 0;
-        for(let _=0;_< MAX_CONIC_TO_QUAD_POW2;_++) {
-            if (error <= tolerance) {
-                break;
-            }
-
-            error *= 0.25;
-            pow2 += 1;
-        }
-
-        // Unlike Skia, we always expect `pow2` to be at least 1.
-        // Otherwise it produces ugly results.
-      //  Some(pow2.max(1))
-        return Math.max(pow2,1)
-    }
-    // Chop this conic into N quads, stored continuously in pts[], where
-    // N = 1 << pow2. The amount of storage needed is (1 + 2 * N)
-    chop_into_quads_pow2( pow2:number, points: Vector2[]){
-       // debug_assert!(pow2 < 5);
-        const self=this
-        points[0] = self.points[0];
-        subdivide(self, points.slice(1), pow2);
-
-        let quad_count = 1 << pow2;
-        let pt_count = 2 * quad_count + 1;
-        const hasNonFinite = points.slice(0, pt_count).some(n => !Number.isFinite(n));
-        if (hasNonFinite) {
-            // if we generated a non-finite, pin ourselves to the middle of the hull,
-            // as our first and last are already on the first/last pts of the hull.
-            // for p in points.iter_mut().take(pt_count - 1).skip(1) {
-            //     *p = self.points[1];
-            // }
-            for(let i=0;i<pt_count-1;i++){
-                this.points[i+1]=this.points[1]
-            }
-        }
-
-        return 1<<pow2
-    }
-     chop():[Conic, Conic] {
-        const self=this;
-        let scale = Vector2.splat(1/(1.0 + self.weight));
-        let new_w = subdivide_weight_value(self.weight);
-
-        let p0 = self.points[0].clone();
-        let p1 = self.points[1].clone();
-        let p2 = self.points[2].clone();
-        let ww = Vector2.splat(self.weight);
-
-        let wp1 = ww.clone().mul(p1);
-        let m = (p0.clone().add(times_2(wp1)).add(p2)).multiply(scale).mul( Vector2.splat(0.5));
-        let  m_pt = Vector2.from(m);
-        if(!m_pt.isFinite()) {
-            let w_d = self.weight;
-            let w_2 = w_d * 2.0;
-            let scale_half = 1.0 / (1.0 + w_d) * 0.5;
-            m_pt.x = ((self.points[0].x
-                + w_2 * self.points[1].x
-                + self.points[2].x)
-                * scale_half);
-
-            m_pt.y = ((self.points[0].y 
-                + w_2 * self.points[1].y
-                + self.points[2].y)
-                * scale_half);
-        }
-
-        return [
-            new Conic({
-                points: [self.points[0], Vector2.from((p0.clone().add(wp1)).mul(scale)), m_pt],
-                weight: new_w,
-            }),
-            new Conic({
-                points: [m_pt, Vector2.from((wp1.clone().add(p2)).mul(scale)), self.points[2]],
-                weight: new_w,
-            }),
-        ]
-    }
     static build_unit_arc(
         u_start: Vector2,
         u_stop: Vector2,
@@ -854,6 +745,115 @@ function calc_cubic_precision(src:Vector2[]):number {
           return dst.slice(0,conic_count)
         }
     }
+    constructor(options?:{
+        points:Vector2[]
+        weight:number
+    }){
+        if(options){
+            Object.assign(this,options)
+        }
+    }
+     compute_quad_pow2(tolerance: f32) {
+        if (tolerance < 0.0 || !Number.isFinite(tolerance)) {
+            return ;
+        }
+        const self=this;
+
+        if (!self.points[0].isFinite() || !self.points[1].isFinite() || !self.points[2].isFinite())
+        {
+            return ;
+        }
+
+        // Limit the number of suggested quads to approximate a conic
+        const MAX_CONIC_TO_QUAD_POW2 = 4;
+
+        // "High order approximation of conic sections by quadratic splines"
+        // by Michael Floater, 1993
+        let a = self.weight - 1.0;
+        let k = a / (4.0 * (2.0 + a));
+        let x = k * (self.points[0].x - 2.0 * self.points[1].x + self.points[2].x);
+        let y = k * (self.points[0].y - 2.0 * self.points[1].y + self.points[2].y);
+
+        let  error = Math.sqrt((x * x + y * y));
+        let  pow2 = 0;
+        for(let _=0;_< MAX_CONIC_TO_QUAD_POW2;_++) {
+            if (error <= tolerance) {
+                break;
+            }
+
+            error *= 0.25;
+            pow2 += 1;
+        }
+
+        // Unlike Skia, we always expect `pow2` to be at least 1.
+        // Otherwise it produces ugly results.
+      //  Some(pow2.max(1))
+        return Math.max(pow2,1)
+    }
+    // Chop this conic into N quads, stored continuously in pts[], where
+    // N = 1 << pow2. The amount of storage needed is (1 + 2 * N)
+    chop_into_quads_pow2( pow2:number, points: Vector2[]){
+       // debug_assert!(pow2 < 5);
+        const self=this
+        points[0] = self.points[0];
+        subdivide(self, points.slice(1), pow2);
+
+        let quad_count = 1 << pow2;
+        let pt_count = 2 * quad_count + 1;
+        const hasNonFinite = points.slice(0, pt_count).some(n => !Number.isFinite(n));
+        if (hasNonFinite) {
+            // if we generated a non-finite, pin ourselves to the middle of the hull,
+            // as our first and last are already on the first/last pts of the hull.
+            // for p in points.iter_mut().take(pt_count - 1).skip(1) {
+            //     *p = self.points[1];
+            // }
+            for(let i=0;i<pt_count-1;i++){
+                this.points[i+1]=this.points[1]
+            }
+        }
+
+        return 1<<pow2
+    }
+     chop():[Conic, Conic] {
+        const self=this;
+        let scale = Vector2.splat(1/(1.0 + self.weight));
+        let new_w = subdivide_weight_value(self.weight);
+
+        let p0 = self.points[0].clone();
+        let p1 = self.points[1].clone();
+        let p2 = self.points[2].clone();
+        let ww = Vector2.splat(self.weight);
+
+        let wp1 = ww.clone().mul(p1);
+        let m = (p0.clone().add(times_2(wp1)).add(p2)).multiply(scale).mul( Vector2.splat(0.5));
+        let  m_pt = Vector2.from(m);
+        if(!m_pt.isFinite()) {
+            let w_d = self.weight;
+            let w_2 = w_d * 2.0;
+            let scale_half = 1.0 / (1.0 + w_d) * 0.5;
+            m_pt.x = ((self.points[0].x
+                + w_2 * self.points[1].x
+                + self.points[2].x)
+                * scale_half);
+
+            m_pt.y = ((self.points[0].y 
+                + w_2 * self.points[1].y
+                + self.points[2].y)
+                * scale_half);
+        }
+
+        return [
+            new Conic({
+                points: [self.points[0], Vector2.from((p0.clone().add(wp1)).mul(scale)), m_pt],
+                weight: new_w,
+            }),
+            new Conic({
+                points: [m_pt, Vector2.from((wp1.clone().add(p2)).mul(scale)), self.points[2]],
+                weight: new_w,
+            }),
+        ]
+    }
+   
 }
 
 
