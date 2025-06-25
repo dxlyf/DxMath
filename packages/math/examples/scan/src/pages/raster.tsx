@@ -1,4 +1,4 @@
-import Canvas, { CanvasExpose } from "src/components/Canvas"
+import Canvas, {type CanvasExpose } from "../components/Canvas"
 // import {rasterize,Document,Path,Style,ColorPaintServer,Color} from 'math/2d_path/rasterizer'
 
 import {PathBuilder} from 'math/2d_raster/soft2d'

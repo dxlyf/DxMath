@@ -655,8 +655,8 @@ export class Vector2 {
         const new_weights = weights.slice()
         for (let i = 0; i <= n; i++) {
             let v = bernstein(n, i, t)
-            x += new_points[i].x * v
-            y += new_points[i].y * v
+            x += new_points[i].x * v*new_weights[i]
+            y += new_points[i].y * v*new_weights[i]
             w += weights[i] * v
         }
         return this.set(x / w, y / w)
@@ -691,7 +691,11 @@ export class Vector2 {
 
     }
     conic(p0: Vector2, p1: Vector2, p2: Vector2, w: number, t: number): Vector2 {
-        return this.rationalBezier([p0, p1, p2], [1, w, 1], t)
+       // return this.rationalBezier([p0, p1, p2], [1, w, 1], t)
+       const k=(4*w)/(3*(1+w))
+       const cp1=p0.clone().interpolate(p1,k)
+       const cp2=p2.clone().interpolate(p1,k)
+       return this.curveBezier(p0, cp1, cp2,p2, t)
     }
     quadraticBezier(p0: Vector2, p1: Vector2, p2: Vector2, t: number): Vector2 {
         return this.bezier([p0, p1, p2], t)

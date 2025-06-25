@@ -554,6 +554,15 @@ export function conicToBeziers(x0:number, y0:number, x1:number, y1:number, x2:nu
     }
 }
 
+export function conicToCubic(p0:Vector2,p1:Vector2,p2:Vector2,w:number,dst:Vector2[]=[]){
+        let k = 4.0 * w / (3.0 * (1.0 + w));
+
+        dst[0] =Vector2.default().interpolateVectors(p0,p1,k) // p0 + (p1 - p0) * k;
+        dst[1] =Vector2.default().interpolateVectors(p2,p1,k)  // p2 + (p1 - p2) * k;
+        dst[2] =p2.clone() //p2;
+
+      return dst
+}
 export function conicToQuadratic(x0:number, y0:number, x1:number, y1:number, x2:number, y2:number, w:number
 ) {
     // 定义原有理曲线的三个控制点

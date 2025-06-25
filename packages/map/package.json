@@ -1,0 +1,29 @@
+{
+  "name": "@dxyl/map",
+  "private": false,
+  "version": "0.1.0",
+  "type": "module",
+  "files": [
+    "./dist",
+    "./package.json"
+  ],
+  "homepage": "https://github.com/dxlyf/DxMath",
+  "description": "2D Mathematics and Geometry, Path Tool Class",
+  "exports": {},
+  "scripts": {
+    "dev": "vite --port=5469",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@ant-design/pro-components": "^2.8.9",
+    "@turf/turf": "^7.2.0",
+    "@types/leaflet": "^1.9.19",
+    "ahooks": "^3.8.5",
+    "antd": "^5.26.2",
+    "leaflet": "^1.9.4",
+    "mapbox-gl": "^3.13.0",
+    "ol": "^10.6.1"
+  }
+}

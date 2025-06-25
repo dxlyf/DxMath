@@ -1,4 +1,15 @@
-import { LineCap, LineJoin } from "./Stroker"
+
+export enum LineJoin {
+    MITER = 'miter',
+    ROUND = 'round',
+    BEVEL = 'bevel',
+}
+
+export enum LineCap {
+    BUTT = 'butt',
+    ROUND = 'round',
+    SQUARE = 'square',
+}
 export enum PaintStyle{
     FILL,
     STROKE,
@@ -41,9 +52,6 @@ export class Paint{
         ctx.lineCap=this.lineCap
         ctx.miterLimit=this.miterLimit
         ctx.lineWidth=this.lineWidth
-
-
-
 
     }
 }

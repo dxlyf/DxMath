@@ -1,8 +1,8 @@
 
-import Canvas, { CanvasExpose } from '../components/Canvas'
-import { Path } from '../../math/2d_path/path'
-import { SKPath2D } from '../../math/skia_path/SKPath2D'
-import { PathBuilder,PathStroker,Paint,LineJoin,LineCap, endPointToCenter,centerToEndPoint } from '../../math/2d_raster/soft2d'
+import Canvas, {type CanvasExpose } from '../components/Canvas'
+import { Path } from 'math/2d_path/path'
+import { SKPath2D } from 'math/skia_path/SKPath2D'
+import { PathBuilder,PathStroker,Paint,LineJoin,LineCap, endPointToCenter,centerToEndPoint } from 'math/2d_raster/soft2d'
 import { GUI } from 'lil-gui'
 import { Matrix2D } from 'math/math/mat2d'
 import { Vector2 } from 'math/math/vec2'

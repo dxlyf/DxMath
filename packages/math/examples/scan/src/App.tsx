@@ -3,7 +3,7 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 
-import {useRoutes,BrowserRouter, useNavigate, RouteObject,useLocation,useMatch} from 'react-router-dom'
+import {useRoutes,BrowserRouter, useNavigate,type RouteObject,useLocation,useMatch,useMatches} from 'react-router-dom'
 import SvgCmd from './pages/svgcmd'
 const loadLazyComponent = (p: () => Promise<{ default: ComponentType }>) => {
   const LazyComponent = React.lazy(p);
@@ -69,6 +69,7 @@ function App() {
   ] as RouteObject[],[])
 
   const element = useRoutes(routes);
+
   return (
     <div className='app'>
    

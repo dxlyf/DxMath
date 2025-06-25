@@ -1783,7 +1783,7 @@ export class PathBuilder {
     }
 
 
-    conicTo(x1: number, y1: number, x: number, y: number, weight: number): this {
+    conicTo2(x1: number, y1: number, x: number, y: number, weight: number): this {
         if (!(weight > 0.0)) {
             this.lineTo(x, y);
         } else if (!Number.isFinite(weight)) {
@@ -1806,7 +1806,7 @@ export class PathBuilder {
         }
         return this
     }
-    conicTo2(x1: number, y1: number, x: number, y: number, weight: number): this {
+    conicTo(x1: number, y1: number, x: number, y: number, weight: number): this {
         if (!(weight > 0.0)) {
             this.lineTo(x, y);
         } else if (!Number.isFinite(weight)) {
@@ -2077,7 +2077,7 @@ export class PathBuilder {
         this.toCanvas(path)
         return path
     }
-    toPolygons(closed = false) {
+    toPolygons(autoClosed = true) {
         const polygons: Point[][] = []
         let polygon: Point[] | null = null
 
@@ -2102,7 +2102,7 @@ export class PathBuilder {
             },
             closePath: (d) => {
                 if (polygon) {
-                    if (closed) {
+                    if (autoClosed&&!d.p0.equals(d.lastMovePoint)) {
                         polygon.push(d.lastMovePoint)
                     }
                     polygons.push(polygon)

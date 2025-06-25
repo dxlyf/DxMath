@@ -19,7 +19,7 @@ const DOWNSCALE = (x: number) => ((x) >> (PIXEL_BITS - 6))
 
 // 这个函数把取模变成:a-Math.floor(a/b)*b // 正数向下取整，负数向取整
 const FT_DIV_MOD = (type: any, dividend: number, divisor: number, quotient: RefValue<number>, remainder: RefValue<number>) => {
-    quotient.value = type(Math.floor(dividend / divisor));// 商的整数
+    quotient.value = type(Math.trunc(dividend / divisor));// 商的整数
     remainder.value = type(dividend % divisor); // 余数
     //正常 -14%10=-4 14%10=4
     // 当前负数向上取整 
@@ -338,8 +338,8 @@ function gray_record_cell() {
     }
 }
 /**
- * @param ex 起点x坐标
- * @param ey 起点y坐标
+ * @param ex 下一个x坐标
+ * @param ey 下一个y坐标
  */
 function gray_set_cell(ex: TCoord, ey: TCoord) {
     let ras = currentWorker!
@@ -353,7 +353,9 @@ function gray_set_cell(ex: TCoord, ey: TCoord) {
     if (ex < 0) {
         ex = -1;
     }
-    // 如果不是当前start cell单元，就记录上一个单元格，并重置当前单元数据
+    // 如果不是当前start cell单元，就记录上一个单元格，
+    // 并重置当前单元数据，准备下一个单元格的绘制
+
     if (ex != ras.ex || ey != ras.ey) {
         // 如果当前单元格激活，则记录当前单元格
         if (!ras.invalid) {
@@ -396,10 +398,10 @@ function gray_start_cell(ex: TCoord, ey: TCoord) {
  * 绘制水平线段.可能y小数部分不相同
 
  * @param ey 起始y坐标
- * @param x1 起始x坐标
- * @param y1 起始y坐标，小数部分
- * @param x2 结束x坐标
- * @param y2 结束y坐标，小数部分
+ * @param {number} x1 起始x坐标
+ * @param {number} y1 起始y坐标，小数部分
+ * @param {number} x2 结束x坐标
+ * @param {number} y2 结束y坐标，小数部分
  * @returns 
  */
 function gray_render_scanline(ey: TCoord, x1: TPos, y1: TCoord, x2: TPos, y2: TCoord) {
@@ -517,6 +519,7 @@ function gray_render_line(to_x: TPos, to_y: TPos) {
         else {
             first = 0;
         }
+           // 起始像素覆盖率计算
         delta.value = first - fy1;
         ras.area += two_fx * delta.value;
         ras.cover += delta.value;
@@ -565,6 +568,7 @@ function gray_render_line(to_x: TPos, to_y: TPos) {
                 gray_set_cell(ex, ey1);
             }
         }
+           // 结束像素覆盖率计算
         delta.value = (fy2 - ONE_PIXEL + first);
         ras.area += two_fx * delta.value;
         ras.cover += delta.value;

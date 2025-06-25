@@ -1,7 +1,7 @@
 
-import Canvas, { CanvasExpose } from '../components/Canvas'
-import { PathBuilder } from '../../math/2d_raster/soft2d'
-import { Path } from '../../math/2d_path/path'
+import Canvas, {type CanvasExpose } from '../components/Canvas'
+import { PathBuilder } from 'math/2d_raster/soft2d'
+import { Path } from 'math/2d_path/path'
 
 const tigersvg = `
 <svg version="1.1" baseProfile="basic" id="svg2" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="900px" height="900px" viewBox="0 0 900 900" xml:space="preserve">

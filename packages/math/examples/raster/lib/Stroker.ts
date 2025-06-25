@@ -1,46 +1,7 @@
 import { PathBuilder, Point, PathVerb } from "math/2d_raster/soft2d";
 import { subdivideCubic, subdivideQuadratic } from "./Bezier";
 import { Paint } from "./Paint";
-export enum LineJoin {
-    MITER = 'miter',
-    ROUND = 'round',
-    BEVEL = 'bevel',
-}
 
-export enum LineCap {
-    BUTT = 'butt',
-    ROUND = 'round',
-    SQUARE = 'square',
-}
-
-
-type Edge = {
-    nromalize: Point
-    offset: Point
-    delta: Point
-    start: Point
-    end: Point
-
-}
-type SubPath = {
-    segments: Edge[],
-    closed: boolean
-}
-
-let delta = Point.default()
-let dir = Point.default()
-let norm = Point.default()
-let offset = Point.default()
-
-let delta2 = Point.default()
-let dir2 = Point.default()
-let norm2 = Point.default()
-let offset2 = Point.default()
-
-let leftStart = Point.default()
-let leftEnd = Point.default()
-let rightStart = Point.default()
-let rightEnd = Point.default()
 export class Stroker {
 
     outerPath = PathBuilder.default()
@@ -48,99 +9,16 @@ export class Stroker {
 
     stroke(path: PathBuilder, paint: Paint) {
 
-        let lineWidth = paint.lineWidth * 0.5
-
-        let strokePath = PathBuilder.default()
-        let closed = false, i = 0
-        // let tmpPath=PathBuilder.default()
-        let startPoint = Point.default()
-        let lastPoint: Point | null = null
-        let currentPoint = Point.default()
-        let lastLastPoint = Point.default()
-
-
-
-        let outerPath: PathBuilder | null = PathBuilder.default()
-        let innerPath: PathBuilder | null = PathBuilder.default()
-
-
         path.visit({
             moveTo: (d) => {
-                // 路径开始
-                outerPath = PathBuilder.default()
-                innerPath = PathBuilder.default()
-                startPoint.copy(d.p0)
-                lastPoint = null
             },
             lineTo: (d) => {
-                let isStart = false
-                if (lastPoint === null) {
-                    isStart = true
-                    lastPoint = startPoint.clone()
-                }
-                currentPoint.copy(d.p0)
 
-                // if (isStart) {
-                //     leftStart.addVector(lastPoint, offset)
-                //     rightStart.subVector(lastPoint, offset)
-
-                // } else {
-                //     leftStart.addVector(lastPoint, offset)
-                //     rightStart.subVector(lastPoint, offset)
-                // }
-                // leftEnd.addVector(currentPoint, offset)
-                // rightEnd.subVector(currentPoint, offset)
-                if (!isStart) {
-                    this.handleLineJoin(outerPath!, lastLastPoint, lastPoint, currentPoint, lineWidth, paint)
-                    this.handleLineJoin(innerPath!, lastLastPoint, lastPoint, currentPoint, -lineWidth, paint)
-                } else {
-                    delta.subVector(currentPoint, lastPoint)
-                    dir.copy(delta).normalize()
-                    norm.copy(dir).cw() // left
-                    offset.copy(norm).multiplyScalar(lineWidth)
-
-                    leftStart.addVector(lastPoint, offset)
-                    leftEnd.addVector(currentPoint, offset)
-
-                    rightStart.subVector(lastPoint, offset)
-                    rightEnd.subVector(currentPoint, offset)
-
-                    outerPath!.moveTo(leftStart)
-                    // outerPath!.lineTo(leftEnd)
-
-                    innerPath!.moveTo(rightStart)
-                    // innerPath!.lineTo(rightEnd)
-                }
-                lastLastPoint.copy(lastPoint)
-                lastPoint.copy(d.p0)
             },
             closePath: (d) => {
-                // 是闭合路径，如果是闭合径
-                closed = true;
-                outerPath = null
-                innerPath = null
-                //  nextPoint=null
 
             }
         })
-
-        // 如果是开放路径
-        if (!closed && outerPath) {
-            //
-            strokePath.addPath(outerPath)
-            innerPath.toReversePath().visit({
-                moveTo: (d) => {
-                    this.handleLineCap(strokePath, outerPath!.lastPoint, d.p0, paint)
-                },
-                lineTo: (d) => {
-                    strokePath.lineTo(d.p0)
-                }
-            })
-            this.handleLineCap(strokePath, strokePath!.lastPoint, outerPath!.points[0], paint)
-            strokePath.closePath()
-
-        }
-        return strokePath
     }
     handleLineJoin(path: PathBuilder, prev: Point, current: Point, next: Point, lineWidth: number, paint: Paint) {
 

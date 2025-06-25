@@ -54,20 +54,27 @@ export class PixelRenderer {
                 this.ctx.fillRect(x*w+marginLeft,y*h+marginTop,w,h);
             }
         }
-        this.ctx.beginPath();
-        this.ctx.lineWidth=1
-        this.ctx.strokeStyle="black";
 
-        for(let y=0;y<height;++y){
-            this.ctx.moveTo(marginLeft,y*h+marginTop)
-            this.ctx.lineTo(this.width*w,y*h+marginTop)
+    
+
+        for(let y=0;y<height*4;++y){
+            this.ctx.beginPath();
+            this.ctx.lineWidth=1
+            this.ctx.strokeStyle=y%4==0?"black":"rgba(0,0,0,0.2)";
+            this.ctx.moveTo(marginLeft,y*h/4+marginTop)
+            this.ctx.lineTo(this.width*w,y*h/4+marginTop)
+            this.ctx.stroke()
         }
-        for(let x=0;x<width;++x){
-            this.ctx.moveTo(x*w+marginLeft,marginTop)
-            this.ctx.lineTo(x*w+marginLeft,this.height*h)
+        for(let x=0;x<width*4;++x){
+            this.ctx.beginPath();
+            this.ctx.lineWidth=1
+            this.ctx.strokeStyle=x%4==0?"black":"rgba(0,0,0,0.2)";
+            this.ctx.moveTo(x*w/4+marginLeft,marginTop)
+            this.ctx.lineTo(x*w/4+marginLeft,this.height*h)
+            this.ctx.stroke()
           
         }
-        this.ctx.stroke()
+      
     }
 
 

@@ -1,4 +1,4 @@
-import Canvas, { CanvasExpose } from "src/components/Canvas"
+import Canvas, { CanvasExpose } from "../../components/Canvas"
 import { Path } from 'math/2d_path/path'
 import {Vector2} from 'math/math/vec2'
 import { SKPath2D } from 'math/skia_path/SKPath2D'

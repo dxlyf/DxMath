@@ -1,0 +1,19 @@
+
+:root{
+    --fw:calc(100vw / 100);
+    --fh:calc(100vh / 100);
+}
+body{
+    margin: 0;
+    padding: 0;
+}
+#root{
+    width: 100vw;
+    height: 100vh;
+}
+.ant-pro-layout{
+    height: 100%;
+}
+.ant-layout-content{
+    padding: 16px;
+}

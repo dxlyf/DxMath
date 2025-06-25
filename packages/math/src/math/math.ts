@@ -329,6 +329,7 @@ export const ceilMod = (v: number, m: number) => {
 export const floorMod = (v: number, m: number) => {
     return v - Math.floor(v / m) * m
 }
+
 // 给定偏移和缩放和单位，计算起始坐标值
 // 用于标尺或网格的计算起点坐标值
 export const calcStartCoordinateValue = (unit: number, offset: number, scalar: number) => {
@@ -342,12 +343,23 @@ export const calcStartGraduationValue = (unit: number, offset: number, scalar: n
     // return Math.floor(-offset/(unit*scalar))*unit
     return -Math.ceil(offset / (unit * scalar)) * unit
 }
-// -2%10 -2 2%10=2
+export const divmod = (dividend: number, divisor: number) => {
+    let quotient=Math.trunc(dividend/divisor)
+    let remainder=dividend%divisor
+    if(remainder<0){
+        quotient--
+        remainder+=divisor
+    }
+    return [quotient,remainder]
+}
+export const divmod2 = (dividend: number, divisor: number) => {
+    let quotient=Math.floor(dividend/divisor)
+    let remainder=dividend-quotient*divisor
+    return [quotient,remainder]
+}
 export const mod = (v: number, m: number) => {
-    //return v % modulo
     return v - Math.trunc(v / m) * m
 }
-
 // 正数向上取整，负数向下取整
 // 2%10=-8 -2%10=-2
 export const  modUp=(a:number,b:number)=>{
@@ -367,6 +379,7 @@ export const clamp01 = (v: number) => {
 export const interpolate = (start: number, end: number, t: number) => {
     return start + (end - start) * t
 }
+
 export const mix = (edge0: number, edge1: number, t: number) => {
     return edge0 * (1 - t) + edge1 * t
 }

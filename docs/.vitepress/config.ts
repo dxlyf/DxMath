@@ -3,6 +3,17 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
     themeConfig: {
         nav: [
+            {   text: 'gis', 
+                items:[
+                    {
+                        text:'ol',
+                        link:'/gis/ol'
+                    },{
+                        text:'mapbox',
+                        link:'/gis/mapbox'
+                    }
+                ]
+             },
             { text: '2d图形', 
                 items:[
                     {

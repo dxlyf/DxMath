@@ -13,6 +13,14 @@ canvas.width=surface.width
 canvas.height=surface.height
 const nativeCtx=canvas.getContext('2d')!
 
+ctx.save()
+ctx.newPath()
+ctx.setSourceRGB(1,0,0)
+ctx.moveTo(20,10)
+ctx.lineTo(30,20)
+ctx.lineTo(10,20)
+ctx.closePath()
+ctx.fill()
 
 
 // ctx.save()
@@ -67,16 +75,16 @@ const nativeCtx=canvas.getContext('2d')!
 // ctx.stroke()
 // ctx.restore()
 
-ctx.save()
-ctx.newPath()
+// ctx.save()
+// ctx.newPath()
 
-ctx.setSourceRGB(1,0,0)
-ctx.setLineWidth(10)
-ctx.setLineJoin(LineJoin.ROUND)
- ctx.arc(300,100,50,0,Math.PI*2,false)
+// ctx.setSourceRGB(1,0,0)
+// ctx.setLineWidth(10)
+// ctx.setLineJoin(LineJoin.ROUND)
+//  ctx.arc(300,100,50,0,Math.PI*2,false)
 // ctx.clip()
 //ctx.rectangle(100,100,100,100)
-ctx.stroke()
-ctx.restore()
+// ctx.stroke()
+// ctx.restore()
 
 nativeCtx.putImageData(new ImageData(surface.pixels!,surface.width,surface.height),0,0)

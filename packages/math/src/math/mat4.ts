@@ -1,7 +1,7 @@
 
-import { Euler } from './euler.js';
-import { Quaternion } from './quad.js';
-import { Vector3 } from './vec3.js';
+import type { Euler } from './euler';
+import { Quaternion } from './quad';
+import { Vector3 } from './vec3';
 
 export class Matrix4 {
     static DEFAULT_MUTABLE = true

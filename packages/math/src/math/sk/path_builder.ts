@@ -511,7 +511,7 @@ export class PathBuilder {
             }
        
             // safe to convert back to floats now
-            let dist = SkScalarAbs(SkDoubleToScalar(radius * (1 - cosh) / sinh));
+            let dist = SkScalarAbs(SkDoubleToScalar(radius * (1 - cosh) / sinh));//(1 - cosh) / sinh)=crd
             let xx = p1.x - dist * befored.x;
             let yy = p1.y - dist * befored.y;
             
