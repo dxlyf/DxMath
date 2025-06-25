@@ -312,10 +312,10 @@ function gray_find_cell(): TCell {
     }
 
     // 保证从x排序（从小到大）
-    let newCell = ras.cells[ras.num_cells]
-    if (!newCell) {
-        newCell = ras.cells[ras.num_cells] = new TCell()
-    }
+    let newCell =new TCell()// ras.cells[ras.num_cells]
+    // if (!newCell) {
+    //     newCell = new TCell()
+    // }
     ras.num_cells++
     newCell.x = x;
     newCell.area = 0;
@@ -1071,105 +1071,6 @@ function gray_convert_glyph() {
     ras.band_shoot = 0;
     min = ras.min_ey;
     max_y = ras.max_ey;
-
-    // for (n = 0; n < num_bands; n++, min = max) {
-    //     max = min + ras.band_size;
-    //     if (n == num_bands - 1 || max > max_y) {
-    //         max = max_y;
-    //     }
-    //     bands[0].min = min;
-    //     bands[0].max = max;
-    //     band = PointerArray.from(bands);
-    //     const sizeofPCell = 8//sizeof(PCell)
-    //     while (band.curIndex >= 0) {
-    //         let bottom, top, middle;
-    //         let error;
-    //         {
-    //             let cells_max;
-    //             let yindex;
-    //             let cell_start, cell_end, cell_mod;
-    //             ras.ycells = [];
-    //             ras.ycount = band.value.max - band.value.min;
-    //            //  cell_start = ras.ycount;
-    //             //  cell_mod = cell_start;
-    //             // if(cell_mod > 0)
-    //             //    cell_start += sizeof(TCell) - cell_mod;
-    //             //   cell_end = ras.buffer_size;
-    //             // cell_end -= cell_end % sizeof(TCell);
-    //             // cells_max = (PCell)((char*)ras.buffer + cell_end);
-    //             ras.cells = []
-    //             //(PCell)((char*)ras.buffer + cell_start);
-    //             // if (ras.cells >= cells_max) {
-    //             //     bottom = band.value.min;
-    //             //     top = band.value.max;
-    //             //     middle = bottom + ((top - bottom) >> 1);
-    //             //     if (middle == bottom) {
-    //             //         return ErrRaster_OutOfMemory;
-    //             //     }
-    //             //     if (bottom - top >= ras.band_size) {
-    //             //         ras.band_shoot++;
-    //             //     }
-    //             //     band.get(1).min = bottom;
-    //             //     band.get(1).max = middle;
-    //             //     band.get(0).min = middle;
-    //             //     band.get(0).max = top;
-    //             //     band.next();
-    //             //     break
-    //             // }
-    //            // ras.max_cells = (cells_max - ras.cells);
-    //             // if (ras.max_cells < 2) {
-    //             //     bottom = band.value.min;
-    //             //     top = band.value.max;
-    //             //     middle = bottom + ((top - bottom) >> 1);
-    //             //     if (middle == bottom) {
-    //             //         return ErrRaster_OutOfMemory;
-    //             //     }
-    //             //     if (bottom - top >= ras.band_size) {
-    //             //         ras.band_shoot++;
-    //             //     }
-    //             //     band.get(1).min = bottom;
-    //             //     band.get(1).max = middle;
-    //             //     band.get(0).min = middle;
-    //             //     band.get(0).max = top;
-    //             //     band.next();
-    //             //     break
-    //             // }
-    //             for (yindex = 0; yindex < ras.ycount; yindex++)
-    //             {
-    //                 ras.ycells[yindex] = null;
-    //             }
-    //         }
-    //         ras.num_cells = 0;
-    //         ras.invalid = 1;
-    //         ras.min_ey = band.value.min;
-    //         ras.max_ey = band.value.max;
-    //         ras.count_ey = band.value.max - band.value.min;
-    //         error = gray_convert_glyph_inner();
-    //         if (!error) {
-    //             gray_sweep();
-    //             band.prev();
-    //             continue;
-    //         }
-    //         else if (error != ErrRaster_Memory_Overflow) {
-    //             return 1;
-    //         }
-
-    //         bottom = band.value.min;
-    //         top = band.value.max;
-    //         middle = bottom + ((top - bottom) >> 1);
-    //         if (middle == bottom) {
-    //             return ErrRaster_OutOfMemory;
-    //         }
-    //         if (bottom - top >= ras.band_size) {
-    //             ras.band_shoot++;
-    //         }
-    //         band.get(1).min = bottom;
-    //         band.get(1).max = middle;
-    //         band.get(0).min = middle;
-    //         band.get(0).max = top;
-    //         band.next();
-    //     }
-    // }
 
     let error = gray_convert_glyph_inner()
     gray_sweep()

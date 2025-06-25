@@ -16,9 +16,9 @@ const nativeCtx=canvas.getContext('2d')!
 ctx.save()
 ctx.newPath()
 ctx.setSourceRGB(1,0,0)
-ctx.moveTo(20,10)
-ctx.lineTo(30,20)
-ctx.lineTo(10,20)
+ctx.moveTo(5,1)
+ctx.lineTo(9,7)
+ctx.lineTo(1,7)
 ctx.closePath()
 ctx.fill()
 

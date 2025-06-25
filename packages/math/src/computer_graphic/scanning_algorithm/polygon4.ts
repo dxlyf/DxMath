@@ -290,6 +290,7 @@ class Rasterizer {
         x = this.x + delta
         this.renderScanLine(ey1, this.x, fy1, x, first)
         ey1 += incr
+        this.setCell(Int24_8.toFloor(x),ey1)
         if (ey1 != ey2) {
             p = Int24_8.ONE * dx // 单行像素的总面积
             let [lift, rem] = divmod(p, dy)
@@ -377,7 +378,12 @@ class Rasterizer {
         this.cover += dy
     }
     startCell(ex: number, ey: number) {
-        ex = clamp(ex, this.count_ex - 1, this.count_ex)
+        if (ex > this.maxX) {
+            ex = this.maxX;
+        }
+        if (ex < this.minX) {
+            ex = this.minX - 1;
+        }
         this.area = 0
         this.cover = 0
         this.ex = ex - this.minX
@@ -387,11 +393,15 @@ class Rasterizer {
         this.setCell(ex, ey)
     }
     setCell(ex: number, ey: number) {
-        ex -= this.minX
+    
         ey -= this.minY
-
-        ex = clamp(ex, -1, this.count_ex)
-
+        if(ex>this.maxX){
+            ex=this.maxX
+        }
+        ex-=this.minX
+        if (ex < 0) {
+            ex = -1;
+        }
         // 如果不是当前处理的像素，则重置当前像素的记录状态
         if (ex !== this.ex || ey !== this.ey) {
             // 如果有效
@@ -417,7 +427,10 @@ class Rasterizer {
 
     }
     findCell() {
-        const x = this.ex
+        let x = this.ex
+        if(x>this.count_ex){
+            x=this.count_ex
+        }
         let cell = this.yCells[this.ey] as (Cell | null), prev: Cell | null = null
         while (cell) {
             if (cell.x == x) return cell
@@ -429,7 +442,7 @@ class Rasterizer {
             x: x,
             area: 0,
             cover: 0,
-            next: null
+            next: cell||null
         }
         if (prev) {
             newCell.next = prev.next
@@ -471,8 +484,8 @@ class Rasterizer {
             let spans = this.spans
             let last=spans[spans.length-1]
 
-            if(last&&last.x===x&&last.y===y&&last.coverage==coverage) {
-                last.len+=acount
+            if(last&&last.x===x&&last.y===y&& last.x + last.len == x &&last.coverage==coverage) {
+                last.len=last.len+acount
                 return
             }
             let span:Span ={
@@ -550,7 +563,7 @@ class Rasterizer {
         for (let i = 0; i < spans.length; i++) {
             let span = spans[i]
             for(let x=span.x,j=0;j<span.len;j++,x++){
-                this.setPixel(x, span.y, span.coverage)
+                this.setPixel(span.x+j, span.y, span.coverage)
             }
           
         }

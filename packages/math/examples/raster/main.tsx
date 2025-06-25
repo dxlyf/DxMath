@@ -3,7 +3,7 @@ import { PathBuilder } from "math/2d_raster/soft2d";
 import { Path } from "math/2d_path/path";
 import { Rasterizer,FillRule } from "./lib/Rasterizer";
 import { Paint } from "./lib/Paint";
-import { LineJoin,LineCap, Stroker } from "./lib/Stroker";
+import {  Stroker } from "./lib/Stroker";
 
 function test(){
   
