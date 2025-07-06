@@ -92,18 +92,21 @@ export class Line{
     // y轴截距
     getInterceptFromYAxis(){
         //斜截式 y=kx+b
-        const k=(this.end.y-this.start.y)/(this.end.x-this.start.x)
-        const b=this.start.y-k*this.start.x
-        return b
+        // const k=(this.end.y-this.start.y)/(this.end.x-this.start.x)
+        // const b=this.start.y-k*this.start.x
+        const delta=this.end.clone().subtract(this.start)
+
+        return this.start.cross(delta)/-delta.x
     }
     // x轴截距
     getInterceptFromXAxis(){
         //斜截式 y=kx+b x=ky+b
-        const k=(this.end.x-this.start.x)/(this.end.y-this.start.y)
-        const b=this.start.x-k*this.start.y
-        return b
+        // const k=(this.end.x-this.start.x)/(this.end.y-this.start.y)
+        // const b=this.start.x-k*this.start.y
+        const delta=this.end.clone().subtract(this.start)
+        return this.start.cross(delta)/delta.y
     }
-    intersection(line:Line,out?:Vector2):boolean{
+    intersection(line:Line,out=Vector2.default()){
         const ab=this.end.clone().subtract(this.start)
         const cd=line.end.clone().subtract(line.start)
 
@@ -117,26 +120,19 @@ export class Line{
           x=(CE-FB)/(AE-BD)
           y=(AF-DC)/(AE-BD)
         */
-        let A=ab.y;
-        let B=-ab.x;
-        let C=ab.x*this.start.y-ab.y*this.start.x;
-
-        let D=cd.y;
-        let E=-cd.x;
-        let F=cd.x*line.start.y-cd.y*line.start.x;
-          // AE-BD
           const det=ab.cross(cd)
-          // 没有解
-          if(det==0) return false
-        const aa=line.start.clone().subtract(this.start)
+          if(det==0) return null
         
-
-
-
-        return false
+          const ac=this.start.clone().sub(line.start)
+          const u=cd.cross(ac)/det
+          const v=ab.cross(ac)/det
+          if(u>=0&&u<=1&&v>=0&&v<=1){
+            return out.copy(this.start).add(ab.clone().multiplyScalar(u))
+          }
+          return null
     }
 
-    contains(point:Vector2):boolean{
+    contains(point:Vector2){
         
     }
 

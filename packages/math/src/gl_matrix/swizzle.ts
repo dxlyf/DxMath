@@ -17,16 +17,20 @@ const SWIZZLE_INDEX = {
   y: 1,    g: 1,
   z: 2,    b: 2,
   w: 3,    a: 3,
-};
+} as const;
+type SWIZZLE_INDEX_KEYS = keyof typeof SWIZZLE_INDEX;
+function getSwizzleImpl(swizzle:string): () => any {
 
-function getSwizzleImpl(swizzle: string): () => any {
   switch(swizzle.length) {
     case 2:
-      return function() { return new Vec2(this[SWIZZLE_INDEX[swizzle[0]]], this[SWIZZLE_INDEX[swizzle[1]]]); };
+      return function(this:any) { return new Vec2(this[SWIZZLE_INDEX[swizzle[0] as SWIZZLE_INDEX_KEYS]], this[SWIZZLE_INDEX[swizzle[1] as SWIZZLE_INDEX_KEYS]]); };
     case 3:
-      return function() { return new Vec3(this[SWIZZLE_INDEX[swizzle[0]]], this[SWIZZLE_INDEX[swizzle[1]]], this[SWIZZLE_INDEX[swizzle[2]]]); };
+      return function(this:any) { return new Vec3(this[SWIZZLE_INDEX[swizzle[0] as SWIZZLE_INDEX_KEYS]], this[SWIZZLE_INDEX[swizzle[1] as SWIZZLE_INDEX_KEYS]], this[SWIZZLE_INDEX[swizzle[2] as SWIZZLE_INDEX_KEYS]]); };
     case 4:
-      return function() { return new Vec4(this[SWIZZLE_INDEX[swizzle[0]]], this[SWIZZLE_INDEX[swizzle[1]]], this[SWIZZLE_INDEX[swizzle[2]]], this[SWIZZLE_INDEX[swizzle[3]]]); };
+      return function(this:any) { return new Vec4(this[SWIZZLE_INDEX[swizzle[0] as SWIZZLE_INDEX_KEYS]], this[SWIZZLE_INDEX[swizzle[1] as SWIZZLE_INDEX_KEYS]], this[SWIZZLE_INDEX[swizzle[2] as SWIZZLE_INDEX_KEYS]], this[SWIZZLE_INDEX[swizzle[3] as SWIZZLE_INDEX_KEYS]]); };
+  }
+  return ()=>{
+    return null
   }
 }
 

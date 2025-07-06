@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>伪3D 射线投射（贴图 + 控制 + 光照）</title>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+<canvas id="screen" width="640" height="480"></canvas>
+<script>
+const canvas = document.getElementById("screen");
+const ctx = canvas.getContext("2d");
+
+// 地图定义
+const map = [
+  [1, 1, 1, 1, 1, 1, 1, 1],
+  [1, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 1, 0, 0, 0, 1],
+  [1, 0, 1, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 1, 0, 1],
+  [1, 1, 1, 1, 1, 1, 1, 1],
+];
+const mapWidth = map[0].length;
+const mapHeight = map.length;
+
+// 玩家定义
+let player = {
+  x: 3.5,
+  y: 3.5,
+  dir: Math.PI / 4,
+  fov: Math.PI / 3,
+  moveSpeed: 0.05,
+  rotSpeed: 0.04
+};
+
+// 控制状态
+const keys = {};
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
+
+// 天空贴图
+const sky = ctx.createLinearGradient(0, 0, 0, canvas.height / 2);
+sky.addColorStop(0, "#88c");
+sky.addColorStop(1, "#66a");
+
+// 地板贴图
+const floorPattern = (() => {
+  const f = document.createElement("canvas");
+  f.width = f.height = 32;
+  const c = f.getContext("2d");
+  c.fillStyle = "#444";
+  c.fillRect(0, 0, 32, 32);
+  c.fillStyle = "#222";
+  c.fillRect(0, 0, 16, 16);
+  c.fillRect(16, 16, 16, 16);
+  return ctx.createPattern(f, "repeat");
+})();
+
+// 墙体纹理
+const wallTexture = new Image();
+wallTexture.src = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEDGlAiVHvQ75QgRu_52oMnznkxZPZWSf2Yg&s'; // 可换为任意砖墙纹理图
+
+function castRay(px, py, angle) {
+  const dx = Math.cos(angle);
+  const dy = Math.sin(angle);
+  let mapX = Math.floor(px);
+  let mapY = Math.floor(py);
+  const deltaDistX = Math.abs(1 / dx);
+  const deltaDistY = Math.abs(1 / dy);
+
+  let stepX, sideDistX;
+  if (dx < 0) {
+    stepX = -1;
+    sideDistX = (px - mapX) * deltaDistX;
+  } else {
+    stepX = 1;
+    sideDistX = (mapX + 1 - px) * deltaDistX;
+  }
+  let stepY, sideDistY;
+  if (dy < 0) {
+    stepY = -1;
+    sideDistY = (py - mapY) * deltaDistY;
+  } else {
+    stepY = 1;
+    sideDistY = (mapY + 1 - py) * deltaDistY;
+  }
+
+  let hit = false, side = 0;
+  while (!hit) {
+    if (sideDistX < sideDistY) {
+      sideDistX += deltaDistX;
+      mapX += stepX;
+      side = 0;
+    } else {
+      sideDistY += deltaDistY;
+      mapY += stepY;
+      side = 1;
+    }
+    if (mapX < 0 || mapY < 0 || mapX >= mapWidth || mapY >= mapHeight) break;
+    if (map[mapY][mapX] === 1) hit = true;
+  }
+  const dist = side === 0
+    ? (mapX - px + (1 - stepX) / 2) / dx
+    : (mapY - py + (1 - stepY) / 2) / dy;
+
+  const hitX = side === 0 ? py + dist * dy : px + dist * dx;
+  const texX = Math.floor((hitX - Math.floor(hitX)) * wallTexture.width);
+
+  return { dist, texX, side };
+}
+
+function update() {
+  if (keys['ArrowLeft']) player.dir -= player.rotSpeed;
+  if (keys['ArrowRight']) player.dir += player.rotSpeed;
+  const dx = Math.cos(player.dir) * player.moveSpeed;
+  const dy = Math.sin(player.dir) * player.moveSpeed;
+  if (keys['w'] || keys['ArrowUp']) {
+    if (map[Math.floor(player.y)][Math.floor(player.x + dx)] === 0) player.x += dx;
+    if (map[Math.floor(player.y + dy)][Math.floor(player.x)] === 0) player.y += dy;
+  }
+  if (keys['s'] || keys['ArrowDown']) {
+    if (map[Math.floor(player.y)][Math.floor(player.x - dx)] === 0) player.x -= dx;
+    if (map[Math.floor(player.y - dy)][Math.floor(player.x)] === 0) player.y -= dy;
+  }
+}
+
+function render() {
+  const w = canvas.width, h = canvas.height, halfH = h / 2;
+
+  // 天空
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, w, halfH);
+
+  // 地板
+  ctx.fillStyle = floorPattern;
+  ctx.fillRect(0, halfH, w, halfH);
+
+  for (let x = 0; x < w; x++) {
+    const cameraX = (x / w - 0.5) * 2;
+    const rayAngle = player.dir + cameraX * player.fov / 2;
+    const { dist, texX, side } = castRay(player.x, player.y, rayAngle);
+    const correctedDist = dist * Math.cos(rayAngle - player.dir);
+    const wallHeight = h / correctedDist;
+
+    const shade = 1 / (correctedDist * 0.1);
+    ctx.globalAlpha = Math.min(1, shade);
+
+    ctx.drawImage(
+      wallTexture,
+      texX, 0, 1, wallTexture.height,
+      x, halfH - wallHeight / 2, 1, wallHeight
+    );
+  }
+  ctx.globalAlpha = 1;
+}
+
+function loop() {
+  update();
+  render();
+  requestAnimationFrame(loop);
+}
+
+wallTexture.onload = loop;
+</script>
+</body>
+</html>

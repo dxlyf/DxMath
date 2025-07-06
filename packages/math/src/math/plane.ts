@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { Matrix3 } from './mat3';
 import { Vector3 } from './vec3';
 

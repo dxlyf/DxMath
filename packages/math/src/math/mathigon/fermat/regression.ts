@@ -4,7 +4,7 @@
 // =============================================================================
 
 
-import {list} from '@mathigon/core';
+import {list} from '../core';
 import * as Matrix from './matrix';
 
 
@@ -120,7 +120,7 @@ export function polynomial(data: Coordinate[], order = 2) {
   // X = [[1, x1, x1^2], [1, x2, x2^2], [1, x3, x3^2]
   // y = [y1, y2, y3]
 
-  const X = data.map(d => list(order + 1).map(p => Math.pow(d[0], p)));
+  const X = data.map(d => list(order + 1).map((p:number) => Math.pow(d[0], p)));
   const XT = Matrix.transpose(X);
   const y = data.map(d => [d[1]]);
 

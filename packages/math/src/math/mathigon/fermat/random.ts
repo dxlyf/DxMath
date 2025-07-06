@@ -4,7 +4,7 @@
 // ============================================================================
 
 
-import {repeat, total, uid} from '@mathigon/core';
+import {repeat, total, uid} from '../core';
 
 
 /** Randomly shuffles the elements in an array a. */

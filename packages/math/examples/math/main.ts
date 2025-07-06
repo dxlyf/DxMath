@@ -1,7 +1,7 @@
-import { Context } from 'math/cg/ctx'
-import { FillRule, LineCap, LineJoin } from 'math/cg/paint';
-import {Surface} from 'math/cg/surface'
-import {FT_Cos,FT_Atan2,ft_trig_pseudo_rotate} from 'math/cg/ft/math'
+import { Context } from 'math/2d_softrender/ctx'
+import { FillRule, LineCap, LineJoin } from 'math/2d_softrender/paint';
+import {Surface} from 'math/2d_softrender/surface'
+import {FT_Cos,FT_Atan2,ft_trig_pseudo_rotate} from 'math/2d_softrender/ft/math'
 
 
 console.log('FT_Cos',FT_Cos(40<<16),'FT_Atan2',FT_Atan2(1,1)/65536)
@@ -16,10 +16,7 @@ const nativeCtx=canvas.getContext('2d')!
 ctx.save()
 ctx.newPath()
 ctx.setSourceRGB(1,0,0)
-ctx.moveTo(5,1)
-ctx.lineTo(9,7)
-ctx.lineTo(1,7)
-ctx.closePath()
+ctx.rectangle(100,100,100,100)
 ctx.fill()
 
 

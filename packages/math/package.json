@@ -1,7 +1,7 @@
 {
   "name": "@dxyl/math",
   "private": false,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "files": [
     "./dist",
@@ -45,7 +45,7 @@
   },
   "scripts": {
     "dev": "vite --port=5467",
-    "build": "tsc -b && vite build",
+    "build": "tsc -p tsconfig.app.json && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

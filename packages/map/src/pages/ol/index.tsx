@@ -1,6 +1,8 @@
 
-import {ol} from 'ol'
- const OpenlayerMap=()=>{
-    return <div>OpenlayerMap</div>
+import {Map} from 'ol'
+
+
+export default ()=>{
+
+    return new Map({})
 }
-export default OpenlayerMap

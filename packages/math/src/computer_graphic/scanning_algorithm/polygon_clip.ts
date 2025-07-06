@@ -565,7 +565,7 @@ export const weilerAthertonClipper = (
               path.push(...current.point);
 
               // 沿当前多边形遍历
-              let next = current.next!;
+              let next = current.next! as any;
               while (!next.isIntersection && next !== current) {
                   next.visited = true;
                   path.push(...next.point);

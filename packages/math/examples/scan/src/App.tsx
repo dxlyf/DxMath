@@ -65,6 +65,16 @@ function App() {
       path: '/scan/canvaskit',
       title:'canvaskit',
       element:loadLazyComponent(()=>import('./pages/canvaskit')),
+    },
+    {
+      path: '/clip/line',
+      title:'line-clip',
+      element:loadLazyComponent(()=>import('./pages/clip/line')),
+    },
+    {
+      path: '/clip/polygon',
+      title:'polygon-clip',
+      element:loadLazyComponent(()=>import('./pages/clip/polygon')),
     }
   ] as RouteObject[],[])
 

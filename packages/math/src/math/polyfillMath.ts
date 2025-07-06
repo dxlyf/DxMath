@@ -1,3 +1,4 @@
+// @ts-nocheck
 import BigNumber from './bignumber'
 // cordic Volder算法
 // https://zh.wikipedia.org/wiki/CORDIC

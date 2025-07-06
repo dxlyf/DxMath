@@ -1,4 +1,4 @@
-import Canvas, { CanvasExpose } from "src/components/Canvas"
+import Canvas, { CanvasExpose } from "../../src/components/Canvas"
 import {Raster3D,Object3D,Mesh,Geometry,Camera,createCubeVertices,Texture,Vertex,Face3} from 'math/computer_graphic/3d'
 
 import imageUrl from 'src/assets/uv_grid_opengl.jpg'

@@ -1570,7 +1570,7 @@ export class Path {
         }
         return newPath
     }
-    isZeroLengthSincePoint(start_pt_index: usize):bool {
+    isZeroLengthSincePoint(start_pt_index: number):boolean {
         let count = this.points.length - start_pt_index;
         if(count < 2) {
             return true;

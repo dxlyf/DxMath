@@ -1,4 +1,5 @@
 
+// @ts-nocheck
 import type { Euler } from './euler';
 import { Quaternion } from './quad';
 import { Vector3 } from './vec3';

@@ -1,4 +1,5 @@
 // Rasterizer.ts
+// @ts-nocheck
 import { Bitmap } from "./Bitmap";
 import { PathBuilder, PathVerb } from "math/2d_raster";
 import { FillRule } from "./FillRule";

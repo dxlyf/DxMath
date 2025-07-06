@@ -416,8 +416,8 @@ function fillTriangleScanlineOptimized(
 }
 function fillTriangleScanline2(a:Vertex, b:Vertex, c:Vertex, setPixel:any) {
     // 辅助函数
-    const lerp = (a, b, t) => a + t * (b - a);
-    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const lerp = (a:number, b:number, t:number) => a + t * (b - a);
+    const clamp = (v:number, min:number, max:number) => Math.max(min, Math.min(max, v));
 
     // 排序顶点（按y升序）
     const points = [a, b, c].sort((p1, p2) => p1.positionScreen.y - p2.positionScreen.y);

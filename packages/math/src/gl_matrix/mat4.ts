@@ -1919,7 +1919,7 @@ export class Mat4 extends Float32Array {
    * @returns `out`
    * @deprecated
    */
-  static perspectiveFromFieldOfView(out: Mat4Like, fov, near: number, far: number): Mat4Like {
+  static perspectiveFromFieldOfView(out: Mat4Like, fov:any, near: number, far: number): Mat4Like {
     const upTan = Math.tan((fov.upDegrees * Math.PI) / 180.0);
     const downTan = Math.tan((fov.downDegrees * Math.PI) / 180.0);
     const leftTan = Math.tan((fov.leftDegrees * Math.PI) / 180.0);

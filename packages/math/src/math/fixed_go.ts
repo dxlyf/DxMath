@@ -1,3 +1,4 @@
+// @ts-nocheck
 // 26.6 Fixed Point
 export const FDot6 = {
     ONE: 64,

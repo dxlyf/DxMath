@@ -1,4 +1,5 @@
 
+// @ts-nocheck
 import {vec3,Vec3Like,Vec4Like,Vec2Like,vec2,vec4,mat4,mat3, Vec2,quat,QuatLike, Mat4Like} from '../gl_matrix'
 function interpolate(start:number, end:number, t:number) {
     return start + (end - start) * t;

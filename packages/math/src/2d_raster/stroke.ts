@@ -403,7 +403,7 @@ export class Stroker {
 		this.addNonCurvy2(mab, mabc);
 		this.addNonCurvy2(mbc, c);
 	}
-	Add3(b, c, d) {
+	Add3(b:any, c:any, d:any) {
 		console.assert("freetype/raster: stroke unimplemented for cubic segments")
 	}
 

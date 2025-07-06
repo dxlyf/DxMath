@@ -5,7 +5,7 @@ import { Face3, Vertex } from './vertex'
 
 
 
-export function createCubeVertices(size) {
+export function createCubeVertices(size:number) {
     size = size || 1;
     const k = size / 2;
     const CUBE_FACE_INDICES = [

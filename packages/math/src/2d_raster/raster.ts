@@ -486,7 +486,7 @@ export class Rasterizer {
                     i += 6;
                     break;
                 case 3:
-                    this.Add3(Point26_6.from(p.points[i + 1], p.points[i + 2]), Point26_6.from(p.points[i + 3], p.points[i + 4]), Point.from(p.points[i + 5], p.points[i + 6]));
+                    this.Add3(Point26_6.from(p.points[i + 1], p.points[i + 2]), Point26_6.from(p.points[i + 3], p.points[i + 4]), Point26_6.from(p.points[i + 5], p.points[i + 6]));
                     i += 8;
                     break;
                 default:

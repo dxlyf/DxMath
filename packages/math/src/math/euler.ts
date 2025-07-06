@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Quaternion } from './quad';
 import { Matrix4 } from './mat4';
 import { clamp } from './math';

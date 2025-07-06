@@ -4,7 +4,7 @@
 // =============================================================================
 
 
-import {repeat2D, tabulate2D} from '@mathigon/core';
+import {repeat2D, tabulate2D} from '../core';
 import {nearlyEquals} from './arithmetic';
 
 
@@ -146,7 +146,7 @@ export function inverse(M: Matrix) {
   if (n !== M[0].length) throw new Error('Not a square matrix.');
 
   const I = identity(n);
-  const C = tabulate2D((x, y) => M[x][y], n, n);  // Copy of original matrix
+  const C = tabulate2D((x:number, y:number) => M[x][y], n, n);  // Copy of original matrix
 
   for (let i = 0; i < n; ++i) {
     // Loop over the elements e in along the diagonal of C.

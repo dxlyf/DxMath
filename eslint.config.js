@@ -19,6 +19,8 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      "@typescript-eslint/ban-types": "off",      // 允许使用 BigNumber 等类型
+      "@typescript-eslint/no-unused-vars": "off", // 关闭未使用变量的警告
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },

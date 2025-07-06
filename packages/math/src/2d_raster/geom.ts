@@ -162,7 +162,7 @@ export class Path {
         this.points.push(...q.points);
     }
 
-    AddStroke(q, width, cr, jr) {
+    AddStroke(q:any, width:any, cr:any, jr:any) {
         // Stroke 方法的实现
         // 这里可以根据需要实现
     }
@@ -204,7 +204,7 @@ export class Path {
                 break;
             case 3:
                 i -= 8;
-                p.Add3(Point26_6.from(q.points[i + 4], q.points[i + 5]), Point26_6.from(q.points[i + 2], q.points[i + 3]), Point.from(q.points[i - 2], q.points[i - 1]));
+                p.Add3(Point26_6.from(q.points[i + 4], q.points[i + 5]), Point26_6.from(q.points[i + 2], q.points[i + 3]), Point26_6.from(q.points[i - 2], q.points[i - 1]));
                 break;
             default:
                 throw new Error("freetype/raster: bad path");

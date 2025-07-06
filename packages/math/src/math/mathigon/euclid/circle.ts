@@ -6,10 +6,10 @@
 
 import {nearlyEquals} from '../fermat';
 import {Arc} from './arc';
-import {Line} from '../line';
-import {ORIGIN, Point} from '../point';
-import {Rectangle} from '../rectangle';
-import {GeoShape, rad, SimplePoint, TransformMatrix, TWO_PI} from '../utilities';
+import {Line} from './line';
+import {ORIGIN, Point} from './point';
+import {Rectangle} from './rectangle';
+import {GeoShape, rad, SimplePoint, TransformMatrix, TWO_PI} from './utilities';
 
 
 /** A circle with a given center and radius. */

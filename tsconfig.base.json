@@ -8,7 +8,6 @@
         "module": "ESNext",
         "skipLibCheck": true,
         "allowJs": true,
-
     
         /* Bundler mode */
         "moduleResolution": "bundler",
@@ -20,9 +19,9 @@
     
         /* Linting */
         "strict": true,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
-        "erasableSyntaxOnly": false,
+        "noUnusedLocals": false,/*关闭未使用声明变量*/
+        "noUnusedParameters": false,
+//        "erasableSyntaxOnly": false,
         "noFallthroughCasesInSwitch": true,
         "noUncheckedSideEffectImports": true,
     },

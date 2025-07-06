@@ -89,7 +89,7 @@ export function isPointInPolygon(point: Point, polygon: Point[]): boolean {
     if (vi.x === point.x && vi.y === point.y) return true;
 
     // 检查点是否在边 vj-vi 上
-    if (isPointOnLineSegment(point, vj, vi)) return true;
+    if (isPointOnLineSegment2(point, vj, vi)) return true;
 
     // 射线与边相交判断逻辑
     const intersectY = (vi.y > point.y) !== (vj.y > point.y);

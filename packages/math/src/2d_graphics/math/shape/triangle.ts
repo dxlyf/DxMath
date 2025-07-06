@@ -1,3 +1,3 @@
 export class Triangle{
-    constructor(a:Vec)
+    constructor(a:any){}
 }

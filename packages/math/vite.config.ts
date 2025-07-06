@@ -19,7 +19,7 @@ export default defineConfig({
         'skia_path':resolve(__dirname,'./src/skia_path/SKPath2D.ts'),
         '2d_path':resolve(__dirname,'./src/2d_path/path.ts'),
         'soft2d':resolve(__dirname,'./src/2d_raster/index.ts'),
-        'cg':resolve(__dirname,'./src/cg/index.ts'),
+        '2d_softrender':resolve(__dirname,'./src/2d_softrender/index.ts'),
         'event_emiter':resolve(__dirname,'./src/event/event_emiter.ts'),
         '3d_scanning_algorithm':resolve(__dirname,'./src/computer_graphic/3d/index.ts'),
         '2d_scanning_algorithm':resolve(__dirname,'./src/computer_graphic/scanning_algorithm/index.ts'),

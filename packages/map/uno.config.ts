@@ -21,10 +21,14 @@ import {
     },
     presets: [
       presetWind4({
-        important:'.body-wrapper'
+        important:'.body-wrapper',
+        preflights:{
+          reset:false
+        }
       }),
       presetAttributify(),
       presetIcons(),
+ 
     //   presetTypography(),
     //   presetWebFonts({
     //     fonts: {

@@ -1,3 +1,5 @@
+@import 'mapbox-gl/dist/mapbox-gl.css';
+@import 'ol/ol.css';
 
 :root{
     --fw:calc(100vw / 100);
@@ -14,6 +16,9 @@ body{
 .ant-pro-layout{
     height: 100%;
 }
-.ant-layout-content{
-    padding: 16px;
+.ant-pro-layout-content{
+    flex:1 1 auto;
+}
+.app-map-wrapper,.app-map-layout{
+    height: 100%;
 }

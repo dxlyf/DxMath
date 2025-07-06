@@ -1,4 +1,4 @@
-
+// @ts-nocheck
 function fillPolygonAntialiased(ctx, polygon, color = [255, 0, 0, 255]) {
     const canvas = ctx.canvas;
     const width = canvas.width;

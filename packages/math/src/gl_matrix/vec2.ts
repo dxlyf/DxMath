@@ -27,9 +27,9 @@ export class Vec2 extends Float32Array {
       case 2:{
         const v = values[0];
         if (typeof v === 'number') {
-          super([v, values[1]]);
+          super([v, values[1] as any]);
         } else {
-          super(v as ArrayBufferLike, values[1], 2);
+          super(v as any, values[1], 2);
         }
         break;
       }

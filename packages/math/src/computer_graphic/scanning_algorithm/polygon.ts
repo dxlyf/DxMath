@@ -805,7 +805,7 @@ export const polygonScanFillAntialias4 = (
 
 
 
-const fillPolygons = (polygons, color, bounds, fillRule = "nonzero" // 新增参数
+const fillPolygons = (polygons:any[], color:any, bounds:any, fillRule = "nonzero" // 新增参数
 ) => {
   const width = bounds.right - bounds.left + 1;
   const height = bounds.bottom - bounds.top + 1;
@@ -815,7 +815,7 @@ const fillPolygons = (polygons, color, bounds, fillRule = "nonzero" // 新增参
    * 计算点的绕数（Winding Number）
    * 返回值为绕数值，可用于不同填充规则判断
    */
-  const computeWindingNumber = (point, polygon) => {
+  const computeWindingNumber = (point:any, polygon:any) => {
     let wn = 0;
     const n = polygon.length;
     if (n < 3)
@@ -847,7 +847,7 @@ const fillPolygons = (polygons, color, bounds, fillRule = "nonzero" // 新增参
   let globalMinX = Infinity, globalMaxX = -Infinity;
   let globalMinY = Infinity, globalMaxY = -Infinity;
   polygons.forEach(polygon => {
-    polygon.forEach(p => {
+    polygon.forEach((p:any) => {
       globalMinX = Math.min(globalMinX, p.x);
       globalMaxX = Math.max(globalMaxX, p.x);
       globalMinY = Math.min(globalMinY, p.y);

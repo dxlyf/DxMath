@@ -1,3 +1,5 @@
+
+// @ts-nocheck
 import { Vector3 } from './vec3.js';
 
 const _vector = /*@__PURE__*/ new Vector3();

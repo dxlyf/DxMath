@@ -144,14 +144,14 @@ export class Texture{
         var fracY = pixelY - y1;
 
 
-        var color = [];
-        interpolationColor(color, color1, color2, fracX);
-        var colorTemp = []
-        interpolationColor(colorTemp, color3, color4, fracX);
-        interpolationColor(color, color, colorTemp, fracY);
+        // var color = [];
+        // interpolationColor(color, color1, color2, fracX);
+        // var colorTemp = []
+        // interpolationColor(colorTemp, color3, color4, fracX);
+        // interpolationColor(color, color, colorTemp, fracY);
 
-        let alpha = (color1[3] + color2[3] + color3[3] + color4[3]) / 4;
-        return [color[0], color[1], color[2], 255]
+        // let alpha = (color1[3] + color2[3] + color3[3] + color4[3]) / 4;
+        // return [color[0], color[1], color[2], 255]
     }
     map(u:number, v:number,color?:number[] ) {
         color=color||[0,0,0,1] 

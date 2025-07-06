@@ -47,6 +47,9 @@ export class Vector2 {
     static lerp(a: Vector2, b: Vector2, t: number) {
         return this.create(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
     }
+    static fromRadian(radian: number) {
+        return this.create(Math.cos(radian), Math.sin(radian))
+    }
     static pools: Vector2[] = []
     static maxPoolSize: number = 100
     static batchPools: Vector2[] = []
@@ -241,7 +244,7 @@ export class Vector2 {
      * @returns 
      */
     cross(v: Vector2) {
-        return this.crossVectors(this, v)
+        return this.crossVectors(this, v) // cross(a,b)在数学轴 a在右边大于0,在网页坐标系 a在在边小于0
     }
     squaredLength() {
         return this.dot(this)
@@ -445,9 +448,11 @@ export class Vector2 {
     negate() {
         return this.set(-this.x, -this.y)
     }
-    sign() {
-        return this.set(Math.sign(this.x), Math.sign(this.y))
+    sign(positiveOneAndNegativeOne=false) {
+         
+        return positiveOneAndNegativeOne?this.set(this.x>=0?1:-1,this.y>=0?1:-1):this.set(Math.sign(this.x), Math.sign(this.y))
     }
+
     pow(s: Vector2) {
         return this.set(Math.pow(this.x, s.x), Math.pow(this.y, s.y))
     }
@@ -465,6 +470,9 @@ export class Vector2 {
     }
     fract() {
         return this.set(this.x - Math.floor(this.x), this.y - Math.floor(this.y))
+    }
+    signfract() {
+        return this.set(this.x - Math.trunc(this.x), this.y - Math.trunc(this.y))
     }
     ceil() {
         return this.set(Math.ceil(this.x), Math.ceil(this.y))

@@ -4,7 +4,7 @@
 // ============================================================================
 
 
-import {total} from '@mathigon/core';
+import {total} from '../core';
 import {lerp} from './arithmetic';
 
 

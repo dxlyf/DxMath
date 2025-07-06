@@ -32,7 +32,7 @@ export class Color {
         return this.fromHsv(h, newS, v)
     }
     static fromHsv(h: number, s: number, v: number) {
-        let r, g, b;
+        let r=0, g=0, b=0;
         let i = Math.floor(h / 60);
         let f = h / 60 - i;
         let p = v * (1 - s);
@@ -351,7 +351,7 @@ export class Color {
     toHsl() {
         let r = this.r, g = this.g, b = this.b
         let max = Math.max(r, g, b), min = Math.min(r, g, b);
-        let h, s, l = (max + min) / 2;
+        let h=0, s, l = (max + min) / 2;
 
         if (max === min) {
             h = s = 0;
@@ -371,7 +371,7 @@ export class Color {
     toHsv() {
         let r = this.r, g = this.g, b = this.b
         let max = Math.max(r, g, b), min = Math.min(r, g, b);
-        let h, s, v = max;
+        let h=0, s, v = max;
 
         let d = max - min;
         s = max === 0 ? 0 : d / max;

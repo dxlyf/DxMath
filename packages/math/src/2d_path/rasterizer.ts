@@ -172,7 +172,7 @@ class Stop {
         return this.pos < pos;
     }
 };
-function lowerBoundCustom<T, V>(arr: T[], target: V, compare: (a: T, b: V) => bool) {
+function lowerBoundCustom<T, V>(arr: T[], target: V, compare: (a: T, b: V) => boolean) {
     let low = 0;
     let high = arr.length;
     while (low < high) {
@@ -236,9 +236,10 @@ class LinearGradient extends Gradient {
         this.end.copy(g.end);
         this.stops = g.stops.map(d => d.clone())
     }
+    // @ts-ignore
     evaluate(p: Vector2): Color {
         const d = this.end.clone().subtract(this.start);
-        return super.evaluate(p.clone().sub(this.start).dot(d) / d.dot(d));
+        return super.evaluate(p.clone().sub(this.start).dot(d) / d.dot(d)) as Color;
     }
 };
 
@@ -284,6 +285,7 @@ class RadialGradient extends Gradient {
             this.stops = args[2]
         }
     }
+    // @ts-ignore
     evaluate(p: Vector2) {
         const f = this.f, c = this.c, fr = this.fr, r = this.r
         // solving for t in length(f + (c - f) * t - p) == fr + (r - fr) * t
@@ -399,7 +401,7 @@ class RadialGradientPaintServer extends PaintServer {
         this.gradient = gradient
     }
     get_paint(transformation: Matrix2D) {
-        return new TransformationPaint(this.gradient, transformation.clone().invert())
+        return new TransformationPaint(this.gradient as any, transformation.clone().invert()!)
     }
 };
 
@@ -836,7 +838,7 @@ class Event {
 	}
 
 }
-class PriorityQueue2<T> {
+class PriorityQueue2<T=any> {
     heap: T[] = [];
     compare: (a: T, b: T) => boolean;
     constructor(compare = (a:T, b:T) => a < b) {
@@ -864,7 +866,7 @@ class PriorityQueue2<T> {
       const top = this.heap[0];
       const last = this.heap.pop();
       if (this.heap.length > 0) {
-        this.heap[0] = last;
+        this.heap[0] = last!;
         this._siftDown();
       }
       return top;

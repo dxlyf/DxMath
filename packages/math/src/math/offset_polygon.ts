@@ -80,19 +80,19 @@ type Vector = {
   
       const x = vertices[i].x;
       const y = vertices[i].y;
-      minX = Math.min(x, minX);
-      minY = Math.min(y, minY);
-      maxX = Math.max(x, maxX);
-      maxY = Math.max(y, maxY);
+      minX = Math.min(x, minX!);
+      minY = Math.min(y, minY!);
+      maxX = Math.max(x, maxX!);
+      maxY = Math.max(y, maxY!);
     }
   
     const polygon: Polygon = {
       vertices,
       edges,
-      minX,
-      minY,
-      maxX,
-      maxY,
+      minX:minX as number,
+      minY:minY as number,
+      maxX:maxX as number,
+      maxY:maxY as number,
     };
   
     return polygon;

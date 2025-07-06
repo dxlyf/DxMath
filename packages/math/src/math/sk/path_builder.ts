@@ -98,7 +98,7 @@ function build_arc_conics(oval: Rect, start: Point, stop: Point, dir: SkRotation
 export class PathBuilder {
     static IsA = IsA
     static default() {
-
+        return new this()
     }
     static fromPathFillType(fillType: PathFillType) {
         return new this().setFillType(fillType);
@@ -143,7 +143,7 @@ export class PathBuilder {
     }
 
 
-    privateReverseAddPath(src) {
+    privateReverseAddPath(src:any) {
 
         // const  verbsBegin = src.fPathRef.verbsBegin();
         // const  verbs = src.fPathRef.verbsEnd();
@@ -483,7 +483,7 @@ export class PathBuilder {
         @return             reference to SkPath
     */
     arcTo(r: Point, xAxisRotate: number, largeArc: number, sweep: PathDirection, xy: Point):this
-    arcTo(rOrP1OrOval:Point|Rect,p2OrStartAngleOrXAxis:Point|number,radiusOrLargeArcOrSweep:number,sweepOrForceMoveTo?:PathDirection|bool,xy?:Point) {
+    arcTo(rOrP1OrOval:Point|Rect,p2OrStartAngleOrXAxis:Point|number,radiusOrLargeArcOrSweep:number,sweepOrForceMoveTo?:PathDirection|boolean,xy?:Point) {
         const argLength = arguments.length,fVerbs=this.fVerbs,fPts=this.fPts;
         if(argLength===3){
             const p1=rOrP1OrOval as Point,p2=p2OrStartAngleOrXAxis as Point,radius=radiusOrLargeArcOrSweep as number;

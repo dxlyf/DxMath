@@ -655,7 +655,7 @@ export class Quaternion {
 
 	}
 
-	fromBufferAttribute( attribute, index ) {
+	fromBufferAttribute( attribute:any, index:number ) {
 
 		this._x = attribute.getX( index );
 		this._y = attribute.getY( index );
@@ -674,7 +674,7 @@ export class Quaternion {
 
 	}
 
-	_onChange( callback ) {
+	_onChange( callback:any ) {
 
 		this._onChangeCallback = callback;
 

@@ -318,6 +318,7 @@ export const randomRound = (min: number, max: number) => {
 export const fract = (v: number) => {
     return v - Math.trunc(v)
 }
+
 // 向上取模 10%100=-90  -10%100=-10 
 // 返回的永远是负数
 export const ceilMod = (v: number, m: number) => {
@@ -620,6 +621,146 @@ export function identityMatrix(out: Float32Array | number[], n: number) {
     }
     return out
 }
+
+export const getIntersectionGridCell=(options:{start:Vector2,dir:Vector2,rows:number,cols:number, cellWidth:number, cellHeight:number,onCollisionDetection?:(x:number,y:number)=>boolean})=>{
+    const {start,dir,rows,cols,cellWidth,cellHeight,onCollisionDetection}=options
+    const cellSize=Vector2.create(cellWidth,cellHeight)
+    const coord=start.clone().div(cellSize) // 屏幕坐标转换为网格坐标
+    const mapCoord=coord.clone().floor() // 地图坐标 
+    const offset=coord.clone().sub(mapCoord) // 在格子的偏移量
+    const sign=dir.clone().sign() // 方向符号
+    // 判断正割
+    const deltaX=dir.x===0?1e30:Math.abs(1/dir.x); // 正割,dist和x的比 计算x轴相对dir方向的距离
+    const deltaY=dir.y===0?1e30:Math.abs(1/dir.y); // 余割 计算y轴相对dir方向的距离
+  
+    // 计算x轴和y轴的距离
+    let sideDistX=sign.x===1?(1-offset.x)*deltaX:offset.x*deltaX // 计算start相对右侧或左侧的距离
+
+    let sideDistY=sign.y===1?(1-offset.y)*deltaY:offset.y*deltaY;// 计算start相对上方和下方距离 
+   
+    const intersections=[] // 与线段方向相交的格子坐标
+
+    let side=false; // 是否侧面
+    let count=rows*cols
+    while(count--){
+        
+        // 如果x轴距离更小，应该向x轴移动，反之向y轴移动
+        if(sideDistX<sideDistY){
+            side=true
+            mapCoord.x+=sign.x;
+        }else{
+            side=false
+            mapCoord.y+=sign.y;
+           
+        }
+        let col=mapCoord.x
+        let row=mapCoord.y
+    
+   
+        if(side){
+            let x=start.x+sideDistX*cellWidth*dir.x;
+            let y=start.y+sideDistX*cellWidth*dir.y
+            intersections.push(Vector2.create(x,y))
+            sideDistX+=deltaX
+        }else{
+            let x=start.x+sideDistY*cellHeight*dir.x;
+            let y=start.y+sideDistY*cellHeight*dir.y
+            intersections.push(Vector2.create(x,y))
+            sideDistY+=deltaY
+        }
+        if(col<0||col>=cols||row<0||row>=rows||onCollisionDetection?.(mapCoord.x,mapCoord.y)){
+            break
+        }
+    }
+  
+    return intersections;
+  }
+export const getRays3D = (player:{rotate:number,x:number,y:number},map:number[][], fovAngle:number, width:number, height:number, cellSize:number, fish = true) => {
+    const rays = []
+    const fovRad=fovAngle / 180 * Math.PI
+    const fov = Math.tan(fovRad*0.5)// 视野（0-1）之间
+    const origin = Vector2.create(player.x, player.y)
+    for (let i = 0; i <= width; i++) {
+        // 每个x像素相对光线方向的角度
+        const theta = fov * (i / width * 2 - 1) + player.rotate;
+        //   const theta=i/width*fov2+player.rotate-fov2/2
+        const dir = Vector2.fromRadian(theta)
+        // 计算射线与最近相交的格子
+        const deltaX = dir.x === 0 ? 1e30 : Math.abs(1 / dir.x)
+        const deltaY = dir.y === 0 ? 1e30 : Math.abs(1 / dir.y)
+
+        let col = origin.x / cellSize >> 0
+        let row = origin.y / cellSize >> 0
+        let x = origin.x / cellSize - col;
+        let y = origin.y / cellSize - row;
+
+        let sideDistX = dir.x > 0 ? (1 - x) * deltaX : x * deltaX
+        let sideDistY = dir.y > 0 ? (1 - y) * deltaY : y * deltaY
+        let side = false
+        while (true) {
+            if (sideDistX < sideDistY) {
+                side = true;
+                sideDistX += deltaX
+                col += Math.sign(dir.x)
+            } else {
+                side = false;
+                sideDistY += deltaY
+                row += Math.sign(dir.y)
+            }
+            if (map[row][col] > 0) {
+                break
+            }
+        }
+        let distance = side ? sideDistX - deltaX : sideDistY - deltaY
+        // const target = dir.multiplyScalar(distance * cellSize).add(origin)
+        // 移除鱼眼
+        let noFishDistance = distance * Math.cos(theta - player.rotate);
+        // 计算光线强度
+        let lightDiffuse = Math.max(0, Math.cos(fov * (i / width * 2 - 1)))
+
+        rays.push({
+            diffuse: Math.pow(lightDiffuse, 64),
+            x: i,
+            row,
+            col,
+            value: map[row][col],
+            side,
+            dir,
+            origin,
+            distance,// 格子距离
+            noFishDistance: noFishDistance
+            //  target
+        })
+    }
+    return rays
+}
+
+export const drawRays3d=(options:{getStrokeColor:(ray:any)=>string,ctx:CanvasRenderingContext2D,rays:any[],map:number[][]})=>{
+    const {ctx,rays,map,getStrokeColor}=options
+    const height = ctx.canvas.height;
+    const width=ctx.canvas.width
+    const halfHeight = height * 0.5;
+    const cellSize = width / map[0].length >> 0
+    let x1, y1, x2, y2;
+    rays.forEach((ray) => {
+        let strokeColor = getStrokeColor(ray)
+        let lineHeight = height / ray.noFishDistance
+
+        x1 = ray.x;
+        y1 = halfHeight - lineHeight * 0.5
+        x2 = ray.x;
+        y2 = halfHeight + lineHeight * 0.5
+
+        y1 = Math.max(0, Math.min(y1, height))
+        y2 = Math.max(0, Math.min(y2, height))
+
+        ctx.beginPath()
+        ctx.strokeStyle=strokeColor
+        ctx.moveTo(x1, y1)
+        ctx.lineTo(x2, y2)
+        ctx.stroke()
+    })
+}
 // 初等行变换求逆矩阵
 export function invertFromNMatrixByElementary(m: Float32Array | number[]) {
     let n = Math.sqrt(m.length)
@@ -829,4 +970,15 @@ export function invertFromNMatrixByLU(matrix: Float32Array | number[]) {
     // let a=multiplyMatrices(null,L,U)
 
     return multiplyMatrices(null, invertUpperTriangular(U), invertLowerTriangular(L))
+}
+
+
+export function trapezoidalIntegralArea(f:(x:number)=>number, a:number, b:number, n:number) {
+    const h = (b - a) / n;
+    let sum = (f(a) + f(b)) / 2;
+    for (let i = 1; i < n; i++) {
+        const x = a + i * h;
+        sum += f(x);
+    }
+    return h * sum;
 }

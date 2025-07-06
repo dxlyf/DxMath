@@ -802,18 +802,17 @@ export class RRect {
     }
 
 
-    transform(matrix:Matrix, dst) {
-        if (nullptr == dst) {
+    transform(matrix:Matrix, dst?:RRect) {
+        if (!dst) {
             return false;
         }
        
         // Assert that the caller is not trying to do this in place, which
         // would violate const-ness. Do not return false though, so that
         // if they know what they're doing and want to violate it they can.
-        SkASSERT(dst != this);
-       
+   
         if (matrix.isIdentity()) {
-            *dst = *this;
+            dst.copy(this)
             return true;
         }
        
@@ -821,10 +820,10 @@ export class RRect {
             return false;
         }
        
-        SkRect newRect;
-        if (!matrix.mapRect(&newRect, fRect)) {
-            return false;
-        }
+        let newRect=Rect.makeEmpty();
+        // if (!matrix.mapRect(newRect, fRect)) {
+        //     return false;
+        // }
        
         // The matrix may have scaled us to zero (or due to float madness, we now have collapsed
         // some dimension of the rect, so we need to check for that. Note that matrix must be
@@ -835,93 +834,92 @@ export class RRect {
         }
        
         // At this point, this is guaranteed to succeed, so we can modify dst.
-        dst->fRect = newRect;
+        dst.fRect = newRect;
        
         // Since the only transforms that were allowed are axis aligned, the type
         // remains unchanged.
-        dst->fType = fType;
+        dst.fType = this.fType;
        
-        if (kRect_Type == fType) {
-            SkASSERT(dst->isValid());
+        if (kRect_Type == this.fType) {
+           
             return true;
         }
-        if (kOval_Type == fType) {
-            for (int i = 0; i < 4; ++i) {
-                dst->fRadii[i].fX = SkScalarHalf(newRect.width());
-                dst->fRadii[i].fY = SkScalarHalf(newRect.height());
+        if (kOval_Type == this.fType) {
+            for (let i = 0; i < 4; ++i) {
+                dst.fRadii[i].x = SkScalarHalf(newRect.width);
+                dst.fRadii[i].y = SkScalarHalf(newRect.height);
             }
-            SkASSERT(dst->isValid());
             return true;
         }
        
         // Now scale each corner
-        SkScalar xScale = matrix.getScaleX();
-        SkScalar yScale = matrix.getScaleY();
+        let xScale = matrix.getScaleX();
+        let yScale = matrix.getScaleY();
        
         // There is a rotation of 90 (Clockwise 90) or 270 (Counter clockwise 90).
         // 180 degrees rotations are simply flipX with a flipY and would come under
         // a scale transform.
         if (!matrix.isScaleTranslate()) {
-            const bool isClockwise = matrix.getSkewX() < 0;
+            const  isClockwise = matrix.getSkewX() < 0;
        
             // The matrix location for scale changes if there is a rotation.
             xScale = matrix.getSkewY() * (isClockwise ? 1 : -1);
             yScale = matrix.getSkewX() * (isClockwise ? -1 : 1);
        
-            const int dir = isClockwise ? 3 : 1;
-            for (int i = 0; i < 4; ++i) {
-                const int src = (i + dir) >= 4 ? (i + dir) % 4 : (i + dir);
+            const  dir = isClockwise ? 3 : 1;
+            for (let i = 0; i < 4; ++i) {
+                const  src = (i + dir) >= 4 ? (i + dir) % 4 : (i + dir);
                 // Swap X and Y axis for the radii.
-                dst->fRadii[i].fX = fRadii[src].fY;
-                dst->fRadii[i].fY = fRadii[src].fX;
+                dst.fRadii[i].x = this.fRadii[src].y;
+                dst.fRadii[i].y = this.fRadii[src].x;
             }
         } else {
-            for (int i = 0; i < 4; ++i) {
-                dst->fRadii[i].fX = fRadii[i].fX;
-                dst->fRadii[i].fY = fRadii[i].fY;
+            for (let i = 0; i < 4; ++i) {
+                dst.fRadii[i].x = this.fRadii[i].x;
+                dst.fRadii[i].y = this.fRadii[i].y;
             }
         }
        
-        const bool flipX = xScale < 0;
+        const  flipX = xScale < 0;
         if (flipX) {
             xScale = -xScale;
         }
        
-        const bool flipY = yScale < 0;
+        const  flipY = yScale < 0;
         if (flipY) {
             yScale = -yScale;
         }
        
         // Scale the radii without respecting the flip.
-        for (int i = 0; i < 4; ++i) {
-            dst->fRadii[i].fX *= xScale;
-            dst->fRadii[i].fY *= yScale;
+        for (let i = 0; i < 4; ++i) {
+            dst.fRadii[i].x *= xScale;
+            dst.fRadii[i].y *= yScale;
         }
        
-        // Now swap as necessary.
-        using std::swap;
-        if (flipX) {
-            if (flipY) {
-                // Swap with opposite corners
-                swap(dst->fRadii[kUpperLeft_Corner], dst->fRadii[kLowerRight_Corner]);
-                swap(dst->fRadii[kUpperRight_Corner], dst->fRadii[kLowerLeft_Corner]);
-            } else {
-                // Only swap in x
-                swap(dst->fRadii[kUpperRight_Corner], dst->fRadii[kUpperLeft_Corner]);
-                swap(dst->fRadii[kLowerRight_Corner], dst->fRadii[kLowerLeft_Corner]);
-            }
-        } else if (flipY) {
-            // Only swap in y
-            swap(dst->fRadii[kUpperLeft_Corner], dst->fRadii[kLowerLeft_Corner]);
-            swap(dst->fRadii[kUpperRight_Corner], dst->fRadii[kLowerRight_Corner]);
-        }
+        // // Now swap as necessary.
+        // using std::swap;
+        // if (flipX) {
+        //     if (flipY) {
+        //         // Swap with opposite corners
+        //         swap(dst->fRadii[kUpperLeft_Corner], dst->fRadii[kLowerRight_Corner]);
+        //         swap(dst->fRadii[kUpperRight_Corner], dst->fRadii[kLowerLeft_Corner]);
+        //     } else {
+        //         // Only swap in x
+        //         swap(dst->fRadii[kUpperRight_Corner], dst->fRadii[kUpperLeft_Corner]);
+        //         swap(dst->fRadii[kLowerRight_Corner], dst->fRadii[kLowerLeft_Corner]);
+        //     }
+        // } else if (flipY) {
+        //     // Only swap in y
+        //     swap(dst->fRadii[kUpperLeft_Corner], dst->fRadii[kLowerLeft_Corner]);
+        //     swap(dst->fRadii[kUpperRight_Corner], dst->fRadii[kLowerRight_Corner]);
+        // }
        
-        if (!AreRectAndRadiiValid(dst->fRect, dst->fRadii)) {
-            return false;
-        }
+        // if (!AreRectAndRadiiValid(dst->fRect, dst->fRadii)) {
+        //     return false;
+        // }
        
-        dst->scaleRadii();
-        dst->isValid();  // TODO: is this meant to be SkASSERT(dst->isValid())?
+        // dst->scaleRadii();
+        // dst->isValid();  // TODO: is this meant to be SkASSERT(dst->isValid())?
        
         return true;
     }

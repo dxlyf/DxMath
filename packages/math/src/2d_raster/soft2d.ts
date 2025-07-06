@@ -1520,7 +1520,7 @@ export class PathBuilder {
         this.closePath();
         return this;
     }
-    addCircle(x: f32, y: f32, r: f32) {
+    addCircle(x: number, y: number, r: number) {
         this.addOval(x - r, y - r, r + r, r + r);
     }
     arcToOval(x: number, y: number, rx: number, ry: number, rotation: number, startAngle: number, deltaAngle: number, forceMoveTo: boolean) {
@@ -2811,7 +2811,7 @@ function quadInLine(quad: Point[]): boolean {
     console.assert(outer1 < outer2);
 
     let mid = outer1 ^ outer2 ^ 3;
-    const CURVATURE_SLOP: f32 = 0.000005; // this multiplier is pulled out of the air
+    const CURVATURE_SLOP: number = 0.000005; // this multiplier is pulled out of the air
     let line_slop = pt_max * pt_max * CURVATURE_SLOP;
     return ptToLine(quad[mid], quad[outer1], quad[outer2]) <= line_slop
 }
@@ -3034,7 +3034,7 @@ enum ReductionType {
     Degenerate2, // two control points are on the line but outside ends (cubic)
     Degenerate3, // three areas of max curvature found (for cubic)
 }
-const QUAD_RECURSIVE_LIMIT: usize = 3;
+const QUAD_RECURSIVE_LIMIT: number = 3;
 
 // quads with extreme widths (e.g. (0,1) (1,6) (0,3) width=5e7) recurse to point of failure
 // largest seen for normal cubics: 5, 26
@@ -3102,7 +3102,7 @@ export class PathStroker {
     builders() {
         return new SwappableBuilders(this.inner, this.outer)
     }
-    close(is_line: bool) {
+    close(is_line: boolean) {
         this.finishContour(true, is_line);
     }
     moveTo(p: Point) {
@@ -3176,7 +3176,7 @@ export class PathStroker {
         self.first_outer_pt_index_in_contour = self.outer.points.length;
     }
 
-    preJoinTo(p: Point, curr_is_line: bool, normal: Point, unit_normal: Point) {
+    preJoinTo(p: Point, curr_is_line: boolean, normal: Point, unit_normal: Point) {
         const self = this
         let prev_x = self.prev_pt.x;
         let prev_y = self.prev_pt.y;
@@ -3240,7 +3240,7 @@ export class PathStroker {
         this.found_tangents = false;
         quad_points.init(start, end);
     }
-    quadStroke(quad: Point[], quad_points: QuadConstruct): bool {
+    quadStroke(quad: Point[], quad_points: QuadConstruct): boolean {
         let self = this
         let result_type = self.compareQuadQuad(quad, quad_points);
         if (result_type == ResultType.Quad) {
@@ -3336,7 +3336,7 @@ export class PathStroker {
             dxy.copy(Point.create(self.radius, 0.0))
         }
 
-        let axis_flip = self.stroke_type as i32 as f32; // go opposite ways for outer, inner
+        let axis_flip = self.stroke_type as number; // go opposite ways for outer, inner
         on_p.x = tp.x + axis_flip * dxy.y;
         on_p.y = tp.y - axis_flip * dxy.x;
 
@@ -3697,7 +3697,7 @@ export class PathStroker {
         self.postJoinTo(pt3, normal_cd, unit_cd);
     }
     
-    cubicStroke(cubic:Point[], quad_points: QuadConstruct):bool {
+    cubicStroke(cubic:Point[], quad_points: QuadConstruct):boolean {
         const self=this;
         if((!self.found_tangents)){
             let result_type = self.tangentsMeet(cubic, quad_points);
@@ -3775,7 +3775,7 @@ export class PathStroker {
         self.recursion_depth -= 1;
         return true
     }
-     cubicMidOnLine(cubic:Point[], quad_points: QuadConstruct):bool {
+     cubicMidOnLine(cubic:Point[], quad_points: QuadConstruct):boolean {
         let self=this
         let  stroke_mid = Point.zero();
         self.cubicQuadMid(cubic, quad_points,  stroke_mid);
@@ -4023,9 +4023,7 @@ export class PathStroker {
 
 }
 
-export class Rasterizer{
 
-}
 
 export class Surface {
     private currentPaint: Paint = Paint.default()
@@ -4067,7 +4065,7 @@ export class PixelImage {
     }
     width: number
     height: number
-    colorBuffer: ImageDataArray
+    colorBuffer: Uint8ClampedArray
     imageData: ImageData
     constructor(width: number, height: number) {
         this.width = width

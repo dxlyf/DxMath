@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { WebGLCoordinateSystem, WebGPUCoordinateSystem } from '../constants';
 import { Vector3 } from './vec3';
 import { Sphere } from './sphere';

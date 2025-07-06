@@ -4,7 +4,7 @@
 // ============================================================================
 
 
-import {unique} from '@mathigon/core';
+import {unique} from '../core';
 
 
 /** Calculates the greatest common divisor of multiple numbers. */

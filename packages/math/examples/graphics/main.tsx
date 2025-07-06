@@ -1,5 +1,5 @@
 import { Bitmap } from "./lib/Bitmap";
-import { PathBuilder } from "math/2d_graphics/path/PathBuilder";
+import { PathBuilder } from "math/2";
 import { LineCap, LineJoin, Rasterizer } from "./lib/Rasterizer";
 import { FillRule } from "./lib/FillRule";
 

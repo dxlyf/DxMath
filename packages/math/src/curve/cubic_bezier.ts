@@ -1,5 +1,5 @@
 import { Box2 } from "../math/box2";
-import { Vector2 } from "../math/vec2";
+import { IVector2, Vector2 } from "../math/vec2";
 export class CubicBezierCurve {
     constructor(public p0: Vector2, public p1: Vector2, public p2: Vector2, public p3: Vector2) {
 
@@ -11,8 +11,8 @@ export class CubicBezierCurve {
     getMaxCurvature() {
         const p0 = this.p0, p1 = this.p1, p2 = this.p2,p3=this.p3
     // 定义辅助函数：点积和二维叉乘（标量）
-    function dot(u, v) { return u.x * v.x + u.y * v.y; }
-    function cross(u, v) { return u.x * v.y - u.y * v.x; }
+    function dot(u:IVector2, v:IVector2) { return u.x * v.x + u.y * v.y; }
+    function cross(u:IVector2, v:IVector2) { return u.x * v.y - u.y * v.x; }
     
     // 计算基本差分向量
     const A = { x: p1.x - p0.x, y: p1.y - p0.y };
@@ -47,7 +47,7 @@ export class CubicBezierCurve {
     tCandidates.push(1);
     
     // 定义计算曲率的函数（与前述公式一致）
-    function curvature(t) {
+    function curvature(t:number) {
       const oneMinusT = 1 - t;
       // 一阶导数 B'(t)
       const bp = {

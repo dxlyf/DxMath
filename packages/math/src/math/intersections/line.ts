@@ -1,223 +1,125 @@
-type Point = { x: number; y: number };
-type Segment = { start: Point; end: Point };
-type Circle = { center: Point; radius: number };
-type Polygon = Point[];
-
-function getLineIntersection(
-  p0: Point,
-  p1: Point,
-  p2: Point,
-  p3: Point
-): Point | null {
-  const s1_x = p1.x - p0.x;
-  const s1_y = p1.y - p0.y;
-  const s2_x = p3.x - p2.x;
-  const s2_y = p3.y - p2.y;
-
-  const s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
-  const t = ( s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
-
-  if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
-    // 交点在两条线段上
-    return {
-      x: p0.x + (t * s1_x),
-      y: p0.y + (t * s1_y)
-    };
-  }
-
-  // 没有交点
-  return null;
-}
-
-function getLineCircleIntersections(
-  p1: Point,
-  p2: Point,
-  circle: Circle
-): Point[] {
-  const { center, radius } = circle;
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
-  const fx = p1.x - center.x;
-  const fy = p1.y - center.y;
-
-  const a = dx * dx + dy * dy;
-  const b = 2 * (fx * dx + fy * dy);
-  const c = (fx * fx + fy * fy) - radius * radius;
-
-  const discriminant = b * b - 4 * a * c;
-  const intersections: Point[] = [];
-
-  if (discriminant >= 0) {
-    const sqrtDiscriminant = Math.sqrt(discriminant);
-    const t1 = (-b - sqrtDiscriminant) / (2 * a);
-    const t2 = (-b + sqrtDiscriminant) / (2 * a);
-
-    if (t1 >= 0 && t1 <= 1) {
-      intersections.push({
-        x: p1.x + t1 * dx,
-        y: p1.y + t1 * dy
-      });
-    }
-
-    if (t2 >= 0 && t2 <= 1) {
-      intersections.push({
-        x: p1.x + t2 * dx,
-        y: p1.y + t2 * dy
-      });
-    }
-  }
-
-  return intersections;
-}
-
-function getLinePolygonIntersections(
-  line: Segment,
-  polygon: Polygon
-): Point[] {
-  const intersections: Point[] = [];
-  const numVertices = polygon.length;
-
-  for (let i = 0; i < numVertices; i++) {
-    const vertex1 = polygon[i];
-    const vertex2 = polygon[(i + 1) % numVertices];
-    const edge: Segment = { start: vertex1, end: vertex2 };
-    const intersection = getLineIntersection(line.start, line.end, edge.start, edge.end);
-    if (intersection) {
-      intersections.push(intersection);
-    }
-  }
-
-  return intersections;
-}
-
-
-// 定义椭圆类型
-type Ellipse = { center: Point; radiusX: number; radiusY: number; rotation?: number };
+import { Vector2 } from "../vec2";
 
 /**
- * 获取线段与椭圆的交点
- * @param p1 线段起点
- * @param p2 线段终点
- * @param ellipse 椭圆
- * @returns 交点数组
+ * 与线段相交
+ * @param a 
+ * @param b 
+ * @param c 
+ * @param d 
+ * @returns 
  */
-function getLineEllipseIntersections(
-  p1: Point,
-  p2: Point,
-  ellipse: Ellipse
-): Point[] {
-  const { center, radiusX, radiusY, rotation = 0 } = ellipse;
-  const cosRotation = Math.cos(rotation);
-  const sinRotation = Math.sin(rotation);
+export function intersectionFromLineSegment(a: Vector2, b: Vector2, c: Vector2, d: Vector2) {
+  const ab = b.clone().sub(a)
+  const cd = d.clone().sub(c)
+  const det = ab.cross(cd)
+  if (det == 0) return null
 
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
-  const fx = p1.x - center.x;
-  const fy = p1.y - center.y;
-
-  const a = (
-    (dx * cosRotation + dy * sinRotation) ** 2 / radiusX ** 2 +
-    (dx * sinRotation - dy * cosRotation) ** 2 / radiusY ** 2
-  );
-  const b = 2 * (
-    (fx * cosRotation + fy * sinRotation) * (dx * cosRotation + dy * sinRotation) / radiusX ** 2 +
-    (fx * sinRotation - fy * cosRotation) * (dx * sinRotation - dy * cosRotation) / radiusY ** 2
-  );
-  const c = (
-    (fx * cosRotation + fy * sinRotation) ** 2 / radiusX ** 2 +
-    (fx * sinRotation - fy * cosRotation) ** 2 / radiusY ** 2 - 1
-  );
-
-  const discriminant = b * b - 4 * a * c;
-  const intersections: Point[] = [];
-
-  if (discriminant >= 0) {
-    const sqrtDiscriminant = Math.sqrt(discriminant);
-    const t1 = (-b - sqrtDiscriminant) / (2 * a);
-    const t2 = (-b + sqrtDiscriminant) / (2 * a);
-
-    if (t1 >= 0 && t1 <= 1) {
-      intersections.push({
-        x: p1.x + t1 * dx,
-        y: p1.y + t1 * dy
-      });
-    }
-
-    if (t2 >= 0 && t2 <= 1) {
-      intersections.push({
-        x: p1.x + t2 * dx,
-        y: p1.y + t2 * dy
-      });
-    }
+  const ac = a.clone().sub(c)
+  const u = cd.cross(ac) / det
+  const v = ab.cross(ac) / det
+  if (u >= 0 && u <= 1 && v >= 0 && v <= 1) {
+    return a.clone().add(ab.clone().multiplyScalar(u))
   }
+  return null
+}
+/**
+ * 直线相交
+ * @param a 
+ * @param b 
+ * @param c 
+ * @param d 
+ */
+export function intersectionFromLine(a: Vector2, b: Vector2, c: Vector2, d: Vector2) {
+  const ab = b.clone().sub(a)
+  const cd = d.clone().sub(c)
+  const det = ab.cross(cd)
+  if (det == 0) return null
 
-  return intersections;
+  const ac = a.clone().sub(c)
+  const u = cd.cross(ac) / det
+  const v = ab.cross(ac) / det
+  return a.clone().add(ab.clone().multiplyScalar(u))
+}
+
+export function intersectionFromRect(a: Vector2, b: Vector2, rect: { x: number, y: number, width: number, height: number }) {
+  const ab = b.clone().sub(a)
+  const direction = ab.clone().normalize()
+  const leftTop = Vector2.create(rect.x, rect.y)
+  const rightBottom = Vector2.create(rect.x + rect.width, rect.y + rect.height)
+  // 计算 t 值 leftTop相对start的长度
+  const t1 = leftTop.sub(a).divide(direction) // 4/5=0.8  4=5*0.8  5=4/0.8   
+  const t2 = rightBottom.sub(a).divide(direction)
+
+
+  const tMin = Math.max(Math.min(t1.x, t2.x), Math.min(t1.y, t2.y)); // 找到最小长度中最大值
+  const tMax = Math.min(Math.max(t1.x, t2.x), Math.max(t1.y, t2.y));
+
+  // 判断是否相交
+  if (tMin <= tMax && tMax >= 0) {
+    // 计算相交点坐标
+    return [a.add(direction.multiplyScalar(tMin))]
+  } else {
+    return []
+  }
+}
+/**
+ * 
+ * @param a 在rect内
+ * @param b 方向
+ * @param rect 
+ * @returns 
+ */
+export function intersectionFromAABB(a: Vector2, b: Vector2, rect: { x: number, y: number, width: number, height: number }) {
+  const ab = b.clone().sub(a)
+  const direction = ab.clone().normalize()
+  const leftTop = Vector2.create(rect.x, rect.y)
+  const rightBottom = Vector2.create(rect.x + rect.width, rect.y + rect.height)
+  // 计算 t 值 leftTop相对start的长度
+  const t1 = leftTop.sub(a).divide(direction) // 4/5=0.8  4=5*0.8  5=4/0.8   
+  const t2 = rightBottom.sub(a).divide(direction)
+
+
+  // const tMin = Math.max(Math.min(t1.x, t2.x), Math.min(t1.y, t2.y)); // 找到最小长度中最大值
+  const tMax = Math.min(Math.max(t1.x, t2.x), Math.max(t1.y, t2.y));
+
+  return a.add(direction.multiplyScalar(tMax))
 }
 
 /**
- * 获取线段与二次贝塞尔曲线的交点
- * @param p1 线段起点
- * @param p2 线段终点
- * @param start 贝塞尔曲线起点
- * @param control 贝塞尔曲线控制点
- * @param end 贝塞尔曲线终点
- * @returns 交点数组
+ * 线段与圆的交点
+ * (x-k)^2+(y-h)^2=r^2 = x^2-2kx+k^2+y^2-2hy+h^2=r^2
+   line(x,y)=x0+ad
+    x^2-2kx+k^2+y^2-2hy+h^2=r^2
+    sqrt(a+bd-c)=r
+  
+
+ * @param a 
+ * @param b 
+ * @param center 
+ * @param radius 
+ * @returns 
  */
-function getLineQuadraticBezierIntersections(
-  p1: Point,
-  p2: Point,
-  start: Point,
-  control: Point,
-  end: Point
-): Point[] {
-  const intersections: Point[] = [];
-  const epsilon = 1e-6;
-  const maxIterations = 100;
+export function intersectionFromCircle(a: Vector2, b: Vector2, center: Vector2, radius: number) {
 
-  // 线段参数方程
-  const lineX = (t: number) => p1.x + t * (p2.x - p1.x);
-  const lineY = (t: number) => p1.y + t * (p2.y - p1.y);
-
-  // 二次贝塞尔曲线参数方程
-  const bezierX = (u: number) => (1 - u) ** 2 * start.x + 2 * (1 - u) * u * control.x + u ** 2 * end.x;
-  const bezierY = (u: number) => (1 - u) ** 2 * start.y + 2 * (1 - u) * u * control.y + u ** 2 * end.y;
-
-  // 牛顿迭代法求解交点
-  const newtonRaphson = (u: number) => {
-    for (let i = 0; i < maxIterations; i++) {
-      const x = bezierX(u);
-      const y = bezierY(u);
-      const dxdu = 2 * (1 - u) * (control.x - start.x) + 2 * u * (end.x - control.x);
-      const dydu = 2 * (1 - u) * (control.y - start.y) + 2 * u * (end.y - control.y);
-
-      const f = x - lineX((x - p1.x) / (p2.x - p1.x + epsilon));
-      const g = y - lineY((y - p1.y) / (p2.y - p1.y + epsilon));
-
-      const denominator = dxdu * (p2.y - p1.y) - dydu * (p2.x - p1.x);
-      if (Math.abs(denominator) < epsilon) break;
-
-      const du = (f * (p2.y - p1.y) - g * (p2.x - p1.x)) / denominator;
-      u -= du;
-
-      if (Math.abs(du) < epsilon) {
-        if (u >= 0 && u <= 1) {
-          const t = (bezierX(u) - p1.x) / (p2.x - p1.x + epsilon);
-          if (t >= 0 && t <= 1) {
-            intersections.push({
-              x: bezierX(u),
-              y: bezierY(u)
-            });
-          }
-        }
-        break;
+  const intersections: Vector2[] = []
+  const ab = b.clone().sub(a).normalize()
+  const ap = center.clone().sub(a)
+  const t = ap.dot(ab) / ab.length()
+  if (t >= 0 && t <= 1) {
+    const proj = a.clone().add(ab.clone().multiplyScalar(t))
+    const dist = center.sub(proj).lengthSq()
+    const radiusSq = radius * radius
+    if (dist <= radiusSq) {
+      const d = Math.sqrt(radiusSq - dist)
+      const edge = ab.clone().multiplyScalar(d)
+      if (a.lengthSq() > radiusSq) {
+        intersections.push(proj.clone().sub(edge))
       }
+      if (b.lengthSq() > radiusSq) {
+        intersections.push(proj.clone().add(edge))
+      }
+
     }
-  };
-
-  // 初始猜测值
-  for (let u = 0; u <= 1; u += 0.1) {
-    newtonRaphson(u);
   }
-
-  return intersections;
+  return intersections
 }

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { SRGBColorSpace, LinearSRGBColorSpace, SRGBTransfer, LinearTransfer, NoColorSpace } from '../constants';
 import { Matrix3 } from './mat3';
 

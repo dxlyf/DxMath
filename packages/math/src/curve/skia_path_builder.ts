@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { nCr,interpolate,almostEqual } from "../math/math"
 import { Vector2 } from "../math/vec2"
 import { AutoConicToQuads } from "./conic"

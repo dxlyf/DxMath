@@ -1,5 +1,6 @@
 
-
+import { IVector2 } from 'math/math'
+import {arcSegmentToCubic} from './arc_to_bezier'
 const dot = (u:number[], v:number[]) => {
     return u[0] * v[0] + u[1] * v[1]
 }
@@ -155,7 +156,7 @@ export function endpoint_to_center2(x1:number, y1:number, x2:number, y2:number,
     outTheta[1] = dtheta
 }
 // 来自:three.js\examples\jsm\loaders\SVGLoader.js
-export function parseArcCommand(path, rx, ry, x_axis_rotation, large_arc_flag, sweep_flag, start, end) {
+export function parseArcCommand(path:any, rx:number, ry:number, x_axis_rotation:number, large_arc_flag:number, sweep_flag:number, start:IVector2, end:IVector2) {
 
     if (rx == 0 || ry == 0) {
 
@@ -216,7 +217,7 @@ export function parseArcCommand(path, rx, ry, x_axis_rotation, large_arc_flag, s
 
 }
 
-function svgAngle(ux, uy, vx, vy) {
+function svgAngle(ux:number, uy:number, vx:number, vy:number) {
 
     const dot = ux * vx + uy * vy;
     const len = Math.sqrt(ux * ux + uy * uy) * Math.sqrt(vx * vx + vy * vy);
@@ -239,7 +240,7 @@ function svgAngle(ux, uy, vx, vy) {
  * @param {number} theta2 - 终止角（单位：弧度）
  * @returns {Object} 包含起点 (x1, y1) 和终点 (x2, y2)
  */
-export function arcCenterToEndpoint(cx, cy, rx, ry, phi, theta1, theta2) {
+export function arcCenterToEndpoint(cx:number, cy:number, rx:number, ry:number, phi:number, theta1:number, theta2:number) {
     const cosPhi = Math.cos(phi);
     const sinPhi = Math.sin(phi);
 

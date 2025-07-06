@@ -29,7 +29,13 @@ export * from './vec4'
 export * from './bezier-js/bezier'
 export * from './mathigon'
 import svgpath from './svgpath/svgpath'
-export * from './mapbox'
+export *  from './mapbox'
+export * from './equation_solver'
+export * as sk from './sk'
+export * as intersections from './intersections'
+export * as shapes from './shapes'
+export * from './bezier-js/bezier'
+export * as clipper from './clipper'
 export {
     offsetPolygon,
     svgpath
