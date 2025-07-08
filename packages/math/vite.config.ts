@@ -12,6 +12,9 @@ export default defineConfig({
     lib:{
       entry:{
         'math':resolve(__dirname,'./src/math/index.ts'),
+        'three.addons':resolve(__dirname,'./src/threejs/jsm/Addons.js'),
+        'three.webgl':resolve(__dirname,'./src/threejs/Three.js'),
+        'three.webgpu':resolve(__dirname,'./src/threejs/Three.WebGPU.js'),
         'gl_matrix':resolve(__dirname,'./src/gl_matrix/index.ts'),
         'canvaskit':resolve(__dirname,'./src/canvaskit/index.ts'),
         '2d_geometry':resolve(__dirname,'./src/2d_geometry/index.ts'),

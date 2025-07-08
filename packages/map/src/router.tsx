@@ -19,7 +19,38 @@ const routes: RouteMenuItem[] = [
         Component:React.lazy(()=>import('src/layouts/BasicLayout')),
         flatMenu:true,
         children:[{
-            key:'ol',
+              name:'ThreeJS',
+              path:'threejs',
+              children:[{
+
+                  name:'示例',
+                  path:'examples',
+                  children:[
+                    {
+                      name:'相机切换',
+                      path:'camera-switch',
+                      Component:React.lazy(()=>import('src/pages/threejs/examples/camera-switch'))
+                    },
+
+                    {
+                      name:'粒子动效',
+                      path:'particles',
+
+                      children:[
+                        {
+                          name:'圆环爆发粒子效果',
+                          path:'particles-ring',
+                        //  Component:React.lazy(()=>import('src/pages/threejs/examples/particles/ring')),
+                         // element:<CodeSandbox code={mapbox_sources_geojson} map='mapbox'></CodeSandbox>
+                        }
+                      ]
+                    }
+                  ]
+              }]
+
+
+        },{
+   
              name:'OpenLayer',
              path:'ol',
              children:[
