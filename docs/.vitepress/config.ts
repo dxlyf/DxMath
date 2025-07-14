@@ -6,8 +6,8 @@ export default defineConfig({
             {   text: 'ThreeJS', 
                 items:[
                     {
-                        text:'快捷操作',
-                        link:'/blender/shortcut_keys'
+                        text:'材质',
+                        link:'/threejs/material.md'
                     }
                 ]
              },{   text: 'Blender', 

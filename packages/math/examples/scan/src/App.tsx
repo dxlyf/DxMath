@@ -75,6 +75,11 @@ function App() {
       path: '/clip/polygon',
       title:'polygon-clip',
       element:loadLazyComponent(()=>import('./pages/clip/polygon')),
+    },
+    {
+      path: '/scan/InitCoverageTable',
+      title:'InitCoverageTable',
+      element:loadLazyComponent(()=>import('./pages/scan/InitCoverageTable')),
     }
   ] as RouteObject[],[])
 

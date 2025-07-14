@@ -11,3 +11,25 @@ canvas{
   display: block;
 
 }
+.coverageTable{
+  border:solid 1px #000;
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+.coverageTable tr:nth-child(n+2) .coverageTable_cell{
+  border-top:solid 1px #000;
+}
+.coverageTable .coverageTable_cell:nth-child(n+2){
+  border-left:solid 1px #000;
+}
+.coverage_subtable{
+  border:solid 1px #999;
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+.coverage_subtable tr:nth-child(n+2) td{
+  border-top:solid 1px #000;
+}
+.coverage_subtable td:nth-child(n+2){
+  border-left:solid 1px #000;
+}

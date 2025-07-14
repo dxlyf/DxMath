@@ -69,7 +69,7 @@ export class Matrix3{
 
         );
     }
-    static fromAxisScale(n:Vector2,k:number){
+    static fromScaleAxis(n:Vector2,k:number){
         return this.fromRows(
             1-(k-1)*Math.pow(n.x,2),(k-1)*n.x*n.y,0,
             (k-1)*n.x*n.y,1+(k-1)*Math.pow(n.y,2),0,

@@ -54,6 +54,13 @@ export class Matrix2D {
         return this.fromRows(sx, 0, 0, sy, 0, 0)
 
     }
+    static fromScaleAxis(n:Vector2,k:number){
+        return this.fromRows(
+            1-(k-1)*Math.pow(n.x,2),(k-1)*n.x*n.y,
+            (k-1)*n.x*n.y,1+(k-1)*Math.pow(n.y,2),
+            0,0
+        )
+    }
     static fromSkew(kx: number, ky: number) {
         // return this.fromRows(1,ky,-kx,1,0,0)
         return this.fromRows(1, Math.tan(ky), Math.tan(kx), 1, 0, 0)
@@ -64,6 +71,7 @@ export class Matrix2D {
     static fromRows(a: number, b: number, c: number, d: number, e: number, f: number) {
         return this.fromArray([a, b, c, d, e, f])
     }
+    
     static pools: Matrix2D[] = []
     static poolSize = 100
     static pool() {

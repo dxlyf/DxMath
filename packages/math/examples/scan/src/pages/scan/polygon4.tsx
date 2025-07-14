@@ -11,15 +11,16 @@ import { fillPath } from 'math/computer_graphic/scanning_algorithm/polygon4'
 import { fract,getGridRays } from 'math/math/math'
 
 function testDDA(ctx: CanvasRenderingContext2D) {
-    const pixel = new PixelRenderer({ ctx: ctx, width: ctx.canvas.width/64 , height: ctx.canvas.height/64  })
+    let scale=64
+    const pixel = new PixelRenderer({ ctx: ctx, width: ctx.canvas.width/scale , height: ctx.canvas.height/scale  })
     const path = PathBuilder.default()
 
     path.moveTo(5, 1)
-    path.lineTo(9, 7)
+    path.lineTo(9, 9)
     path.lineTo(1, 7)
     path.closePath()
     path.points.forEach(d=>{
-      //  d.translate(0.5,0.5)
+        d.translate(0.5,0.5)
       // d.multiplyScalar(64)
     })
     // let a=new PathStroker()
@@ -37,13 +38,13 @@ function testDDA(ctx: CanvasRenderingContext2D) {
     ctx.strokeStyle = '#0000ff'
     path.visit({
         moveTo: d => {
-            ctx.moveTo(d.p0.x * 64, d.p0.y * 64)
+            ctx.moveTo(d.p0.x * scale, d.p0.y * scale)
         },
         lineTo: d => {
-            ctx.lineTo(d.p0.x * 64, d.p0.y * 64)
+            ctx.lineTo(d.p0.x * scale, d.p0.y * scale)
         },
         closePath:d=>{
-            ctx.lineTo(d.lastMovePoint.x * 64, d.lastMovePoint.y * 64)
+            ctx.lineTo(d.lastMovePoint.x * scale, d.lastMovePoint.y * scale)
         }
     })
     ctx.stroke()
@@ -62,7 +63,7 @@ function testDDA(ctx: CanvasRenderingContext2D) {
     points.forEach(d => {
         ctx.beginPath()
         ctx.fillStyle = '#0000ff'
-        ctx.arc(d.x * 64, d.y * 64, 5, 0, Math.PI * 2)
+        ctx.arc(d.x * scale, d.y * scale, 5, 0, Math.PI * 2)
         ctx.fill()
     })
 }

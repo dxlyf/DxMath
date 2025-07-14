@@ -6,7 +6,6 @@
         "math/*":["./src/*"]
       }
     },
-    "include": ["src","examples"],
-    "exclude": ["examples"]
+    "include": ["src","examples"]
     
   }

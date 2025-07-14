@@ -982,3 +982,76 @@ export function trapezoidalIntegralArea(f:(x:number)=>number, a:number, b:number
     }
     return h * sum;
 }
+
+// 完全避免使用位运算符的实现
+export function getBit(num:number, bit:number) {
+    return Math.floor(Math.abs(num) / Math.pow(2, bit)) % 2;
+}
+
+export function setBit(num:number, bit:number, value:number) {
+    const mask = Math.pow(2, bit);
+    const currentBit = getBit(num, bit);
+    if (currentBit === value) return num;
+    return value ? num + mask : num - mask;
+}
+
+export function bitwiseAnd(a:number, b:number) {
+    let result = 0;
+    for (let i = 0; i < 32; i++) {
+        if (getBit(a, i) && getBit(b, i)) {
+            result = setBit(result, i, 1);
+        }
+    }
+    return result;
+}
+
+export function bitwiseOr(a:number, b:number) {
+    let result = 0;
+    for (let i = 0; i < 32; i++) {
+        if (getBit(a, i) || getBit(b, i)) {
+            result = setBit(result, i, 1);
+        }
+    }
+    return result;
+}
+
+function bitwiseXor(a:number, b:number) {
+    let result = 0;
+    for (let i = 0; i < 32; i++) {
+        if (getBit(a, i) !== getBit(b, i)) {
+            result = setBit(result, i, 1);
+        }
+    }
+    return result;
+}
+
+function bitwiseNot(num:number) {
+    // 对于32位整数
+    return bitwiseXor(num, -1) >>> 0; // 这里为了演示，实际不能使用>>>
+    // 替代方案：
+    // return (num ^ 0xFFFFFFFF) + 1; // 但使用了^
+    // 完全不用位运算符的方案：
+    // let result = 0;
+    // for (let i = 0; i < 32; i++) {
+    //     if (!getBit(num, i)) {
+    //         result = setBit(result, i, 1);
+    //     }
+    // }
+    // return result;
+}
+
+function leftShift(num:number, shift:number) {
+    return num * Math.pow(2, shift);
+}
+
+function rightShift(num:number, shift:number) {
+    return Math.floor(num / Math.pow(2, shift));
+}
+
+function unsignedRightShift(num:number, shift:number) {
+    // 将数字转换为32位无符号整数
+    if (num < 0) {
+        num = (num + Math.pow(2, 32)) % Math.pow(2, 32);
+    }
+    return Math.floor(num / Math.pow(2, shift));
+}

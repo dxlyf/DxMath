@@ -3,7 +3,7 @@
 import { PathBuilder } from '../../2d_raster/soft2d'
 import { Vector2 } from '../../math/vec2'
 import { clamp, divmod, fract } from '../../math/math'
-import {drawBresenhamLineAntialias,drawDDALineAntialias } from './line'
+import { drawBresenhamLineAntialias, drawDDALineAntialias } from './line'
 type int26_6 = number
 type int24_8 = number
 class Int26_6 {
@@ -107,7 +107,7 @@ class Int24_8 {
         return (a * b) >> this.SHIFT
     }
     static div_floor(a: int24_8, b: int24_8) {
-        return Math.floor((a<< this.SHIFT) / b)
+        return Math.floor((a << this.SHIFT) / b)
     }
     static mul_round(a: int24_8, b: int24_8) {
         return this.round((a * b) >> this.SHIFT)
@@ -116,9 +116,7 @@ class Int24_8 {
         return this.fromFloat(a / b) << this.SHIFT
     }
 }
-function divMod(a: number, b: number) {
-    return [a % b, Math.floor(a / b)]
-}
+
 
 type FillRule = "evenodd" | "nonzero"
 
@@ -154,8 +152,14 @@ class Rasterizer {
 
     x: int24_8 = 0
     y: int24_8 = 0
-    area: number = 0
-    cover: number = 0
+    // 梯形面积的和：（上底+下底)*高度/2
+    /***
+     * (上底(256)+下底(256))*高度(256)))/512=256
+     */
+    area: number = 0 // 单元的面积
+    // cover*512-area=实际覆盖面积
+    // 实际面积/512=覆盖率
+    cover: number = 0 // 单元的高度
     invalid: boolean = true //无效的
     spans: Span[] = []
     cells: Cell[] = []
@@ -204,7 +208,7 @@ class Rasterizer {
 
         // 处理水平线段 (y坐标相同)
         if (ey1 == ey2) {
-            // 直接渲染扫描线
+            // 直接渲染扫描线 fy1和fy2有可能相同
             this.renderScanLine(ey1, this.x, fy1, to_x, fy2);
             // 更新当前位置
             this.x = to_x;
@@ -245,6 +249,7 @@ class Rasterizer {
             if (dy < 0) {
                 // 边界检查
                 if (ey1 > max_ey1) {
+                    // 如果ey2在边界之外，ey1=ey2
                     ey1 = (max_ey1 > ey2) ? max_ey1 : ey2;// 检查max_ey1是否在ey1和ey2之间
 
                     this.setCell(ex, ey1);
@@ -271,6 +276,7 @@ class Rasterizer {
             else {
                 // 边界检查
                 if (ey1 < this.minY) {
+                    // 如果ey2在边界之外，ey1=ey2
                     ey1 = (this.minY < ey2) ? this.minY : ey2;// 检查minY是否在ey1和ey2之间
                     this.setCell(ex, ey1);
                 } else {
@@ -307,6 +313,7 @@ class Rasterizer {
         // 处理斜线段 (通用情况)
         // 确定线段方向 (向上或向下)
         if (dy > 0) {
+           
             p = (Int24_8.ONE - fy1) * dx;  // 起始像素的面积
             first = Int24_8.ONE;  // 向下
             incr = 1;             // y增加方向
@@ -318,8 +325,11 @@ class Rasterizer {
         }
 
         // 计算初始步进量
+         // (one-p0.y)*dx/dy 计算当前像素的x轴的步进增量
+         // 根据直角三角形dx/dy 逆斜率，根据像y的高度计算x的宽度
+         // 计算x的宽度
         [delta, mod] = divmod(p, dy);  // 整数除法和余数
-        x = this.x + delta;
+        x = this.x + delta;// 下一个y的x轴交点
 
         // 渲染起始扫描线
         this.renderScanLine(ey1, this.x, fy1, x, first);
@@ -391,6 +401,8 @@ class Rasterizer {
         // 处理同一列内的线段 (x坐标相同)
         if (ex1 == ex2) {
             dy = y2 - y1;
+            // (上底+ 下底) × 高÷ 2 
+            // 这里没有除以2
             this.area += (fx1 + fx2) * dy;  // 累加覆盖面积
             this.cover += dy;               // 累加覆盖值
             return;
@@ -413,23 +425,24 @@ class Rasterizer {
         }
 
         // 计算初始步进量
+        // 计算y的高度
         [delta, mod] = divmod(p, dx);
 
         // 累加起始像素的覆盖面积
         this.area += (fx1 + first) * delta;
-        this.cover += delta;
+        this.cover += delta; 
 
         // 更新位置
-        y1 += delta;
+        y1 += delta;// 下一个x的y轴交点
         ex1 += incr;
         this.setCell(ex1, ey);
 
-        // 处理中间像素
+        // 处理同一y像素的x轴中间像素
         if (ex1 !== ex2) {
             p = Int24_8.ONE * dy;  // 中间像素的面积
 
             // 计算中间像素的步进量
-            let [lift, rem] = divMod(p, dx);
+            let [lift, rem] = divmod(p, dx);
 
             do {
                 delta = lift;
@@ -445,7 +458,7 @@ class Rasterizer {
                 this.area += (Int24_8.ONE * delta);
                 this.cover += delta;
 
-                // 更新位置
+                // 向y方高步进
                 y1 += delta;
                 ex1 += incr;
                 this.setCell(ex1, ey);
@@ -469,6 +482,8 @@ class Rasterizer {
     hline(x: number, y: number, area: number, acount: number) {
         // 计算覆盖率 (0-256范围)
         // 将面积值转换为实际的alpha值
+        // 除以512,相当除以2,
+        // 梯形的真实面积公式：(上底+ 下底) × 高÷ 2
         let coverage = Number(BigInt(area) >> (BigInt(Int24_8.SHIFT) * 2n + 1n - 8n));
 
         // 确保覆盖率为正数
@@ -552,6 +567,7 @@ class Rasterizer {
                 cover += cell.cover;
 
                 // 计算当前单元格的覆盖面积
+                // 当前覆盖面积-未覆盖面积=当前单元格的覆盖面积
                 const area = cover * (Int24_8.ONE * 2) - cell.area;
 
                 // 生成当前单元格的线段
@@ -601,7 +617,8 @@ class Rasterizer {
         }
         // 如果不是当前处理的像素，则重置当前像素的记录状态
         if (ex !== this.ex || ey !== this.ey) {
-            // 如果有效
+            // 如果有效,记录上个cell的像素点信息
+
             if (!this.invalid) {
                 this.recordCell()
             }
@@ -797,18 +814,19 @@ class Rasterizer2 {
             activeEdges.splice(i, 0, edge)
 
         }
-       
+
         const min_fy = fract(min_y)
         const max_fy = fract(max_y)
-        const min_iy = Math.floor(min_y)+0.5
-        const max_iy = Math.ceil(max_y)+0.5
+        const min_iy = Math.floor(min_y + 0.5)
+        const max_iy = Math.ceil(max_y + 0.5)
         for (let y = min_iy; y < max_iy; y++) {
             activeEdges.length = 0
-            let iy = Int24_8.fromFloat(y)
+            let fy = y + 0.5
+
             for (let i = 0; i < edges.length; i++) {
                 let edge = edges[i]
-                if (edge.y0 <= y && edge.y1 > y) {
-                    edge.x = edge.p0!.x+ (y - edge.y0) * edge.invertSlope
+                if (edge.y0 <= fy && edge.y1 > fy) {
+                    edge.x = edge.p0!.x + (fy - edge.y0) * edge.invertSlope
                     insertActiveEdge(edge)
                 }
             }
@@ -841,7 +859,7 @@ class Rasterizer2 {
                             const coverageEnd = Math.min(fx1, pixelRight);
 
                             const coverage = clamp(coverageEnd - coverageStart, 0, 1)
-                            const alpha = Math.round(coverage*255)
+                            const alpha = Math.round(coverage * 255)
                             this.setPixel(x >> 0, y >> 0, alpha)
                         }
 
@@ -858,66 +876,71 @@ class Rasterizer2 {
 
 }
 
+class Rasterizer3 {
+    setPixel!: SetPixel
+    fillRule: FillRule = 'nonzero'
+    x: int24_8 = 0
+    y: int24_8 = 0
+    edges: Edge[] = []
+    moveTo(p: Vector2) {
 
-type Vector2Fixed = { x: number; y: number };
-
-export class Rasterizer3Fixed {
-    setPixel!: (x: number, y: number, alpha: number) => void;
-    fillRule: 'nonzero' | 'evenodd' = 'nonzero';
-    private edges: Edge[] = [];
-    private cur: Vector2Fixed = { x: 0, y: 0 };
-
-    /** 移动到起点 p (float) */
-    moveTo(px: number, py: number) {
-        this.cur.x = Int24_8.fromFloat(px);
-        this.cur.y = Int24_8.fromFloat(py);
+        this.x = p.x
+        this.y = p.y
     }
+    lineTo(p: Vector2) {
+        if (this.y === p.y) {
+            this.x = p.x
+            this.y = p.y
+            return;
+        }
+        let p0 = Vector2.create(this.x, this.y)
+        let p1 = Vector2.create(p.x, p.y)
+        const winding = p1.y > p0.y ? 1 : -1
+        if (p0.y > p1.y) {
+            let tmp = p0.clone()
+            p0.copy(p1)
+            p1.copy(tmp)
+        }
 
-    /** 添加直线到 p (float)，使用 fixed point */
-    lineTo(px: number, py: number) {
-        const x1 = Int24_8.fromFloat(px), y1 = Int24_8.fromFloat(py);
-        const x0 = this.cur.x, y0 = this.cur.y;
-        if (y0 === y1) { this.cur = { x: x1, y: y1 }; return; }
+        const dx = p1.x - p0.x
+        const dy = p1.y - p0.y
+        const x = p0.x
+        const y0 = p0.y
+        const y1 = p1.y
+        const invertSlope = dx / dy
 
-        // 保证从低 y 到高 y
-        let winding = +1;
-        let yy0 = y0, yy1 = y1, xx0 = x0, xx1 = x1;
-        if (y1 < y0) { winding = -1; yy0 = y1; yy1 = y0; xx0 = x1; xx1 = x0; }
-
-        // dy, dx
-        const dy = yy1 - yy0;
-        const dx = xx1 - xx0;
-        // 逆斜率 invSlope = dx/dy (fixed)
-        const invSlope = Int24_8.div_floor(dx, dy)
-
-        this.edges.push({
-            y0: yy0,
-            y1: yy1,
-            x: xx0,
-            invertSlope: invSlope,
-            winding
-        });
-        this.cur = { x: x1, y: y1 };
+        let edge: Edge = {
+            p0,
+            p1,
+            x: x,
+            y0: y0,
+            y1: y1,
+            invertSlope: invertSlope,
+            winding: winding
+        }
+        this.edges.push(edge)
+        this.x = p.x
+        this.y = p.y
     }
-
-    /** 构建边列表 */    
     buildEdges(path: PathBuilder) {
 
         path.visit({
             moveTo: d => {
-                this.moveTo(d.p0.x,d.p0.y)
+                this.moveTo(d.p0)
             },
             lineTo: d => {
-                this.lineTo(d.p0.x,d.p0.y)
+                this.lineTo(d.p0)
             },
             closePath: d => {
                 if (d.lastMovePoint.equals(d.p0)) return
-                this.lineTo(d.lastMovePoint.x,d.lastMovePoint.y)
+                this.lineTo(d.lastMovePoint)
 
             }
         })
     }
-    /** 填充路径 */
+    hline(y: number, x0: number, x1: number, y0: number, y1: number) {
+
+    }
     fillPath(path: PathBuilder) {
 
         let tmpPath = path.clone()
@@ -927,239 +950,110 @@ export class Rasterizer3Fixed {
             return
         }
 
-        // 排序并移除水平边
-        this.edges = this.edges
-            .filter(e => e.y1 > e.y0)
-            .sort((a, b) => a.y0 - b.y0 || a.x - b.x);
-
-        const active: Edge[] = [];
+        let edges = this.edges
         let bounds = tmpPath.getBounds()
         let min_y = bounds.min.y, max_y = bounds.max.y
-        // 扫描线，从 minY 到 maxY
-        for (let fy = Int24_8.fromFloat(min_y),fyMax=Int24_8.fromFloat(max_y); fy < fyMax; fy += Int24_8.ONE) {
-            // 激活新边
-            while (this.edges.length && this.edges[0].y0 <= fy) active.push(this.edges.shift()!);
-            // 移除过期边
-            for (let i = active.length - 1; i >= 0; --i) {
-                if (active[i].y1 <= fy) active.splice(i, 1);
+
+        let activeEdges: Edge[] = []
+        let insertActiveEdge = (edge: Edge) => {
+            let i = 0
+            for (; i < activeEdges.length; i++) {
+                if (edge.x < activeEdges[i].x) {
+                    break
+                }
             }
-            
+            activeEdges.splice(i, 0, edge)
 
-            // 按 x 排序
-            active.sort((a, b) => a.x - b.x);
-
-            // 走过每对交点进行填充
-            let cover = 0;
-            let startX = 0;
-            for (const e of active) {
-                const prev = cover;
-                cover = this.fillRule === 'nonzero' ? prev + e.winding : (prev + 1) & 1;
-                const insidePrev = this.fillRule === 'nonzero' ? prev !== 0 : prev === 1;
-                const insideNow = this.fillRule === 'nonzero' ? cover !== 0 : cover === 1;
-                if (!insidePrev && insideNow) startX = e.x;
-                else if (insidePrev && !insideNow) this.rasterSpan(startX, e.x, fy);
-            }
-
-            // 更新 x
-            active.forEach(e => e.x += e.invertSlope);
         }
+
+        const min_fy = fract(min_y)
+        const max_fy = fract(max_y)
+        const min_iy = Math.floor(min_y)
+        const max_iy = Math.ceil(max_y)
+        const spans:Span[] = []
+
+        const getEdgeX=(edge:Edge,y:number)=>{
+            return edge.p0!.x + (y - edge.y0) * edge.invertSlope
+        }
+        for (let y = min_iy; y < max_iy; y++) {
+            activeEdges.length = 0
+            let fy = y+1
+            for (let i = 0; i < edges.length; i++) {
+                let edge = edges[i]
+                if (edge.y0 <= fy && edge.y1 > fy) {
+                    edge.x = edge.p0!.x + (fy - edge.y0) * edge.invertSlope
+                    insertActiveEdge(edge)
+                }
+            }
+            if (activeEdges.length > 1) {
+                let winding = 0
+                let coverages:number[] = []
+                for (let i = 0; i < activeEdges.length - 1; i++) {
+                    if (this.fillRule === 'nonzero') {
+                        winding += activeEdges[i].winding
+                    } else {
+                        winding++
+                    }
+                    if (winding % 2 !== 0) {
+
+        
+                     
+
+                        let y0=Math.max(min_y, y)
+                        let y1=Math.min(max_y, y+1)
+
+                        let px0 =getEdgeX(activeEdges[i],y0)
+                        let px1 =getEdgeX(activeEdges[i+1],y0)
+
+                        let nx0 =getEdgeX(activeEdges[i],y1)
+                        let nx1 =getEdgeX(activeEdges[i+1],y1)
+
+                        let dx=nx1-nx0
+                        let dy=y1-y0
+                        let top_w=Math.abs(px1-px0)
+                        let bottom_w=Math.abs(nx1-nx0)
+                        let inx0=Math.trunc(nx0)
+                        let inx1=Math.trunc(nx1)
+                        
+                        if(inx0===inx1){
+                            let area=(top_w+bottom_w)*dy
+                            let coverage=clamp(area,0,1)*255
+                            spans.push({x:inx0,y:y,len:1,coverage:coverage})
+
+                        }else{
+                            let slope=1/activeEdges[i].invertSlope
+                            let invertSlope=activeEdges[i].invertSlope
+                            let yy=(1-fract(nx0))*slope
+                            let xx=invertSlope
+                        }
+                    }
+                }
+            }
+            // activeEdges.forEach(d=>{
+            //     d.x+=d.invertSlope
+            // })
+
+        }
+
+        for (let i = 0; i < spans.length; i++) {
+            let span = spans[i]
+            for (let x = span.x, j = 0; j < span.len; j++, x++) {
+                this.setPixel(span.x + j, span.y, span.coverage)
+            }
+
+        }
+
     }
 
-    /** 光栅化一段扫描线，x0,x1, y 都是 fixed */
-    private rasterSpan(x0: number, x1: number, y: number) {
-        if (x1 < x0) [x0, x1] = [x1, x0];
-        const sx = Int24_8.toFloor(x0);
-        const ex = Int24_8.toCeil(x1);
-        const fy = Int24_8.toFloor(y);
-        for (let fx = sx; fx <= ex; fx++) {
-            // 计算覆盖：fixed -> float
-            const left = Math.max(x0, fx << 8);
-            const right = Math.min(x1, (fx + 1) << 8);
-            const cov = clamp((right - left) / Int24_8.ONE,0,1);
-            const alpha = Math.round(cov * 255);
-            if (alpha > 0) this.setPixel(fx, fy, alpha);
-        }
-    }
 }
-// Ported from C code in Hearn & Baker "Computer Graphics - C Version", 2nd edition
 
-function fillPoly(polygon:any, setPixel:any) {
-  
-    /*
-    Struct Edge = {
-      int yUpper,
-      float xIntersect,
-      float dxPerScan,
-      Edge next
-    }
-    */
-    
-    function insertEdge(list, edge) {
-      let q = list,
-          p = list.next
-      
-      while (p) {
-        if (edge.xIntersect < p.xIntersect) {
-          p = null
-        }
-        else {
-          q = p
-          p = p.next
-        }
-      }
-      
-      edge.next = q.next
-      q.next = edge
-    }
-    
-    function yNext(k, cnt, pts) {
-      let j
-      
-      if ((k+1) > (cnt-1)) {
-        j = 0
-      }
-      else {
-        j = k+1
-      }
-      
-      while (pts[k][1] == pts[j][1]) {
-        if ((j+1) > (cnt-1)) {
-          j = 0
-        }
-        else {
-          j++
-        }
-      }
-      
-      return pts[j][1]
-    }
-    
-    function makeEdgeRec(lower, upper, yComp, edges) {
-      let edge = {}
-      edge.dxPerScan = (upper[0] - lower[0]) / (upper[1] - lower[1])
-      edge.xIntersect = lower[0]
-      if (upper[1] < yComp) {
-        edge.yUpper = upper[1] - 1
-      }
-      else {
-        edge.yUpper = upper[1]
-      }
-      insertEdge(edges[lower[1]], edge)
-    }
-    
-    function buildEdgeList(pts, edges) {
-      let cnt = pts.length,
-          i,
-          v1 = [0,0],
-          v2 = [0,0],
-          yPrev = pts[cnt-2][1]
-          
-      
-      v1[0] = pts[cnt-1][0]
-      v1[1] = pts[cnt-1][1]
-      
-      for (i=0; i<cnt; i++) {
-        v2 = pts[i]
-        if (v1[1] <= v2[1]) {
-          makeEdgeRec(v1, v2, yNext(i, cnt, pts), edges)
-        }
-        if (v1[1] > v2[1]) {
-          makeEdgeRec(v2, v1, yPrev, edges)
-        }
-        yPrev = v1[1]
-        v1 = v2
-      }
-    }
-    
-    function buildActiveList(scan, active, edges) {
-      let p = edges[scan].next,
-          q
-      
-      while (p) {
-        q = p.next
-        insertEdge(active, p)
-        p = q
-      }
-    }
-    
-    function fillScan(scan, active) {
-      let p1 = active.next,
-          p2,
-          i
-      
-      while (p1) {
-        p2 = p1.next
-        // HACK FL for some reason we sometimes don't get pairwise lists...?
-        if (p2) {
-          for (i=Math.floor(p1.xIntersect); i<p2.xIntersect; i++) {
-            setPixel(i, scan)
-          }
-        }
-        p1 = p2 && p2.next
-      }
-    }
-    
-    function deleteAfter(q) {
-      let p = q.next
-      q.next = p.next
-    }
-    
-    function updateActiveList(scan:number, active:any) {
-      let q = active,
-          p = active.next
-      
-      while (p) {
-        if (scan >= p.yUpper) {
-          p = p.next
-          deleteAfter(q)
-        }
-        else {
-          p.xIntersect = p.xIntersect + p.dxPerScan
-          q = p
-          p = p.next
-        }
-      }
-    }
-    
-    function resortActiveList(active) {
-      let q,
-          p = active.next
-      
-      active.next = null
-      while (p) {
-        q = p.next
-        insertEdge(active, p)
-        p = q
-      }
-    }
-    
-    let edges = [],
-        active,
-        i,scan
-    
-    for (i = 0; i<500; i++) {
-      edges[i] = {next: null}
-    }
-    
-    buildEdgeList(polygon, edges)
-    active = { next: null }
-    
-    for (scan = 0; scan<500; scan++) {
-      buildActiveList(scan, active, edges)
-      if (active.next) {
-        fillScan(scan, active)
-        updateActiveList(scan, active)
-        resortActiveList(active)
-      }
-    }
-  }
 export function fillPath(path: PathBuilder, setPixel: SetPixel, fillRule: FillRule = 'nonzero') {
 
-   
-    let raster = new Rasterizer2()
+
+    let raster = new Rasterizer()
     raster.setPixel = setPixel
     raster.fillRule = fillRule
     raster.fillPath(path)
-    
-    
+
+
 }

@@ -48,6 +48,38 @@ export class Matrix4 {
         );
 
     }
+    static fromScaleAxis(axis:Vector3, k:number) {
+
+        const s=k-1,x=axis.x,y=axis.y,z=axis.z;
+        const tx = s * x, ty = s * y, tz = s * z;
+        return Matrix4.fromRows(
+            tx*x+1,tx*y,tx*z,0,
+            ty*x,ty*y+1,ty*z,0,
+            tz*x,tz*y,tz*z+1,0,
+            0, 0, 0, 1
+        );
+
+    }
+    // 投影平面
+    static fromProjectPlane(axis:Vector3) {
+        const x=axis.x,y=axis.y,z=axis.z;
+        return this.fromRows(
+            1-x*x, -x*y, -x*z, 0,
+            -y*x, 1-y*y, -y*z, 0,
+            -z*x, -z*y, 1-z*z, 0,
+            0, 0, 0, 1
+        )
+    }
+    // 镜像
+    static fromMirrorImage(axis:Vector3) {
+        const x=axis.x,y=axis.y,z=axis.z;
+        return this.fromRows(
+            1-2*x*x, -2*x*y, -2*x*z, 0,
+            -2*y*x, 1-2*y*y, -2*y*z, 0,
+            -2*z*x, -2*z*y, 1-2*z*z, 0,
+            0, 0, 0, 1
+        )
+    }
     static makeRotationFromQuaternion(q:Quaternion) {
 
         return this.default().compose(_zero, q, _one);

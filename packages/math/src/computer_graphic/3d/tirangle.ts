@@ -497,7 +497,7 @@ function fillTriangleScanline2(a:Vertex, b:Vertex, c:Vertex, setPixel:any) {
 }
 export function fillTriangle(v1: Vertex, v2: Vertex, v3: Vertex, setPixel: (x: number, y: number, depth: number, u: number, v: number) => void) {
 
-    return interpolateFillTriangle3(v1, v2, v3, setPixel)
+    return fillTriangleScanline(v1, v2, v3, setPixel)
 }
 // 插值填充三角形
 
