@@ -1,6 +1,6 @@
 import { Vector2 } from "./vec2";
 
-export const BEZIER_CIRCLE_K=(4*(Math.sqrt(2)-1))/3 // 黄金分割率
+export const BEZIER_CIRCLE_K=(4/3*(Math.sqrt(2)-1)) // 黄金分割率
 export const BEZIER_CIRCLE_K2=(delta:number)=>4 / 3 * Math.tan(delta / 4)
 export const CONIC_CIRCLE_K=Math.sqrt(2)/2 // cos(pi/4) 0.707106781187
 
@@ -358,6 +358,7 @@ export const divmod2 = (dividend: number, divisor: number) => {
     let remainder=dividend-quotient*divisor
     return [quotient,remainder]
 }
+// mod(a,b)=a%b
 export const mod = (v: number, m: number) => {
     return v - Math.trunc(v / m) * m
 }

@@ -1,6 +1,6 @@
-import { Vector2Like } from "./vector2";
-type Matrix2dLike = number[] | Float32Array;
-function identity(out: Matrix2dLike) {
+import { Vector2Like } from "./Vector2"
+export type Matrix2dLike = number[] | Float32Array;
+function identity<T extends Matrix2dLike=Matrix2dLike>(out: T) {
     out[0] = 1;
     out[1] = 0;
     out[2] = 0
@@ -10,7 +10,7 @@ function identity(out: Matrix2dLike) {
     return out;
 }
 // 主行序
-function makeTranslation(out: Matrix2dLike, v: Vector2Like) {
+function makeTranslation<T extends Matrix2dLike=Matrix2dLike>(out: T, v: Vector2Like) {
     out[0] = 1;
     out[1] = 0;
     out[2] = 0;
@@ -19,7 +19,7 @@ function makeTranslation(out: Matrix2dLike, v: Vector2Like) {
     out[5] = v[1];
     return out;
 }
-function makeRotation(out: Matrix2dLike, radian: number) {
+function makeRotation<T extends Matrix2dLike=Matrix2dLike>(out: T, radian: number) {
     const c = Math.cos(radian);
     const s = Math.sin(radian);
     out[0] = c;
@@ -30,7 +30,7 @@ function makeRotation(out: Matrix2dLike, radian: number) {
     out[5] = 0;
     return out;
 }
-function makeScale(out: Matrix2dLike, v: Vector2Like) {
+function makeScale<T extends Matrix2dLike=Matrix2dLike>(out: T, v: Vector2Like) {
     out[0] = v[0];
     out[1] = 0;
     out[2] = 0;
@@ -39,7 +39,7 @@ function makeScale(out: Matrix2dLike, v: Vector2Like) {
     out[5] = 0;
     return out;
 }
-function makeTranslationRotationScale(out: Matrix2dLike, v: Vector2Like, radian: number, scale: Vector2Like) {
+function makeTranslationRotationScale<T extends Matrix2dLike=Matrix2dLike>(out: T, v: Vector2Like, radian: number, scale: Vector2Like) {
     const c = Math.cos(radian);
     const s = Math.sin(radian);
     out[0] = c * scale[0];
@@ -50,7 +50,7 @@ function makeTranslationRotationScale(out: Matrix2dLike, v: Vector2Like, radian:
     out[5] = v[1];
     return out;
 }
-function makeTranslationRotationScaleOrigin(out: Matrix2dLike, v: Vector2Like, radian: number, scale: Vector2Like, origin: Vector2Like) {
+function makeTranslationRotationScaleOrigin<T extends Matrix2dLike=Matrix2dLike>(out: T, v: Vector2Like, radian: number, scale: Vector2Like, origin: Vector2Like) {
     const c = Math.cos(radian);
     const s = Math.sin(radian);
     out[0] = c * scale[0];
@@ -88,7 +88,7 @@ function extractOrigin(out: Vector2Like, a: Matrix2dLike) {
  * @param a 输入的 2D 变换矩阵
  * @returns 输出数组
  */
-function decompose(out: Matrix2dLike, a: Matrix2dLike) {
+function decompose<T extends Matrix2dLike=Matrix2dLike>(out: T, a: Matrix2dLike) {
     const a00 = a[0];
     const a01 = a[1];
     const a02 = a[2];
@@ -125,7 +125,7 @@ function decompose(out: Matrix2dLike, a: Matrix2dLike) {
 
     return out;
 }
-function multiply(out: Matrix2dLike, a: Matrix2dLike, b: Matrix2dLike) {
+function multiply<T extends Matrix2dLike=Matrix2dLike>(out: T, a: Matrix2dLike, b: Matrix2dLike) {
     const a00 = a[0];
     const a01 = a[1];
     const a02 = a[2];
@@ -146,7 +146,7 @@ function multiply(out: Matrix2dLike, a: Matrix2dLike, b: Matrix2dLike) {
     out[5] = a01 * b04 + a03 * b05 + a05;
     return out;
 }
-function invert(out: Matrix2dLike, a: Matrix2dLike) {
+function invert<T extends Matrix2dLike=Matrix2dLike>(out: T, a: Matrix2dLike) {
     const a00 = a[0];
     const a01 = a[1];
     const a02 = a[2];
@@ -193,6 +193,9 @@ function hasScale(a:Matrix2dLike){
     return a[0]!==1||a[3]!==1
 }
 export class Matrix2D extends Float32Array {
+    static default(){
+        return new this()
+    }
     static identity=identity
     static multiply=multiply
     static invert=invert
@@ -212,6 +215,24 @@ export class Matrix2D extends Float32Array {
     constructor() {
         super(6);
         identity(this);
+    }
+    get a(){
+        return this[0]
+    }
+    get b(){
+        return this[1]
+    }
+    get c(){
+        return this[2]
+    }
+    get d(){
+        return this[3]
+    }
+    get e(){
+        return this[4]
+    }
+    get f(){
+        return this[5]
     }
     identity() {
         return   identity(this);

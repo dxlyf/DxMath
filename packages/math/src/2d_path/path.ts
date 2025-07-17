@@ -1166,7 +1166,7 @@ export class Path {
         if (shouldLineTo) {
             this.moveTo(x1, y1)
         }
-        this.ellipseArc(x1, y1, rx, ry, rotation, fa, fs, x2, y2)
+        this.ellipseArc(x1, y1,x2, y2, rx, ry, rotation, fa, fs)
     }
     // 椭圆弧
     ellipseArc(x1: number, y1: number, x2: number, y2: number,
@@ -1307,6 +1307,8 @@ export class Path {
         return this.addPath(temp, AddPathMode.kExtend_AddPathMode)
     }
 
+    // 对标PathKit的ellipse方法
+
     ellipse(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, ccw: boolean = false) {
         // This is easiest to do by making a new path and then extending the current path
         // (this properly catches the cases of if there's a moveTo before this call or not).
@@ -1321,14 +1323,17 @@ export class Path {
         m.setRotate(rotation, x, y);
         this.addPath(temp, m, AddPathMode.kExtend_AddPathMode);
     }
+    // 对标canvas path2d的ellipse
     ellipse2(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, ccw: boolean = false) {
         ellipse(this, x, y, radiusX, radiusY, rotation, startAngle, endAngle, ccw)
     }
+        // 对标canvas path2d的ellipse
     ellipse3(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, ccw: boolean = false) {
         if (radiusX < 0 || radiusY < 0) {
             throw new DOMException("radii cannot be negative", "IndexSizeError");
         }
-        const tau = Math.PI * 2
+       
+        const tau = Math.PI*2
         let newStartAngle = startAngle % tau;
         if (newStartAngle <= 0) {
             newStartAngle += tau;
@@ -1357,7 +1362,7 @@ export class Path {
 
         //绘制 2 180 度线段，因为尝试一次绘制所有 360 度
         //不绘制任何内容。
-        if (almostEqual(Math.abs(sweepDegrees), 360)) {
+        if (almostEqual(Math.abs(radianToDegrees(sweepDegrees)), 360)) {
             const halfSweep = sweepDegrees / 2;
             // this.moveTo(x,y)
             this.arcToOval2(
@@ -1377,7 +1382,8 @@ export class Path {
                 radiusY,
                 rotation,
                 (startDegrees + halfSweep),
-                (halfSweep)
+                (halfSweep),
+                false
             );
         }
         else {

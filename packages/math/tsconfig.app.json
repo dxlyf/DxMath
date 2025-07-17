@@ -3,7 +3,17 @@
     "compilerOptions": {
       "baseUrl":"./",
       "paths":{
-        "math/*":["./src/*"]
+        "math/*":["./src/*"],
+        "ismobilejs":["./src/utils/ismobilejs.ts"],
+        "earcut":["./src/math/mapbox/earcut/index.ts"],
+        "eventemitter3":["./src/event/eventemitter3.d.ts"],
+        "parse-svg-path":["./src/utils/parse-svg-path.d.ts"],
+        "gifuct-js":["./src/images/gifuct-js/index.d.ts"],
+        "colord":["./src/color/colord/src"],
+        "@pixi/colord":["./src/color/colord/src"],
+        "@pixi/colord/*":["./src/color/colord/src/*"],
+        "pixi.js":["./src/pixijs/src"],
+        "three":["./src/threejs/src/Three.d.ts"]
       }
     },
     "include": ["src","examples"]

@@ -47,7 +47,9 @@ export class SKPath2D {
     static PathOp=PathOp
     static FillType=FillType
 
-
+    static default(){
+        return new this()
+    }
     static async initializePathKit(){
           await getPathKit() 
     }

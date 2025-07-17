@@ -1,15 +1,15 @@
-import { Vector2Like } from "./vector2";
+import { Vector2Like } from "./Vector2";
 
 type Matrix3Like = number[]|Float32Array;
 
-function identity(out:Matrix3Like){
+function identity<T extends Matrix3Like=Matrix3Like>(out: T){
     out[0] = 1; out[3] = 0; out[6] = 0;
     out[1] = 0; out[4] = 1; out[7] = 0;
     out[2] = 0; out[5] = 0; out[8] = 1;
     return out;
 }
 // 行主序
-function multiply(out:Matrix3Like,a:Matrix3Like,b:Matrix3Like){
+function multiply<T extends Matrix3Like=Matrix3Like>(out: T,a:Matrix3Like,b:Matrix3Like){
     const a00 = a[0], a01 = a[3], a02 = a[6];
     const a10 = a[1], a11 = a[4], a12 = a[7];
     const a20 = a[2], a21 = a[5], a22 = a[8];
@@ -27,7 +27,7 @@ function multiply(out:Matrix3Like,a:Matrix3Like,b:Matrix3Like){
     out[8] = a20 * b02 + a21 * b12 + a22 * b22;
     return out
 }
-function translate(out:Matrix3Like,a:Matrix3Like,vec:Matrix3Like){
+function translate<T extends Matrix3Like=Matrix3Like>(out: T,a:Matrix3Like,vec:Matrix3Like){
     const x = vec[0], y = vec[1];
     out[0] = a[0]; out[3] = a[3]; out[6] = a[6];
     out[1] = a[1]; out[4] = a[4]; out[7] = a[7];
@@ -37,7 +37,7 @@ function translate(out:Matrix3Like,a:Matrix3Like,vec:Matrix3Like){
     out[8] = a[2] * x + a[5] * y + a[8];
     return out; 
 }
-function rotate(out:Matrix3Like,a:Matrix3Like,rad:number){
+function rotate<T extends Matrix3Like=Matrix3Like>(out: T,a:Matrix3Like,rad:number){
     const s = Math.sin(rad);
     const c = Math.cos(rad);
     out[0] = a[0] * c + a[3] * s;
@@ -51,21 +51,21 @@ function rotate(out:Matrix3Like,a:Matrix3Like,rad:number){
     out[8] = a[8];
     return out 
 }
-function scale(out:Matrix3Like,a:Matrix3Like,vec:Matrix3Like){
+function scale<T extends Matrix3Like=Matrix3Like>(out: T,a:Matrix3Like,vec:Matrix3Like){
     const x = vec[0], y = vec[1];
     out[0] = a[0] * x; out[3] = a[3] * x; out[6] = a[6] * x;
     out[1] = a[1] * y; out[4] = a[4] * y; out[7] = a[7] * y;
     out[2] = a[2]; out[5] = a[5]; out[8] = a[8];
     return out 
 }
-function makeTranslation(out:Matrix3Like,vec:Vector2Like){
+function makeTranslation<T extends Matrix3Like=Matrix3Like>(out: T,vec:Vector2Like){
     out[0] = 1; out[3] = 0; out[6] = 0;
     out[1] = 0; out[4] = 1; out[7] = 0;
     out[2] = 0; out[5] = 0; out[8] = 1;
     out[6] = vec[0]; out[7] = vec[1]; out[8] = 1;
     return out 
 }
-function makeRotation(out:Matrix3Like,rad:number){
+function makeRotation<T extends Matrix3Like=Matrix3Like>(out: T,rad:number){
     const s = Math.sin(rad);
     const c = Math.cos(rad);
     out[0] = c; out[3] = -s; out[6] = 0;
@@ -73,25 +73,25 @@ function makeRotation(out:Matrix3Like,rad:number){
     out[2] = 0; out[5] = 0; out[8] = 1;
     return out 
 }
-function makeScale(out:Matrix3Like,vec:Vector2Like){
+function makeScale<T extends Matrix3Like=Matrix3Like>(out: T,vec:Vector2Like){
     out[0] = vec[0]; out[3] = 0; out[6] = 0;
     out[1] = 0; out[4] = vec[1]; out[7] = 0; 
     out[2] = 0; out[5] = 0; out[8] = 1;
     return out
 }
-function makeSkew(out:Matrix3Like,k:Vector2Like){
+function makeSkew<T extends Matrix3Like=Matrix3Like>(out: T,k:Vector2Like){
     out[0] = 1; out[3] = Math.tan(k[0]); out[6] = 0;
     out[1] = Math.trunc(k[1]); out[4] = 1; out[7] = 0;
     out[2] = 0; out[5] = 0; out[8] = 1;
     return out
 }
-function makeProjection(out:Matrix3Like,width:number,height:number){
+function makeProjection<T extends Matrix3Like=Matrix3Like>(out: T,width:number,height:number){
     out[0] = 2 / width; out[3] = 0; out[6] = 0;
     out[1] = 0; out[4] = -2 / height; out[7] = 0;
     out[2] = -1; out[5] = 1; out[8] = 1;
     return out 
 }
-function makeTranslationRotationScale(out:Matrix3Like,translation:Vector2Like,rotation:number,scale:Vector2Like){
+function makeTranslationRotationScale<T extends Matrix3Like=Matrix3Like>(out: T,translation:Vector2Like,rotation:number,scale:Vector2Like){
     const s = Math.sin(rotation);
     const c = Math.cos(rotation);
     out[0] = scale[0] * c; out[3] = scale[0] * -s; out[6] = 0;
@@ -99,7 +99,7 @@ function makeTranslationRotationScale(out:Matrix3Like,translation:Vector2Like,ro
     out[2] = translation[0]; out[5] = translation[1]; out[8] = 1;
     return out 
 }
-function makeTranslationRotationScaleOrigin(out:Matrix3Like,translation:Vector2Like,rotation:number,scale:Vector2Like,origin:Vector2Like){
+function makeTranslationRotationScaleOrigin<T extends Matrix3Like=Matrix3Like>(out: T,translation:Vector2Like,rotation:number,scale:Vector2Like,origin:Vector2Like){
     const s = Math.sin(rotation);
     const c = Math.cos(rotation);
     out[0] = scale[0] * c; out[3] = scale[0] * -s; out[6] = 0;
@@ -127,7 +127,7 @@ function extractScale(out:Vector2Like,a:Matrix3Like){
  * @param a 输入矩阵
  * @returns 矩阵的行列式
 */
-function decompose(out:Matrix3Like,a:Matrix3Like){
+function decompose<T extends Matrix3Like=Matrix3Like>(out: T,a:Matrix3Like){
     const a00 = a[0], a01 = a[3], a02 = a[6];
     const a10 = a[1], a11 = a[4], a12 = a[7];
     const a20 = a[2], a21 = a[5], a22 = a[8];
@@ -181,7 +181,7 @@ function decompose(out:Matrix3Like,a:Matrix3Like){
     // out.translate[1] = b12;
     return det;
 }
-function adjugate(out:Matrix3Like,a:Matrix3Like){
+function adjugate<T extends Matrix3Like=Matrix3Like>(out: T,a:Matrix3Like){
     const a00 = a[0], a01 = a[3], a02 = a[6];
     const a10 = a[1], a11 = a[4], a12 = a[7];
     const a20 = a[2], a21 = a[5], a22 = a[8];
@@ -202,7 +202,7 @@ function determinant(a:Matrix3Like){
     const a20 = a[2], a21 = a[5], a22 = a[8];
     return a00 * (a11 * a22 - a21 * a12) - a01 * (a10 * a22 - a12 * a20) + a02 * (a10 * a21 - a11 * a20); 
 }
-function invert(out:Matrix3Like,a:Matrix3Like){
+function invert<T extends Matrix3Like=Matrix3Like>(out: T,a:Matrix3Like){
     const a00 = a[0], a01 = a[3], a02 = a[6];
     const a10 = a[1], a11 = a[4], a12 = a[7];
     const a20 = a[2], a21 = a[5], a22 = a[8];
@@ -219,7 +219,7 @@ function invert(out:Matrix3Like,a:Matrix3Like){
     out[6] = b21 * det; out[7] = (-a21 * a00 + a01 * a20) * det; out[8] = (a11 * a00 - a01 * a10) * det;
     return out;
 }
-function transpose(out:Matrix3Like,a:Matrix3Like){
+function transpose<T extends Matrix3Like=Matrix3Like>(out: T,a:Matrix3Like){
     const a00 = a[0], a01 = a[3], a02 = a[6];
     const a10 = a[1], a11 = a[4], a12 = a[7];
     const a20 = a[2], a21 = a[5], a22 = a[8];
@@ -239,7 +239,7 @@ function hasScale(a:Matrix3Like){
 function hasIdentity(a:Matrix3Like){
     return a[0]!== 1 || a[3]!== 0 || a[6]!== 0 || a[1]!== 0 || a[4]!== 1 || a[7]!== 0 || a[2]!== 0 || a[5]!== 0 || a[8]!== 1; 
 }
-function fromValues(out:Matrix3Like,m00:number,m01:number,m02:number,m10:number,m11:number,m12:number,m20:number,m21:number,m22:number){
+function fromValues<T extends Matrix3Like=Matrix3Like>(out: T,m00:number,m01:number,m02:number,m10:number,m11:number,m12:number,m20:number,m21:number,m22:number){
     out[0] = m00; out[3] = m01; out[6] = m02;
     out[1] = m10; out[4] = m11; out[7] = m12;
     out[2] = m20; out[5] = m21; out[8] = m22;

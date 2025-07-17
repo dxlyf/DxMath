@@ -48,7 +48,16 @@ export default defineConfig({
   },
   resolve:{
     alias:{
-      'math':'/src'
+      'math':'/src',
+      'eventemitter3':'/src/event/eventemitter3.js',
+      'earcut':'/src/math/mapbox/earcut/index.ts',
+      'ismobilejs':'/src/utils/ismobilejs.ts',
+      'parse-svg-path':'/src/utils/parse-svg-path.js',
+      'gifuct-js':'/src/images/gifuct-js/index.js',
+      'colord':'/src/color/colord/src/index.ts',
+      '@pixi/colord':'/src/color/colord/src/index.ts',
+      'pixi.js':'/src/pixijs/src/index.ts',
+      'three':'/src/threejs/src/Three.js',
     }
   },
   plugins: [react(),dts({

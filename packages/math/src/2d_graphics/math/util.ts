@@ -1,4 +1,4 @@
-import {Vector2} from './vector2'
+import {Vector2} from './Vector2'
 // Math functions
 
 export function sqrt(n:number):number{
@@ -32,6 +32,7 @@ export function factorial(n:number):number{
     }
     return result;
 }
+// 组合
 export function nCr(n:number,r:number):number{
     if(r > n) return 0;
     let result = 1;
@@ -41,6 +42,7 @@ export function nCr(n:number,r:number):number{
     }
     return result;
 }
+// 排列
 export function nPr(n:number,r:number):number{
     if(r > n) return 0;
     let result = 1;
@@ -49,18 +51,29 @@ export function nPr(n:number,r:number):number{
     }
     return result;
 }
+/**
+ * 
+ * @param value 映射值
+ * @param inMin 定义域domain 输入
+ * @param inMax 
+ * @param outMin 值域range 输出
+ * @param outMax 
+ * @returns 
+ */
 export function map(value:number,inMin:number,inMax:number,outMin:number,outMax:number){
     return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
 }
-export function inverseLerp(start:number,end:number,amount:number){
-    return (amount - start) / (end - start);
-}
+
 export function clamp(value:number,min:number,max:number){
     return Math.min(Math.max(value,min),max);
 }
-export function lerp(start:number,end:number,amount:number){
-    return start + (end - start) * amount;
+export function lerp(start:number,end:number,t:number){
+    return start*(1-t) + end*t;
 }
+export function inverseLerp(start:number,end:number,value:number){
+    return (value - start) / (end - start);
+}
+// 平滑插值
 export function smoothstep(start:number,end:number,amount:number){
     const t = clamp((amount - start) / (end - start),0,1);
     return t * t * (3 - 2 * t);

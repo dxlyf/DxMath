@@ -679,3 +679,4 @@ export function flatten(data:any) {
     }
     return {vertices, holes, dimensions};
 }
+export default earcut;

@@ -35,6 +35,9 @@ export class Vector2 {
     static fromArray(elements: number[] | Float32Array) {
         return new this(elements)
     }
+    static fromPoint(v:{x:number,y:number}){
+        return this.create(v.x, v.y)
+    }
     static fromXY(x: number, y: number) {
         return this.create(x, y)
     }
@@ -49,6 +52,9 @@ export class Vector2 {
     }
     static fromRadian(radian: number) {
         return this.create(Math.cos(radian), Math.sin(radian))
+    }
+    static fromAngle(angle: number) {
+        return this.fromRadian(angle/180*Math.PI)
     }
     static pools: Vector2[] = []
     static maxPoolSize: number = 100
@@ -133,6 +139,14 @@ export class Vector2 {
             return (this.constructor as typeof Vector2).create(x, y)
         }
         return this
+    }
+    setXY(x: number, y: number) {
+        return this.set(x, y)
+    }
+    setRotation(radian: number) {
+        const cos = Math.cos(radian)
+        const sin = Math.sin(radian)
+       return  this.set(cos, sin)
     }
     setElements(values: number[] | Float32Array, silent: boolean = false) {
         if (this.mutable && this.elements.some((v, i) => v !== values[i])) {
@@ -514,6 +528,9 @@ export class Vector2 {
     }
     scale(x: number, y: number) {
         return this.set(this.x * x, this.y * y)
+    }
+    rotateAround(center: Vector2, angle: number) {
+        return this.rotate(angle, center)
     }
     rotate(angle: number, origin: Vector2 = Vector2.create(0, 0)) {
         const cos = Math.cos(angle)

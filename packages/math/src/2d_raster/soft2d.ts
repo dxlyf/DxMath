@@ -1,10 +1,10 @@
 import { Matrix2D } from "../math/mat2d"
 import { Conic } from '../curve/conic'
-import {find_cubic_inflections,chop_cubic_at2,eval_cubic_tangent_at,find_cubic_cusp, find_unit_quad_roots, eval_quad_tangent_at, find_cubic_max_curvature, find_quad_max_curvature, eval_quad_at, eval_cubic_pos_at } from '../curve/path_geomtry'
-import { Vector2,Vector2 as Point} from "../math/vec2"
-import {scalarNearlyZero} from '../math/math'
+import { find_cubic_inflections, chop_cubic_at2, eval_cubic_tangent_at, find_cubic_cusp, find_unit_quad_roots, eval_quad_tangent_at, find_cubic_max_curvature, find_quad_max_curvature, eval_quad_at, eval_cubic_pos_at } from '../curve/path_geomtry'
+import { Vector2, Vector2 as Point } from "../math/vec2"
+import { radianToDegrees, scalarNearlyZero } from '../math/math'
 const PI_2 = Math.PI * 2
-
+const twoPi = PI_2
 export {
     Point
 }
@@ -97,8 +97,58 @@ export enum BlendMode {
     Color,
     Luminosity
 }
-
-
+function fmod(a: number, b: number) {
+    return a - Math.floor(a / b) * b;
+}
+function canonicalizeAngle(startAngle: number, endAngle: number) {
+    // Make 0 <= startAngle < 2*PI
+    let newStartAngle = fmod(startAngle, twoPi);
+    if (newStartAngle < 0) {
+        newStartAngle += twoPi;
+        // Check for possible catastrophic cancellation in cases where
+        // newStartAngle was a tiny negative number (c.f. crbug.com/503422)
+        if (newStartAngle >= twoPi) {
+            newStartAngle -= twoPi;
+        }
+    }
+    let delta = newStartAngle - startAngle;
+    startAngle = newStartAngle;
+    endAngle = endAngle + delta;
+    return [startAngle, endAngle]
+}
+// Adapted from https://chromium.googlesource.com/chromium/blink/+/refs/heads/main/Source/modules/canvas2d/CanvasPathMethods.cpp
+function adjustEndAngle(startAngle: number, endAngle: number, counterclockwise: boolean) {
+    let newEndAngle = endAngle;
+    /* http://www.whatwg.org/specs/web-apps/current-work/multipage/the-canvas-element.html#dom-context-2d-arc
+    * If the counterclockwise argument is false and endAngle-startAngle is equal to or greater than 2pi, or,
+    * if the counterclockwise argument is true and startAngle-endAngle is equal to or greater than 2pi,
+    * then the arc is the whole circumference of this ellipse, and the point at startAngle along this circle's circumference,
+    * measured in radians clockwise from the ellipse's semi-major axis, acts as both the start point and the end point.
+    */
+    if (!counterclockwise && endAngle - startAngle >= twoPi) {
+        newEndAngle = startAngle + twoPi;
+    }
+    else if (counterclockwise && startAngle - endAngle >= twoPi) {
+        newEndAngle = startAngle - twoPi;
+    }
+    /*
+    * Otherwise, the arc is the path along the circumference of this ellipse from the start point to the end point,
+    * going anti-clockwise if the counterclockwise argument is true, and clockwise otherwise.
+    * Since the points are on the ellipse, as opposed to being simply angles from zero,
+    * the arc can never cover an angle greater than 2pi radians.
+    */
+    /* NOTE: When startAngle = 0, endAngle = 2Pi and counterclockwise = true, the spec does not indicate clearly.
+    * We draw the entire circle, because some web sites use arc(x, y, r, 0, 2*Math.PI, true) to draw circle.
+    * We preserve backward-compatibility.
+    */
+    else if (!counterclockwise && startAngle > endAngle) {
+        newEndAngle = startAngle + (twoPi - fmod(startAngle - endAngle, twoPi));
+    }
+    else if (counterclockwise && startAngle < endAngle) {
+        newEndAngle = startAngle - (twoPi - fmod(endAngle - startAngle, twoPi));
+    }
+    return newEndAngle;
+}
 export class Color {
     static black() {
         return new Color(0, 0, 0, 1)
@@ -391,8 +441,7 @@ function ellipticalArcSegmentToCubic(
     rotation: number, theta1: number, theta2: number
 ): number[] {
     const delta = theta2 - theta1;
-    const t = Math.tan(delta / 4);
-    const kappa = (4 / 3) * t; // 控制点距离比例
+    const kappa = (4 / 3) * Math.tan(delta / 4); // 控制点距离比例
     // 起始点
     const p0 = pointOnEllipse(cx, cy, rx, ry, rotation, theta1);
     // 结束点
@@ -1380,16 +1429,33 @@ export class PathBuilder {
     ellipse(
         cx: number, cy: number, rx: number, ry: number,
         rotation: number, startAngle: number, endAngle: number,
-        anticlockwise: boolean = false
+        ccw: boolean = false
     ): this {
 
-        // 调整角度：确保角度跨度正确
-        let deltaAngle = endAngle - startAngle;
-        if (!anticlockwise && deltaAngle < 0) {
-            deltaAngle = (deltaAngle % PI_2) + PI_2
-        } else if (anticlockwise && deltaAngle > 0) {
-            deltaAngle = (deltaAngle % PI_2) - PI_2;
+        const tau = Math.PI*2
+        let newStartAngle = startAngle % tau;
+        if (newStartAngle <= 0) {
+            newStartAngle += tau;
         }
+        let delta = newStartAngle - startAngle;
+        startAngle = newStartAngle;
+        endAngle += delta;
+
+        if (!ccw && (endAngle - startAngle) >= tau) {
+            // Draw complete ellipse
+            endAngle = startAngle + tau;
+        }
+        else if (ccw && (startAngle - endAngle) >= tau) {
+            // Draw complete ellipse
+            endAngle = startAngle - tau;
+        }
+        else if (!ccw && startAngle > endAngle) {
+            endAngle = startAngle + (tau - (startAngle - endAngle) % tau);
+        }
+        else if (ccw && startAngle < endAngle) {
+            endAngle = startAngle - (tau - (endAngle - startAngle) % tau);
+        }
+        const deltaAngle=endAngle-startAngle
         // 如果当前路径为空，先 moveTo 起始点
         const startPt = pointOnEllipse(cx, cy, rx, ry, rotation, startAngle);
         if (this.isEmpty) {
@@ -1400,59 +1466,54 @@ export class PathBuilder {
 
         // 分段，每段角度不超过 π/2
         const segments = Math.ceil(Math.abs(deltaAngle) / (Math.PI / 2));
-        const segAngle = deltaAngle / segments;
+        let segAngle = deltaAngle / segments;
+        let theta1 = startAngle
         for (let i = 0; i < segments; i++) {
-            const theta1 = startAngle + i * segAngle;
             const theta2 = theta1 + segAngle;
             const bezier = ellipticalArcSegmentToCubic(cx, cy, rx, ry, rotation, theta1, theta2);
-
             this.bezierCurveTo(bezier[0], bezier[1], bezier[2], bezier[3], bezier[4], bezier[5]);
-        }
-        if (Math.abs(deltaAngle - PI_2) <= 1e-6) {
-            this.closePath()
+            theta1 = theta2
         }
         return this;
     }
     ellipse2(
         cx: number, cy: number, rx: number, ry: number,
         rotation: number, startAngle: number, endAngle: number,
-        anticlockwise: boolean = false
+        ccw: boolean = false
     ) {
 
-        // var tao = 2 * Math.PI;
-        // var newStartAngle = startAngle % tao;
-        // if (newStartAngle < 0) {
-        //   newStartAngle += tao;
-        // }
-        // var delta = newStartAngle - startAngle;
-        // startAngle = newStartAngle;
-        // endAngle += delta;
-
-        // // Based off of AdjustEndAngle in Chrome.
-        // if (!anticlockwise && (endAngle - startAngle) >= tao) {
-        //   // Draw complete ellipse
-        //   endAngle = startAngle + tao;
-        // } else if (anticlockwise && (startAngle - endAngle) >= tao) {
-        //   // Draw complete ellipse
-        //   endAngle = startAngle - tao;
-        // } else if (!anticlockwise && startAngle > endAngle) {
-        //   endAngle = startAngle + (tao - (startAngle - endAngle) % tao);
-        // } else if (anticlockwise && startAngle < endAngle) {
-        //   endAngle = startAngle - (tao - (endAngle - startAngle) % tao);
-        // }
-
-        let deltaTheta = endAngle - startAngle;
-        if (!anticlockwise && deltaTheta < 0) {
-            deltaTheta = (deltaTheta % PI_2) + PI_2
-        } else if (anticlockwise && deltaTheta > 0) {
-            deltaTheta = (deltaTheta % PI_2) - PI_2;
+        const tau = Math.PI*2
+        let newStartAngle = startAngle % tau;
+        if (newStartAngle <= 0) {
+            newStartAngle += tau;
         }
-        if (Math.abs(deltaTheta) <= Math.PI * 2) {
-            const halfSweep = deltaTheta / 2
-            this.arcToOval(cx, cy, rx, ry, rotation, startAngle, halfSweep, true)
-            this.arcToOval(cx, cy, rx, ry, rotation, startAngle + halfSweep, halfSweep, false)
+        let delta = newStartAngle - startAngle;
+        startAngle = newStartAngle;
+        endAngle += delta;
+
+        if (!ccw && (endAngle - startAngle) >= tau) {
+            // Draw complete ellipse
+            endAngle = startAngle + tau;
+        }
+        else if (ccw && (startAngle - endAngle) >= tau) {
+            // Draw complete ellipse
+            endAngle = startAngle - tau;
+        }
+        else if (!ccw && startAngle > endAngle) {
+            endAngle = startAngle + (tau - (startAngle - endAngle) % tau);
+        }
+        else if (ccw && startAngle < endAngle) {
+            endAngle = startAngle - (tau - (endAngle - startAngle) % tau);
+        }
+
+        let sweepDegrees = (endAngle - startAngle);
+        let startDegrees = (startAngle);
+        if (Math.abs(radianToDegrees(sweepDegrees)-360)<=1e-6) {
+            const halfSweep = sweepDegrees / 2
+            this.arcToOval(cx, cy, rx, ry, rotation, startDegrees, halfSweep, true)
+            this.arcToOval(cx, cy, rx, ry, rotation, startDegrees + halfSweep, halfSweep, false)
         } else {
-            this.arcToOval(cx, cy, rx, ry, rotation, startAngle, deltaTheta, true)
+            this.arcToOval(cx, cy, rx, ry, rotation, startDegrees, sweepDegrees, true)
         }
 
         return this
@@ -1564,6 +1625,7 @@ export class PathBuilder {
         }
 
         // safe to convert back to floats now
+        // (1-cos)/sin=tan(angle/2)
         let dist = Math.abs(radius * (1 - cosh) / sinh);
         let xx = p1.x - dist * befored.x;
         let yy = p1.y - dist * befored.y;
@@ -2102,7 +2164,7 @@ export class PathBuilder {
             },
             closePath: (d) => {
                 if (polygon) {
-                    if (autoClosed&&!d.p0.equals(d.lastMovePoint)) {
+                    if (autoClosed && !d.p0.equals(d.lastMovePoint)) {
                         polygon.push(d.lastMovePoint)
                     }
                     polygons.push(polygon)
@@ -3487,39 +3549,39 @@ export class PathStroker {
                 .lineTo(quad_points.quad[2].x, quad_points.quad[2].y);
         }
     }
-    
+
     setCubicEndNormal(
         cubic: Point[],
         normal_ab: Point,
         unit_normal_ab: Point,
-        normal_cd:Point,
-        unit_normal_cd:Point,
+        normal_cd: Point,
+        unit_normal_cd: Point,
     ) {
-        let self=this
+        let self = this
         let ab = cubic[1].clone().sub(cubic[0]);
         let cd = cubic[3].clone().sub(cubic[2]);
 
         let degenerate_ab = degenerateVector(ab);
         let degenerate_cb = degenerateVector(cd);
 
-        if(degenerate_ab && degenerate_cb){
+        if (degenerate_ab && degenerate_cb) {
             normal_cd.copy(normal_ab)
             unit_normal_cd.copy(unit_normal_ab)
             return;
         }
 
-        if(degenerate_ab){
-            ab = cubic[2].clone().sub( cubic[0]);
+        if (degenerate_ab) {
+            ab = cubic[2].clone().sub(cubic[0]);
             degenerate_ab = degenerateVector(ab);
         }
 
-        if(degenerate_cb){
+        if (degenerate_cb) {
             cd = cubic[3].clone().sub(cubic[1])
             degenerate_cb = degenerateVector(cd);
         }
 
-        if(degenerate_ab || degenerate_cb){
-           // *normal_cd = normal_ab;
+        if (degenerate_ab || degenerate_cb) {
+            // *normal_cd = normal_ab;
             //*unit_normal_cd = unit_normal_ab;
             normal_cd.copy(normal_ab)
             unit_normal_cd.copy(unit_normal_ab)
@@ -3622,13 +3684,13 @@ export class PathStroker {
 
     }
     bezierCurveTo(pt1: Point, pt2: Point, pt3: Point) {
-        const self=this;
+        const self = this;
         let cubic = [self.prev_pt, pt1, pt2, pt3];
-        let reduction =Array.from({length:3},()=>Point.zero())
+        let reduction = Array.from({ length: 3 }, () => Point.zero())
         let tangent_pt = Point.zero();
-        
-        let reduction_type = checkCubicLinear(cubic,reduction,tangent_pt);
-        if((reduction_type == ReductionType.Point)){
+
+        let reduction_type = checkCubicLinear(cubic, reduction, tangent_pt);
+        if ((reduction_type == ReductionType.Point)) {
             // If the stroke consists of a moveTo followed by a degenerate curve, treat it
             // as if it were followed by a zero-length line. Lines without length
             // can have square and round end caps.
@@ -3636,22 +3698,21 @@ export class PathStroker {
             return;
         }
 
-        if((reduction_type == ReductionType.Line)){
+        if ((reduction_type == ReductionType.Line)) {
             self.lineTo(pt3);
             return;
         }
 
-        if( ReductionType.Degenerate <= reduction_type
-            && ReductionType.Degenerate3 >= reduction_type)
-        {
+        if (ReductionType.Degenerate <= reduction_type
+            && ReductionType.Degenerate3 >= reduction_type) {
             self.lineTo(reduction[0]);
             let save_joiner = self.joiner;
             self.joiner = lineJoinRound;
-            if((ReductionType.Degenerate2 <= reduction_type)){
+            if ((ReductionType.Degenerate2 <= reduction_type)) {
                 self.lineTo(reduction[1]);
             }
 
-            if((ReductionType.Degenerate3 == reduction_type)){
+            if ((ReductionType.Degenerate3 == reduction_type)) {
                 self.lineTo(reduction[2]);
             }
 
@@ -3660,56 +3721,55 @@ export class PathStroker {
             return;
         }
 
-      //  debug_assert_eq!(reduction_type, ReductionType.Quad);
+        //  debug_assert_eq!(reduction_type, ReductionType.Quad);
         let normal_ab = Point.zero();
         let unit_ab = Point.zero();
         let normal_cd = Point.zero();
         let unit_cd = Point.zero();
-        if((!self.preJoinTo(tangent_pt, false,normal_ab, unit_ab))){
+        if ((!self.preJoinTo(tangent_pt, false, normal_ab, unit_ab))) {
             self.lineTo(pt3);
             return;
         }
 
-        let  t_values =new Array(3).fill(0.5);
-        t_values=find_cubic_inflections(cubic,t_values);
-        let  last_t = 0;
-        for(let index=0,len=t_values.length;index<=len;index++) {
-            let next_t = Number.isFinite(t_values[index])?t_values[index]:1
-            
+        let t_values = new Array(3).fill(0.5);
+        t_values = find_cubic_inflections(cubic, t_values);
+        let last_t = 0;
+        for (let index = 0, len = t_values.length; index <= len; index++) {
+            let next_t = Number.isFinite(t_values[index]) ? t_values[index] : 1
 
-            let  quad_points = QuadConstruct.default();
+
+            let quad_points = QuadConstruct.default();
             self.initQuad(StrokeType.Outer, last_t, next_t, quad_points);
             self.cubicStroke(cubic, quad_points);
             self.initQuad(StrokeType.Inner, last_t, next_t, quad_points);
             self.cubicStroke(cubic, quad_points);
             last_t = next_t;
         }
-        let cusp=find_cubic_cusp(cubic)
-        if((cusp)){
+        let cusp = find_cubic_cusp(cubic)
+        if ((cusp)) {
             let cusp_loc = eval_cubic_pos_at(cubic, cusp);
             self.cusper.addCircle(cusp_loc.x, cusp_loc.y, self.radius);
         }
 
         // emit the join even if one stroke succeeded but the last one failed
         // this avoids reversing an inner stroke with a partial path followed by another moveto
-        self.setCubicEndNormal(cubic, normal_ab, unit_ab,normal_cd,unit_cd);
+        self.setCubicEndNormal(cubic, normal_ab, unit_ab, normal_cd, unit_cd);
 
         self.postJoinTo(pt3, normal_cd, unit_cd);
     }
-    
-    cubicStroke(cubic:Point[], quad_points: QuadConstruct):boolean {
-        const self=this;
-        if((!self.found_tangents)){
+
+    cubicStroke(cubic: Point[], quad_points: QuadConstruct): boolean {
+        const self = this;
+        if ((!self.found_tangents)) {
             let result_type = self.tangentsMeet(cubic, quad_points);
-            if((result_type != ResultType.Quad)){
+            if ((result_type != ResultType.Quad)) {
                 let ok = pointsWithinDist(
                     quad_points.quad[0],
                     quad_points.quad[2],
                     self.inv_res_scale,
                 );
-                if((result_type == ResultType.Degenerate || ok)
-                    && self.cubicMidOnLine(cubic, quad_points))
-                {
+                if ((result_type == ResultType.Degenerate || ok)
+                    && self.cubicMidOnLine(cubic, quad_points)) {
                     self.addDegenerateLine(quad_points);
                     return true;
                 }
@@ -3718,11 +3778,11 @@ export class PathStroker {
             }
         }
 
-        if((self.found_tangents)){
+        if ((self.found_tangents)) {
             let result_type = self.compareQuadCubic(cubic, quad_points);
-            if((result_type == ResultType.Quad)){
+            if ((result_type == ResultType.Quad)) {
                 let stroke = quad_points.quad;
-                if((self.stroke_type == StrokeType.Outer)){
+                if ((self.stroke_type == StrokeType.Outer)) {
                     self.outer
                         .quadraticCurveTo(stroke[1].x, stroke[1].y, stroke[2].x, stroke[2].y);
                 } else {
@@ -3733,70 +3793,70 @@ export class PathStroker {
                 return true;
             }
 
-            if((result_type == ResultType.Degenerate)){
-                if((!quad_points.opposite_tangents)){
+            if ((result_type == ResultType.Degenerate)) {
+                if ((!quad_points.opposite_tangents)) {
                     self.addDegenerateLine(quad_points);
                     return true;
                 }
             }
         }
 
-        if((!Number.isFinite(quad_points.quad[2].x) || !Number.isFinite(quad_points.quad[2].x))){
+        if ((!Number.isFinite(quad_points.quad[2].x) || !Number.isFinite(quad_points.quad[2].x))) {
             return false; // just abort if projected quad isn't representable
         }
 
         self.recursion_depth += 1;
 
-        if((self.recursion_depth > RECURSIVE_LIMITS[Number(self.found_tangents)])){
+        if ((self.recursion_depth > RECURSIVE_LIMITS[Number(self.found_tangents)])) {
             return false; // just abort if projected quad isn't representable
         }
 
-        let  half = QuadConstruct.default();
-        if((!half.initWithStart(quad_points))){
+        let half = QuadConstruct.default();
+        if ((!half.initWithStart(quad_points))) {
             self.addDegenerateLine(quad_points);
             self.recursion_depth -= 1;
             return true;
         }
 
-        if((!self.cubicStroke(cubic,half))){
+        if ((!self.cubicStroke(cubic, half))) {
             return false;
         }
 
-        if((!half.initWithEnd(quad_points))){
+        if ((!half.initWithEnd(quad_points))) {
             self.addDegenerateLine(quad_points);
             self.recursion_depth -= 1;
             return true;
         }
 
-        if((!self.cubicStroke(cubic,half))){
+        if ((!self.cubicStroke(cubic, half))) {
             return false;
         }
 
         self.recursion_depth -= 1;
         return true
     }
-     cubicMidOnLine(cubic:Point[], quad_points: QuadConstruct):boolean {
-        let self=this
-        let  stroke_mid = Point.zero();
-        self.cubicQuadMid(cubic, quad_points,  stroke_mid);
+    cubicMidOnLine(cubic: Point[], quad_points: QuadConstruct): boolean {
+        let self = this
+        let stroke_mid = Point.zero();
+        self.cubicQuadMid(cubic, quad_points, stroke_mid);
         let dist = ptToLine(stroke_mid, quad_points.quad[0], quad_points.quad[2]);
-       return dist < self.inv_res_scale_squared
+        return dist < self.inv_res_scale_squared
     }
 
-     cubicQuadMid(cubic:Point[], quad_points: QuadConstruct, mid: Point) {
-        let  cubic_mid_pt = Point.zero();
+    cubicQuadMid(cubic: Point[], quad_points: QuadConstruct, mid: Point) {
+        let cubic_mid_pt = Point.zero();
         this.cubicPerpRay(cubic, quad_points.mid_t, cubic_mid_pt, mid);
     }
-    
+
     compareQuadCubic(
         cubic: Point[],
-        quad_points:QuadConstruct,
-    ):ResultType {
-        let self=this
+        quad_points: QuadConstruct,
+    ): ResultType {
+        let self = this
         // get the quadratic approximation of the stroke
         self.cubicQuadEnds(cubic, quad_points);
         let result_type = self.intersectRay(IntersectRayType.CtrlPt, quad_points);
-        if(result_type != ResultType.Quad){
+        if (result_type != ResultType.Quad) {
             return result_type;
         }
 
@@ -3804,87 +3864,87 @@ export class PathStroker {
         // points near midpoint on quad, midpoint on cubic
         let ray0 = Point.zero();
         let ray1 = Point.zero();
-        self.cubicPerpRay(cubic, quad_points.mid_t,ray1,ray0);
-        return self.strokeCloseEnough(quad_points.quad.slice(),[ray0, ray1], quad_points)
+        self.cubicPerpRay(cubic, quad_points.mid_t, ray1, ray0);
+        return self.strokeCloseEnough(quad_points.quad.slice(), [ray0, ray1], quad_points)
     }
-    
+
     // Given a cubic and a t range, find the start and end if they haven't been found already.
-    cubicQuadEnds(cubic: Point[], quad_points:QuadConstruct) {
-        const self=this;
-        if(!quad_points.start_set){
+    cubicQuadEnds(cubic: Point[], quad_points: QuadConstruct) {
+        const self = this;
+        if (!quad_points.start_set) {
             let cubic_start_pt = Point.zero();
             self.cubicPerpRay(
                 cubic,
                 quad_points.start_t,
-               cubic_start_pt,
-               quad_points.quad[0],
-               quad_points.tangent_start,
+                cubic_start_pt,
+                quad_points.quad[0],
+                quad_points.tangent_start,
             );
             quad_points.start_set = true;
         }
 
-        if(!quad_points.end_set){
+        if (!quad_points.end_set) {
             let cubic_end_pt = Point.zero();
             self.cubicPerpRay(
                 cubic,
                 quad_points.end_t,
-               cubic_end_pt,
-               quad_points.quad[2],
-            quad_points.tangent_end,
+                cubic_end_pt,
+                quad_points.quad[2],
+                quad_points.tangent_end,
             );
             quad_points.end_set = true;
         }
     }
-    tangentsMeet(cubic: Point[], quad_points:QuadConstruct):ResultType {
+    tangentsMeet(cubic: Point[], quad_points: QuadConstruct): ResultType {
         this.cubicQuadEnds(cubic, quad_points);
         return this.intersectRay(IntersectRayType.ResultType, quad_points)
     }
-     // Given a cubic and t, return the point on curve,
+    // Given a cubic and t, return the point on curve,
     // its perpendicular, and the perpendicular tangent.
     cubicPerpRay(
         cubic: Point[],
         t: number,
-        t_pt:  Point,
-        on_pt:  Point,
+        t_pt: Point,
+        on_pt: Point,
         tangent?: Point
     ) {
-        let self=this
-     
+        let self = this
+
         //*t_pt = path_geometry.eval_cubic_pos_at(cubic, t);
         t_pt.copy(eval_cubic_pos_at(cubic, t))
         let dxy = eval_cubic_tangent_at(cubic, t);
 
-        let chopped = Array.from({length:7},()=>Point.zero());
-        if(dxy.x == 0.0 && dxy.y == 0.0){
-            let c_points:Point[] = cubic;
-            if(scalarNearlyZero(t)){
+        let chopped = Array.from({ length: 7 }, () => Point.zero());
+        if (dxy.x == 0.0 && dxy.y == 0.0) {
+            let c_points: Point[] = cubic;
+            if (scalarNearlyZero(t)) {
                 dxy = cubic[2].clone().sub(cubic[0]);
-            } else if(scalarNearlyZero(1.0 - t)){
+            } else if (scalarNearlyZero(1.0 - t)) {
                 dxy = cubic[3].clone().sub(cubic[1]);
             } else {
                 // If the cubic inflection falls on the cusp, subdivide the cubic
                 // to find the tangent at that point.
                 //
                 // Unwrap never fails, because we already checked that `t` is not 0/1,;
-   
-                chop_cubic_at2(cubic, t,chopped);
+
+                chop_cubic_at2(cubic, t, chopped);
                 dxy = chopped[3].clone().sub(chopped[2]);
-                if(dxy.x == 0.0 && dxy.y == 0.0){
-                    dxy = chopped[3].clone().sub( chopped[1]);
+                if (dxy.x == 0.0 && dxy.y == 0.0) {
+                    dxy = chopped[3].clone().sub(chopped[1]);
                     c_points = chopped;
                 }
             }
 
-            if(dxy.x == 0.0 && dxy.y == 0.0){
+            if (dxy.x == 0.0 && dxy.y == 0.0) {
                 dxy = c_points[3].clone().sub(c_points[0]);
             }
         }
 
-        self.setRayPoints(t_pt,dxy, on_pt, tangent);
+        self.setRayPoints(t_pt, dxy, on_pt, tangent);
     }
 
- 
-    
+
+
     stroke(path: PathBuilder, paint: Paint) {
         return this.strokeInner(path, paint.strokeWidth, paint.miterLimit, paint.lineCap, paint.lineJoin, this.res_scale)
     }

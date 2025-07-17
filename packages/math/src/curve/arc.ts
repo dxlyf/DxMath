@@ -1,5 +1,5 @@
 
-import { IVector2 } from 'math/math'
+import { IVector2,Vector2 } from 'math/math'
 import {arcSegmentToCubic} from './arc_to_bezier'
 const dot = (u:number[], v:number[]) => {
     return u[0] * v[0] + u[1] * v[1]
@@ -14,8 +14,19 @@ const angleTo = (u:number[], v:number[]) => {
 }
 //https://www.w3.org/TR/SVG/implnote.html#ArcConversionCenterToEndpoint
 
-// 中心点坐标转终点坐标
 
+/**
+ * 中心点坐标转终点坐标
+ * @param cx 中心点x坐标。
+ * @param cy 中心点y坐标。
+ * @param rx x轴方向的半径长度。
+ * @param ry y轴方向的半径长度。
+ * @param phi 椭圆的旋转角度，以弧度为单位。默认为0。
+ * @param startAngle 起始角度，以弧度为单位。默认为0。
+ * @param deltaAngle 终止角度，以弧度为单位。默认为2π（即一个完整的圆）。
+
+ * @returns 
+ */
 export function center_to_endpoint(cx: number, cy: number, rx: number, ry: number, phi: number, startAngle: number, deltaAngle: number) {
 
     let PI2 = Math.PI * 2
@@ -46,7 +57,19 @@ export function center_to_endpoint(cx: number, cy: number, rx: number, ry: numbe
 }
 
 // 可借鉴:scripts\graphics\3DGraphics\three.js\r171\examples\jsm\loaders\SVGLoader.js
-// 
+/**
+ * 端点坐标转中心点坐标
+ * @param x1 起点坐标x
+ * @param y1 起点坐标y
+ * @param x2 终点坐标x
+ * @param y2 终点坐标y
+ * @param fa 大弧标志，如果选择跨度小于或等于 180 度的弧，则为 0，如果选择跨度大于 180 度的弧，则为 1。
+ * @param fs 扫描标志，如果连接中心和圆弧的线扫描的角度减小，则为 0，如果扫描的角度增加，则为 1。
+ * @param rx 椭圆弧的x轴半径。
+ * @param ry ry 椭圆弧的y轴半径。
+ * @param phi 椭圆的旋转角度，以弧度为单位。默认为0。
+ * @returns 
+ */
 export function endpoint_to_center(x1: number, y1: number, x2: number, y2: number, fa: boolean | number, fs: boolean | number, rx: number, ry: number, phi: number) {
     let phi_cos = Math.cos(phi), phi_sin = Math.sin(phi)
     let xp1 = phi_cos * (x1 - x2) / 2 + phi_sin * (y1 - y2) / 2
@@ -994,3 +1017,56 @@ export function  ellipticalArcToCubic(x1: number, y1: number, x2: number, y2: nu
 }
 
 
+/**
+ * 辅助函数：计算椭圆上给定角度 theta（弧度）处的点，
+ * 参数：中心(cx, cy)，半径(rx, ry)，旋转角(rotation)（弧度）
+ */
+export function pointOnEllipse(cx: number, cy: number, rx: number, ry: number, rotation: number, theta: number): Point {
+    const cosRot = Math.cos(rotation);
+    const sinRot = Math.sin(rotation);
+    const cosT = Math.cos(theta);
+    const sinT = Math.sin(theta);
+    // cos(α-β)=cosα·cosβ+sinα·sinβ
+    // cos(α+β)=cosα·cosβ-sinα·sinβ
+    //sin(α±β)=sinα·cosβ±cosα·sinβ
+    // tan(α+β)=(tanα+tanβ)/(1-tanα·tanβ)
+    // tan(α-β)=(tanα-tanβ)/(1+tanα·tanβ)
+    const x = cx + rx * cosRot * cosT - ry * sinRot * sinT;
+    const y = cy + rx * sinRot * cosT + ry * cosRot * sinT;
+    return Vector2.create(x, y);
+}
+
+/**
+ * 辅助函数：将椭圆弧的一段（从 theta1 到 theta2）转换为一个三次贝塞尔曲线段
+ * 返回一个长度为6的数组：[cp1x, cp1y, cp2x, cp2y, endX, endY]
+ */
+export function ellipticalArcSegmentToCubic(
+    cx: number, cy: number, rx: number, ry: number,
+    rotation: number, theta1: number, theta2: number
+): number[] {
+    const delta = theta2 - theta1;
+    const t = Math.tan(delta / 4);
+    const kappa = (4 / 3) * t; // 控制点距离比例
+    // 起始点
+    const p0 = pointOnEllipse(cx, cy, rx, ry, rotation, theta1);
+    // 结束点
+    const p3 = pointOnEllipse(cx, cy, rx, ry, rotation, theta2);
+    // 求出起始角处的导数向量（未旋转的）
+    const sinT1 = Math.sin(theta1), cosT1 = Math.cos(theta1);
+    const dx1 = -rx * sinT1, dy1 = ry * cosT1;
+    // 求出结束角处的导数向量（未旋转的）
+    const sinT2 = Math.sin(theta2), cosT2 = Math.cos(theta2);
+    const dx2 = -rx * sinT2, dy2 = ry * cosT2;
+    // 将导数向量旋转（旋转角 rotation）
+    const cosRot = Math.cos(rotation), sinRot = Math.sin(rotation);
+    const d1x = dx1 * cosRot - dy1 * sinRot;
+    const d1y = dx1 * sinRot + dy1 * cosRot;
+    const d2x = dx2 * cosRot - dy2 * sinRot;
+    const d2y = dx2 * sinRot + dy2 * cosRot;
+    // 控制点
+    const cp1x = p0.x + kappa * d1x;
+    const cp1y = p0.y + kappa * d1y;
+    const cp2x = p3.x - kappa * d2x;
+    const cp2y = p3.y - kappa * d2y;
+    return [cp1x, cp1y, cp2x, cp2y, p3.x, p3.y];
+}

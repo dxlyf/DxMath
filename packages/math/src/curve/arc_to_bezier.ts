@@ -82,12 +82,11 @@ function approxUnitArc(ang1: number, ang2: number) {
 
 // https://www.w3.org/TR/SVG/implnote.html#ArcConversionCenterToEndpoint
 export function centerToEndPoint(cx: number, cy: number, rx: number, ry: number, xAxisRotateAngle: number, startAngle: number, sweepAngle: number) {
-    xAxisRotateAngle = xAxisRotateAngle * Math.PI / 180
 
-    const { x: x1, y: y1 } = pointOnEllipse(cx, cy, rx, ry, xAxisRotateAngle, (startAngle * Math.PI / 180))
-    const { x: x2, y: y2 } = pointOnEllipse(cx, cy, rx, ry, xAxisRotateAngle, (startAngle + sweepAngle) * Math.PI / 180)
+    const { x: x1, y: y1 } = pointOnEllipse(cx, cy, rx, ry, xAxisRotateAngle, (startAngle))
+    const { x: x2, y: y2 } = pointOnEllipse(cx, cy, rx, ry, xAxisRotateAngle, (startAngle + sweepAngle))
 
-    const fa = Math.abs(sweepAngle) > 180 ? 1 : 0
+    const fa = Math.abs(sweepAngle) > Math.PI ? 1 : 0
     const fs = sweepAngle > 0 ? 1 : 0
     return {
         x1,
@@ -102,7 +101,7 @@ export function centerToEndPoint(cx: number, cy: number, rx: number, ry: number,
 // /https://www.w3.org/TR/SVG/implnote.html#ArcConversionEndpointToCenter
 export function endPointToCenter(x1: number, y1: number, x2: number, y2: number, rx: number, ry: number, xAxisRotateAngle: number, fa: boolean | number, fs: boolean | number) {
 
-    const phi = xAxisRotateAngle * Math.PI / 180
+    const phi = xAxisRotateAngle
 
     // 计算( x 1 ′,  y 1 ′)
     let { x: x1p, y: y1p } = rotatePoint((x1 - x2) / 2, (y1 - y2) / 2, -phi);
@@ -378,8 +377,74 @@ export function ellipseArcToCubic(
 
     return segments;
 }
+/**
+ * 四分之一椭圆弧转贝塞尔曲线段
 
+ * @param cx 
+ * @param cy 
+ * @param rx 
+ * @param ry 
+ * @param theta1 
+ * @param theta2 
+ */
+export function quarterArcToCubicBezier(cx: number, cy: number, rx: number, ry: number, xAxisRotation: number, theta1: number, theta2: number) {
 
+    const deltaAngle = theta2 - theta1;
+    const kappa = 4 / 3 * Math.tan(deltaAngle / 4);
+
+    let p0 = Vector2.fromPoint(pointOnEllipse(cx, cy, rx, ry, 0, theta1))
+    const cp1 = Vector2.default()
+    const cp2 = Vector2.default()
+    let p3 = Vector2.fromPoint(pointOnEllipse(cx, cy, rx, ry, 0, theta2))
+
+    // 乘以导数
+    cp1.setXY(rx, ry).scale(-Math.sin(theta1), Math.cos(theta1)).multiplyScalar(kappa)
+    cp2.setXY(rx, ry).scale(-Math.sin(theta2), Math.cos(theta2)).multiplyScalar(kappa)
+
+    cp1.setXY(p0.x + cp1.x, p0.y + cp1.y)
+    cp2.setXY(p3.x - cp2.x, p3.y - cp2.y)
+
+    p0.rotateAround(Vector2.create(cx, cy), xAxisRotation)
+    cp1.rotateAround(Vector2.create(cx, cy), xAxisRotation)
+    cp2.rotateAround(Vector2.create(cx, cy), xAxisRotation)
+    p3.rotateAround(Vector2.create(cx, cy), xAxisRotation)
+    return [p0.x, p0.y, cp1.x, cp1.y, cp2.x, cp2.y, p3.x, p3.y]
+}
+
+/**
+ * 四分之一椭圆弧转贝塞尔曲线段
+
+ * @param cx 
+ * @param cy 
+ * @param rx 
+ * @param ry 
+ * @param theta1 
+ * @param theta2 
+ */
+export function quarterArcToCubicBezier2(cx: number, cy: number, rx: number, ry: number, xAxisRotation: number, theta1: number, theta2: number) {
+
+    const deltaAngle = theta2 - theta1;
+    const kappa = 4 / 3 * Math.tan(deltaAngle / 4);
+    // 单位圆
+    const p0 = Vector2.fromRadian(theta1)
+    const p3 = Vector2.fromRadian(theta2)
+    const p1 = Vector2.fromPoint(p0)
+    const p2 = Vector2.fromPoint(p3)
+  
+    // 根据椭圆弧公式与贝赛尔曲线公式，推导楕圆B'(0)=R'(0)
+    // 3(p1-p0)=delta*(-sin*rx,cos*ry), p1=p0-(delta/3)*(-sin*rx,cos*ry)  kappa=(delta/3) 
+    // kappa= 4 / 3 * Math.tan(deltaAngle / 4);更精确
+
+    p1.translate(-kappa * p0.y, kappa * p0.x);
+    p2.translate(kappa  * p3.y, -kappa * p3.x);
+
+    p0.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)
+    p1.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)
+    p2.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)
+    p3.scale(rx,ry).rotate(xAxisRotation).translate(cx,cy)
+
+    return [p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y]
+}
 
 /**
  * 辅助函数：计算椭圆上给定角度 theta（弧度）处的点，
@@ -447,6 +512,7 @@ export function arcToCubicCurves(
     _rx: number, _ry: number, angle: number,
     largeArcFlag: number, sweepFlag: number
 ): number[][] {
+
     const { cx, cy, rx, ry, deltaTheta, theta1 } = endPointToCenter(x1, y1, x2, y2, _rx, _ry, angle, largeArcFlag, sweepFlag)
 
     // 将弧划分为若干段，每段弧跨度不超过 PI/2
@@ -555,7 +621,7 @@ export function ellipseArc(x1: number, y1: number, x2: number, y2: number,
 }
 
 
-export function ellipseArc2(x1: number, y1: number, x2: number, y2: number,
+export function ellipseArc2(this: any, x1: number, y1: number, x2: number, y2: number,
     _rx: number, _ry: number, xAxisRotation: number,
     largeArcFlag: number, sweepFlag: number) {
     const { cx, cy, rx, ry, theta1, deltaTheta } = endPointToCenter(x1, y1, x2, y2, _rx, _ry, xAxisRotation, largeArcFlag, sweepFlag)
@@ -567,7 +633,7 @@ export function ellipseArc2(x1: number, y1: number, x2: number, y2: number,
     const pointTransform = Matrix2D.fromRotate(xAxisRotation)
     pointTransform.preScale(rx, ry)
 
-   // const beiers = ellipseArcToCubicBezier(x1, y1, x2, y2, _rx, _ry, xAxisRotation, largeArcFlag, sweepFlag)
+    // const beiers = ellipseArcToCubicBezier(x1, y1, x2, y2, _rx, _ry, xAxisRotation, largeArcFlag, sweepFlag)
     // for(let b of beiers){
     //    this.bezierCurveTo(b[2],b[3],b[4],b[5],b[6],b[7])
     // }
@@ -597,9 +663,9 @@ export function ellipseArc2(x1: number, y1: number, x2: number, y2: number,
         // p1.applyMatrix2D(pointTransform).translate(cx,cy)
         // p2.applyMatrix2D(pointTransform).translate(cx,cy)
         // p3.applyMatrix2D(pointTransform).translate(cx,cy)
-        //this.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y)
+        this.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y)
         startTheta = endTheta
     }
 
-   // return this
+    // return this
 }
