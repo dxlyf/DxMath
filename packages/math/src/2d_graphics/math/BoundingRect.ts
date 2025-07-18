@@ -6,6 +6,9 @@ export class BoundingRect {
     static default(){
         return new this(Vector2.create(Infinity, Infinity), Vector2.create(-Infinity, -Infinity))
     }
+    static empty(){
+        return this.fromLTRB(0,0,0,0)
+    }
     static fromXYWH(x: number, y: number, width: number, height: number) {
         return this.fromLTRB(x, y, x + width, y + height)
     }
@@ -23,6 +26,12 @@ export class BoundingRect {
     }
     get cy() {
         return (this.min.y + this.max.y) * 0.5
+    }
+    get x(){
+        return this.min.x
+    }
+    get y(){
+        return this.min.y
     }
     get width() {
         return this.max.x - this.min.x
@@ -103,6 +112,15 @@ export class BoundingRect {
     intersectRect(other: BoundingRect) {
         return !(other.min.x > this.max.x || other.max.x < this.min.x || other.min.y > this.max.y || other.max.y < this.min.y)
     }
+    setFromVertices(vertices:number[]){
+        this.makeEmpty()
+        for(let i=0;i<vertices.length;i+=2){
+            const x = vertices[i]
+            const y = vertices[i+1]
+            this.expandByXY(x,y)
+        }
+        return this
+    } 
     setFromPoints(points: Vector2[]) {
         this.makeEmpty();
         for (let i = 0, il = points.length; i < il; i++) {
@@ -110,11 +128,15 @@ export class BoundingRect {
         }
         return this;
     }
+    expandByXY(x:number,y:number){
+        this.min.setXY(Math.min(x,this.min.x),Math.min(y,this.min.y));
+        this.max.setXY(Math.max(x,this.max.x),Math.max(y,this.max.y));
+        return this;
+    }
     expandByPoint(point: Vector2) {
         this.min.min(point);
         this.max.max(point);
         return this;
-
     }
     union(other: BoundingRect) {
         this.min.min(other.min)
@@ -145,6 +167,9 @@ export class BoundingRect {
         let max = this.max
         m.mapPoint(min)
         m.mapPoint(max)
+    }
+    getBounds(){
+
     }
     equals(other: BoundingRect) {
         return this.min.equalsEpsilon(other.min) && this.max.equalsEpsilon(other.max)

@@ -422,7 +422,7 @@ function eval_cubic_2ndDerivative(src: Point[], t: number): Point {
     return to_point(A.mulScalar(t).add(B));
 }
 
-function SkEvalCubicAt(src: Point[], t: number, loc: Point, tangent: Point, curvature: Point) {
+function SkEvalCubicAt(src: Point[], t: number, loc: Point|null, tangent: Point|null, curvature: Point|null) {
 
     if (loc) {
         loc = to_point(new SkCubicCoeff(src).eval(FloatPoint.splat(t)));
@@ -1900,4 +1900,12 @@ export {
     SkChopCubicAt_4,
     SkChopCubicAt_5,
     SkChopQuadAt,
+    SkEvalQuadAt,
+    SkEvalCubicAt,
+    SkChopCubicAtHalf,
+    SkChopCubicAtXExtrema,
+    SkChopCubicAtYExtrema,
+    SkChopQuadAtYExtrema,
+    SkEvalQuadTangentAt
+    
 }

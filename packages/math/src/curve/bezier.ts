@@ -976,6 +976,11 @@ function pointOnSegmentDistance(pt: Vector2, a: Vector2, b: Vector2) {
     return ap.distanceToSquared(ab.multiplyScalar(t))
 }
 // 点到直线的距离（不带符号）
+/**
+ * 直线方程：Ax+By+C=0
+   点:p0
+   |Ap0.x+Bp0.y+C|/sqrt(A^2+B^2)
+*/
 function pointOnLineDistance(pt: Vector2, a: Vector2, b: Vector2) {
     const ab = b.clone().sub(a)
   //  const ap = pt.clone().sub(a)

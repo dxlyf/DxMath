@@ -1,6 +1,6 @@
 
 export type Vector2Like = number[] | Float32Array | Vector2
-
+export type Vector2Point={x:number, y:number}
 
 /**
  * 设置向量的x和y坐标
@@ -443,6 +443,15 @@ export class Vector2 extends Float32Array {
     clone() { // 复制向量，返回新的向量
         return (this.constructor as unknown as typeof Vector2).create(this[0], this[1]); // 返回新的向量
     }
+    set(array: ArrayLike<number>, offset?: number):this
+    set(x:number, y: number):this
+    set(x:number|ArrayLike<number>,y?:number){
+        if(Array.isArray(x)){
+            super.set(x, y)
+            return this
+        }
+        return setXY(this, x as number, y as number); 
+    }
     setXY(x: number, y: number) { // 向量加法，传入另一个向量，返回新的向量
         return setXY(this, x, y); // 返回新的向量
     }
@@ -455,8 +464,14 @@ export class Vector2 extends Float32Array {
     add(other: Vector2Like) { // 向量加法，传入另一个向量，返回新的向量
         return add(this, this, other) as Vector2; // 返回新的向量
     }
+    addVectors(a: Vector2Like, b: Vector2Like) { // 向量减法，传入两个向量，返回新的向量
+        return add(this, a, b) as Vector2; // 返回新的向量
+    }
     sub(other: Vector2Like) { // 向量减法，传入另一个向量，返回新的向量
         return subtract(this, this, other) as Vector2; // 返回新的向量
+    }
+    subtractVectors(a: Vector2Like, b: Vector2Like) { // 向量减法，传入两个向量，返回新的向量
+        return subtract(this, a, b) as Vector2; // 返回新的向量
     }
     mul(other: Vector2Like) { // 向量乘法，传入另一个向量，返回新的向量
         return multiply(this, this, other); // 返回新的向量
@@ -568,6 +583,20 @@ export class Vector2 extends Float32Array {
     }
     equalsEpsilon(other: Vector2Like, epsilon: number = 1e-6) { // 向量相等，传入另一个向量和一个标量，返回一个布尔值
         return Math.abs(this[0] - other[0]) < epsilon && Math.abs(this[1] - other[1]) < epsilon; // 返回布尔    
+    }
+    toZero( b:Vector2Like){
+        let a=this;
+        if (a[0] + b[0] == a[0]) {
+            b[0] = 0;
+        } else if (a[0] + b[0] == b[0]) {
+            a[0] = 0;
+        }
+        if (a[1] + b[1] == a[1]) {
+            b[1] = 0;
+        } else if (a[1] + b[1] == b[1]) {
+            a[1] = 0;
+        }
+        return this
     }
     toArray() { // 向量转数组，返回一个数组
         return [this[0], this[1]]; // 返回数组

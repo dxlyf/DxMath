@@ -867,8 +867,9 @@ export class PathBuilder {
     addPath() {
 
     }
+    // 扩充内存空间
     incReserve(extraPtCount: number, extraVerbCount?: number) {
-
+       
     }
 
     offset(dx: number, dy: number) {

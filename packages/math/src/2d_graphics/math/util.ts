@@ -37,8 +37,7 @@ export function nCr(n:number,r:number):number{
     if(r > n) return 0;
     let result = 1;
     for(let i = 1;i <= r;i++){
-        result *= (n - i + 1);
-        result /= i;
+        result *= (n - i + 1)/i;
     }
     return result;
 }

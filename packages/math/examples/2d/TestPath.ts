@@ -1,9 +1,10 @@
 
 import { CanvasRenderer } from 'math/2d_graphics/renderer/canvas';
 
-import { PathBuilder } from 'math/2d_graphics/math/PathBuilder';
+import { PathBuilder } from 'math/2d_graphics/math/path/PathBuilder';
 import { SKPath2D } from 'math/skia_path/SKPath2D'
 import { GUI } from 'lil-gui'
+import {pointInPath} from  'math/2d_graphics/math/path/intersection';
 
 
 abstract class TestBase {
@@ -15,7 +16,7 @@ abstract class TestBase {
     abstract draw(ctx: Path2D | PathBuilder): void
     abstract dispose(): void
     abstract buildNativePath(): Path2D
-    abstract buildPathBuilder(): Path2D
+    abstract buildPathBuilder(): PathBuilder
 
 }
 class TestEllipse extends TestBase {
@@ -60,7 +61,7 @@ class TestEllipse extends TestBase {
         const path = new PathBuilder()
 
         this.draw(path)
-        return path.toPath2D()
+        return path
     }
     dispose(): void {
 
@@ -110,7 +111,7 @@ class TestEllipseArc extends TestBase {
 
         path.ellipseArc(this.x0, this.y0, this.x1, this.y1, this.rx, this.ry, this.xRotation / 180 * Math.PI, this.largeArcflag, this.sweepFlag)
 
-        return path.toPath2D()
+        return path
     }
     dispose(): void {
 
@@ -157,7 +158,7 @@ class TestArc extends TestBase {
         const path = new PathBuilder()
 
         this.draw(path)
-        return path.toPath2D()
+        return path
     }
     dispose(): void {
 
@@ -210,7 +211,7 @@ class TestArcTo extends TestBase {
         const path = new PathBuilder()
 
         this.draw(path)
-        return path.toPath2D()
+        return path
     }
     dispose(): void {
 
@@ -265,7 +266,7 @@ class TestRoundRect extends TestBase {
         const path = new PathBuilder()
 
         this.draw(path)
-        return path.toPath2D()
+        return path
     }
     dispose(): void {
 
@@ -286,7 +287,18 @@ export class TestMain {
         document.body.appendChild(renderer.domElement)
         this.renderer = renderer
         const gui = new GUI()
+        renderer.domElement.addEventListener('pointerdown',e=>{
+            let path=this.curExample?.buildPathBuilder()
+            if(path){
+                const x=e.offsetX
+                const y=e.offsetY
+               // console.log('命中11')
+                if(pointInPath(x,y,path,{fillRule:1})){
+                    console.log('命中')
+                }
 
+            }
+        })
         this.gui = gui
         TestMain.examples.forEach(Type => {
             let d = new Type(this)
@@ -297,10 +309,14 @@ export class TestMain {
         this.gui.add(this, 'showPathBuilder').onChange(() => {
             this.refresh()
         })
+        this.gui.add(this, 'showPathBounds').onChange(() => {
+            this.refresh()
+        })
         if (this.examples.size) {
             this.example = Array.from(this.examples.keys())[0]
             this.gui.controllers[0].updateDisplay()
         }
+        
         this.startLoop()
     }
     set example(v) {
@@ -315,6 +331,7 @@ export class TestMain {
         return this.examples.get(this._example)
     }
     showPathBuilder = true
+    showPathBounds=false
 
     initExample(newExampleID: string) {
         if (newExampleID === this._example) return
@@ -360,7 +377,17 @@ export class TestMain {
             if (this.showPathBuilder) {
                 ctx.beginPath()
                 ctx.strokeStyle = 'red'
-                ctx.stroke(this.curExample.buildPathBuilder())
+                let path=this.curExample.buildPathBuilder()
+                ctx.stroke(path.toPath2D())
+
+                if(this.showPathBounds){
+                    const bounds=path.computeTightBounds()
+                    ctx.beginPath()
+                    ctx.strokeStyle = 'green'
+                    ctx.beginPath()
+                    ctx.rect(bounds.x,bounds.y,bounds.width,bounds.height)
+                    ctx.stroke()
+                }
             }
         }
         ctx.restore()
