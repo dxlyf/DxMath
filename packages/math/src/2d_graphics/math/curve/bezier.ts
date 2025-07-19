@@ -224,7 +224,7 @@ function pointOnSegmentDistance(x:number,y:number,x1:number,y1:number,x2:number,
     if(d==0){
         return 0;
     }
-    const t=(px*dx+py*dy)/d;
+    const t=Math.max(0,Math.min(1,(px*dx+py*dy)/d));
     const projX=x1+t*dx;
     const projY=y1+t*dy;
     const dx0=(x-projX)

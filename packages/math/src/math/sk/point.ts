@@ -11,6 +11,9 @@ export class Point {
     static create(x: number, y: number) {
         return new this([x, y])
     }
+    static fromPoint(p:{x:number,y:number}){
+        return this.create(p.x,p.y)
+    }
     static fromXY(x: number, y: number) {
         return this.create(x, y)
     }

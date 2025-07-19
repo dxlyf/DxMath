@@ -1360,7 +1360,14 @@ export class PathBuilder {
 
         // 转换 A 命令为若干个 cubic 贝塞尔曲线段
         let curves = arcToCubicCurves(x1, y1, x2, y2, _rx, _ry, xAxisRotation, largeArcFlag, sweepFlag);
-        for (const curve of curves) {
+        for (const [i,curve] of curves.entries()) {
+            if (i === 0) {
+                if (this.isEmpty) {
+                    this.moveTo(curve[0], curve[1])
+                } else {
+                    this.lineTo(curve[0], curve[1])
+                }
+            }
             this.bezierCurveTo(curve[2], curve[3], curve[4], curve[5], curve[6], curve[7])
         }
     }

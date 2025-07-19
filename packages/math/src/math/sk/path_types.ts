@@ -31,3 +31,15 @@ export enum  PathVerb {
     kCubic,  //!< SkPath::RawIter returns 4 points
     kClose   //!< SkPath::RawIter returns 0 points
 };
+export enum PathIterVerb {
+    kMoveTo = PathVerb.kMove,
+    kLineTo = PathVerb.kLine,
+    kQuadCurveTo = PathVerb.kQuad,
+    kConicTo = PathVerb.kConic,
+    kCubicCurveTo = PathVerb.kCubic,
+    kClose = PathVerb.kClose,
+    kDone = PathVerb.kClose + 1
+}
+export function PathFillType_IsInverse(ft:PathFillType) {
+    return ((ft) & 2) != 0;
+}

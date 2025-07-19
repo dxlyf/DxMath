@@ -8,6 +8,7 @@ import { SkBezierCubic } from "./bezier_cubic";
 import { SkCubics } from "./cubics";
 import { Rect } from "./rect";
 import { Matrix } from "./matrix";
+
 export const kMaxConicToQuadPOW2 = 5
 export const  kMaxConicsForArc = 5
 export enum SkCubicType {
@@ -425,7 +426,7 @@ function eval_cubic_2ndDerivative(src: Point[], t: number): Point {
 function SkEvalCubicAt(src: Point[], t: number, loc: Point|null, tangent: Point|null, curvature: Point|null) {
 
     if (loc) {
-        loc = to_point(new SkCubicCoeff(src).eval(FloatPoint.splat(t)));
+        loc.copy(to_point(new SkCubicCoeff(src).eval(FloatPoint.splat(t))))
     }
     if (tangent) {
         // The derivative equation returns a zero tangent vector when t is 0 or 1, and the
@@ -1329,9 +1330,9 @@ function conic_find_extrema(src: number[], w: number, t: Ref<number>) {
 
     if (1 == roots) {
         t.value = tValues.get(0);
-        return true;
+        return 1;
     }
-    return false;
+    return 0;
 }
 
 // We only interpolate one dimension at a time (the first, at +0, +3, +6).
@@ -1884,6 +1885,67 @@ class SkCubicCoeff {
 };
 
 
+
+/**
+ * 计算二次贝塞尔曲线极值点。
+ * @param src 控制点
+ * @param extremas 极值点
+ * @returns 极值点个数
+ */
+ function SkComputeQuadExtremas(src: Point[], extremas: Point[]) {
+    let ts: number[] = [], tmp: number[] = [];
+    let n = 0
+    if (SkFindQuadExtrema(src[0].x, src[1].x, src[2].x, tmp) > 0) {
+        ts[n] = tmp[0]
+        n++
+    }
+    if (SkFindQuadExtrema(src[0].y, src[1].y, src[2].y, tmp) > 0) {
+        ts[n] = tmp[0]
+        n++
+    }
+    for (let i = 0; i < n; ++i) {
+        extremas[i] = SkEvalQuadAt(src, ts[i])!;
+    }
+    extremas[n] = src[2];
+    return n + 1;
+}
+
+/**
+ *  计算三次贝塞尔曲线极值点。
+ * @param src 控制点数组
+ * @param extremas  极值点数组
+ * @returns  极值点个数
+ */
+ function SkComputeCubicExtremas(src: Point[], extremas: Point[]) {
+    let ts: number[] = [], tmp: number[] = [];
+    let n = 0
+    if (SkFindCubicExtrema(src[0].x, src[1].x, src[2].x, src[3].x, tmp) > 0) {
+        ts[n] = tmp[0]
+        n++
+    }
+    if (SkFindCubicExtrema(src[0].y, src[1].y, src[2].y, src[3].y, tmp) > 0) {
+        ts[n] = tmp[0]
+        n++
+    }
+    for (let i = 0; i < n; ++i) {
+        extremas[i]=extremas[i]||Point.default()
+        SkEvalCubicAt(src, ts[i], extremas[i], null, null);
+    }
+    extremas[n] = src[3];
+    return n + 1;
+}
+function SkComputeConicExtremas(src: Point[],w:number, extremas: Point[])  {
+    let conic=new SkConic([src[0], src[1], src[2]], w);
+    let ts=[Ref.from(0),Ref.from(0)]
+    let n  = conic.findXExtrema(ts[0]);
+        n += conic.findYExtrema(ts[1]);
+
+    for (let i = 0; i < n; ++i) {
+        extremas[i] = conic.evalAt(ts[i].value);
+    }
+    extremas[n] = src[2];
+    return n + 1;
+}
 export {
     SkConic,
     SkFindCubicExtrema,
@@ -1906,6 +1968,9 @@ export {
     SkChopCubicAtXExtrema,
     SkChopCubicAtYExtrema,
     SkChopQuadAtYExtrema,
-    SkEvalQuadTangentAt
+    SkEvalQuadTangentAt,
+    SkComputeQuadExtremas,
+    SkComputeCubicExtremas,
+    SkComputeConicExtremas
     
 }

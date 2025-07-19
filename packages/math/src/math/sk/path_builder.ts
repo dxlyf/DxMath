@@ -1,14 +1,15 @@
 // @ts-ignore
 
 import { RRect } from "./rrect";
-import { kMaxConicsForArc, SkConic, SkRotationDirection } from "./geometry";
+import { kMaxConicsForArc, SkComputeConicExtremas, SkComputeCubicExtremas, SkComputeQuadExtremas, SkConic, SkRotationDirection } from "./geometry";
 import { Matrix } from "./matrix";
-import { PathDirection, PathFillType, PathSegmentMask, PathVerb } from "./path_types";
+import { PathDirection, PathFillType,PathFillType_IsInverse, PathIterVerb, PathSegmentMask, PathVerb } from "./path_types";
 import { Point } from "./point";
 import { Rect } from "./rect";
-import { SK_ScalarHalf, SK_ScalarPI, SK_ScalarRoot2Over2, SkDegreesToRadians, SkDoubleToScalar, SkIntToScalar, SkScalarAbs, SkScalarATan2, SkScalarCeilToInt, SkScalarCos, SkScalarCosSnapToZero, SkScalarFloorToScalar, SkScalarHalf, SkScalarIsFinite, SkScalarNearlyEqual, SkScalarNearlyZero, SkScalarRoundToScalar, SkScalarSin, SkScalarSinSnapToZero, SkScalarSqrt, SkScalarTan } from "./scalar";
-import { Ref, copysign,isFinite} from "./util";
-
+import { SK_ScalarHalf, SK_ScalarPI, SK_ScalarRoot2Over2, SkDegreesToRadians, SkDoubleToScalar, SkIntToScalar, SkScalarAbs, SkScalarATan2, SkScalarCeilToInt, SkScalarCos, SkScalarCosSnapToZero, SkScalarFloorToScalar, SkScalarHalf, SkScalarIsFinite, SkScalarNearlyEqual, SkScalarNearlyZero, SkScalarRoundToScalar, SkScalarSignAsInt, SkScalarSin, SkScalarSinSnapToZero, SkScalarSqrt, SkScalarTan } from "./scalar";
+import { FloatPoint, Ref, copysign,isFinite} from "./util";
+import {PathIter} from './path_iter'
+import { tangent_cubic, tangent_line, tangent_quad, winding_cubic, winding_line, winding_quad } from "./path_intersection";
 enum IsA {
     kIsA_JustMoves,     // we only have 0 or more moves
     kIsA_MoreThanMoves, // we have verbs other than just move
@@ -116,7 +117,7 @@ export class PathBuilder {
 
     fIsVolatile: boolean = false;
 
-    fSegmentMask: number = 0
+    fSegmentMask: number = PathSegmentMask.kLine_SkPathSegmentMask
     fLastMovePoint = Point.zero();
     fLastMoveIndex: number = -1; // only needed until SkPath is immutable
     fNeedsMoveVerb: boolean = true;
@@ -126,6 +127,15 @@ export class PathBuilder {
     fIsAStart: number = -1;     // tracks direction iff fIsA is not unknown
     fIsACCW = false;  // tracks direction iff fIsA is not unknown
 
+    getFillType(){
+        return this.fFillType;
+    }
+     isInverseFillType()  { 
+        return PathFillType_IsInverse(this.getFillType());
+     }
+     getSegmentMasks(){
+        return this.fSegmentMask
+     }
     // constructor()
     // constructor(fillType:PathFillType)
     // constructor(path:any)
@@ -141,55 +151,94 @@ export class PathBuilder {
     fromPath(path: any) {
 
     }
+    // 忽略第一个轮廓的最后一个点
+     reversePathTo(src:PathBuilder) {
+        if(src.fVerbs.length==0) return this;
+        const  verbsBegin = 0;
+        let  verbsEnd=src.countVerbs()
+        const  verbs =src.fVerbs
+        const pts = src.fPts
+        let ptsIndex=pts.length-1
+        const conicWeights = src.fConicWeights
+        let conicWeightsIndex=src.fConicWeights.length
 
+        while (verbsEnd > verbsBegin) {
+            let v = verbs[--verbsEnd];
+            ptsIndex-= PtsInVerb(v);
+            switch (v) {
+                case PathVerb.kMove:
+                   return this;
+                case PathVerb.kLine:
+                    this.lineTo(pts[ptsIndex]);
+                    break;
+                case PathVerb.kQuad:
+                    this.quadTo(pts[ptsIndex+1], pts[ptsIndex]);
+                    break;
+                case PathVerb.kConic:
+                    this.conicTo(pts[ptsIndex+1], pts[ptsIndex], conicWeights[--conicWeightsIndex]);
+                    break;
+                case PathVerb.kCubic:
+                    this.cubicTo(pts[ptsIndex+2], pts[ptsIndex+1], pts[ptsIndex]);
+                    break;
+                case PathVerb.kClose:
+                    break;
+                default:
+                   // SkDEBUGFAIL("unexpected verb");
+            }
+        }
+        return this;
+    }
 
-    privateReverseAddPath(src:any) {
+     reverseAddPath(src:PathBuilder) {
+        if(src.fVerbs.length==0) return this;
+        const  verbsBegin = 0;
+        let  verbsEnd=src.countVerbs()
+        const  verbs =src.fVerbs
+        const pts = src.fPts
+        let ptsIndex=pts.length
+        const conicWeights = src.fConicWeights
+        let conicWeightsIndex=src.fConicWeights.length
 
-        // const  verbsBegin = src.fPathRef.verbsBegin();
-        // const  verbs = src.fPathRef.verbsEnd();
-        // const pts = src.fPathRef.pointsEnd();
-        // const conicWeights = src.fPathRef.conicWeightsEnd();
+        let needMove = true;
+        let needClose = false;
+        while (verbsEnd > verbsBegin) {
+            let v = verbs[--verbsEnd];
+            let n = PtsInVerb(v);
 
-        // let needMove = true;
-        // let needClose = false;
-        // while (verbs > verbsBegin) {
-        //     let v = --verbs;
-        //     let n = SkPathPriv::PtsInVerb(v);
-
-        //     if (needMove) {
-        //         --pts;
-        //         this.moveTo(pts.x, pts.y);
-        //         needMove = false;
-        //     }
-        //     pts -= n;
-        //     switch ((SkPathVerb)v) {
-        //         case SkPathVerb::kMove:
-        //             if (needClose) {
-        //                 this.close();
-        //                 needClose = false;
-        //             }
-        //             needMove = true;
-        //             pts += 1;   // so we see the point in "if (needMove)" above
-        //             break;
-        //         case SkPathVerb::kLine:
-        //             this.lineTo(pts[0]);
-        //             break;
-        //         case SkPathVerb::kQuad:
-        //             this.quadTo(pts[1], pts[0]);
-        //             break;
-        //         case SkPathVerb::kConic:
-        //             this.conicTo(pts[1], pts[0], *--conicWeights);
-        //             break;
-        //         case SkPathVerb::kCubic:
-        //             this.cubicTo(pts[2], pts[1], pts[0]);
-        //             break;
-        //         case SkPathVerb::kClose:
-        //             needClose = true;
-        //             break;
-        //         default:
-        //             SkDEBUGFAIL("unexpected verb");
-        //     }
-        // }
+            if (needMove) {
+                --ptsIndex;
+                this.moveTo(pts[ptsIndex]);
+                needMove = false;
+            }
+            ptsIndex -= n;
+            switch (v) {
+                case PathVerb.kMove:
+                    if (needClose) {
+                        this.close();
+                        needClose = false;
+                    }
+                    needMove = true;
+                    ptsIndex += 1;   // so we see the point in "if (needMove)" above
+                    break;
+                case PathVerb.kLine:
+                    this.lineTo(pts[ptsIndex]);
+                    break;
+                case PathVerb.kQuad:
+                    this.quadTo(pts[ptsIndex+1], pts[ptsIndex]);
+                    break;
+                case PathVerb.kConic:
+                    this.conicTo(pts[ptsIndex+1], pts[ptsIndex], conicWeights[--conicWeightsIndex]);
+                    break;
+                case PathVerb.kCubic:
+                    this.cubicTo(pts[ptsIndex+2], pts[ptsIndex+1], pts[ptsIndex]);
+                    break;
+                case PathVerb.kClose:
+                    needClose = true;
+                    break;
+                default:
+                   // SkDEBUGFAIL("unexpected verb");
+            }
+        }
         return this;
     }
 
@@ -207,9 +256,9 @@ export class PathBuilder {
     }  // the builder is unchanged after returning this path
     detach()    // the builder is reset to empty after returning this path
     {
-        // let path = this.make(new SkPathRef(std::move(fPts),
-        //                                               std::move(fVerbs),
-        //                                               std::move(fConicWeights),
+        // let path = this.make(new SkPathRef(std.move(fPts),
+        //                                               std.move(fVerbs),
+        //                                               std.move(fConicWeights),
         //                                               fSegmentMask)));
         this.reset();
         // return path;
@@ -230,6 +279,7 @@ export class PathBuilder {
         this.fLastMovePoint = Point.zero();
         this.fLastMoveIndex = -1;        // illegal
         this.fNeedsMoveVerb = true;
+        this.fSegmentMask=PathSegmentMask.kLine_SkPathSegmentMask
     }
 
     moveTo(x: number, y: number): PathBuilder;
@@ -241,7 +291,7 @@ export class PathBuilder {
 
         this.fPts.push(pt);
         this.fVerbs.push(PathVerb.kMove);
-        this.fLastMovePoint = pt;
+        this.fLastMovePoint.copy(pt);
         this.fNeedsMoveVerb = false;
         return this;
     }
@@ -736,7 +786,7 @@ export class PathBuilder {
         
         if (sweepAngle >= kFullCircleAngle || sweepAngle <= -kFullCircleAngle) {
             // We can treat the arc as an oval if it begins at one of our legal starting positions.
-            // See SkPath::addOval() docs.
+            // See SkPath.addOval() docs.
             let startOver90 = startAngle / 90;
             let startOver90I = SkScalarRoundToScalar(startOver90);
             let error = startOver90 - startOver90I;
@@ -863,7 +913,70 @@ export class PathBuilder {
         }
         return this;
     }
-
+    getBounds(){
+        const bounds=Rect.makeEmpty()
+        bounds.setBounds(this.fPts,this.fPts.length)
+        return bounds
+    }
+    computeTightBounds(){
+        if (0 == this.countVerbs()) {
+            return Rect.makeEmpty();
+        }
+    
+        if (this.getSegmentMasks() == PathSegmentMask.kLine_SkPathSegmentMask) {
+            return this.getBounds();
+        }
+    
+        let extremas=new Array(5).fill(0).map(()=>Point.default()); // big enough to hold worst-case curve type (cubic) extremas + 1
+    
+        // initial with the first MoveTo, so we don't have to check inside the switch
+        let min=Point.default(), max=Point.default()
+        let pts=this.fPts,k=0,wIndex=0
+        for (let i=0;i<this.fVerbs.length;++i) {
+            let count = 0;
+            let verb=this.fVerbs[i];
+            switch (verb) {
+                case PathVerb.kMove:
+                    extremas[0].copy(pts[k]);
+                    k+=1;
+                    count = 1;
+                    break;
+                case PathVerb.kLine:
+                    extremas[0].copy(pts[k]);
+                    k+=1
+                    count = 1;
+                    break;
+                case PathVerb.kQuad:
+                    let p=[pts[k-1],pts[k],pts[k+1]]
+                    count = SkComputeQuadExtremas(p, extremas);
+                    k+=2;
+                    break;
+                case PathVerb.kConic:
+                    let p1=[pts[k-1],pts[k],pts[k+1]]
+                    count = SkComputeConicExtremas(p1,this.fConicWeights[wIndex++], extremas);
+                    k+2;
+                    break;
+                case PathVerb.kCubic:
+                    let p2=[pts[k-1],pts[k],pts[k+1],pts[k+2]]
+                    count = SkComputeCubicExtremas(p2, extremas);
+                    k+=3;
+                    break;
+                case PathVerb.kClose:
+                    break;
+            }
+            for (let i = 0; i < count; ++i) {
+                let tmp = extremas[i];
+                min.min(tmp)
+                max.max(tmp)
+            }
+        }
+        let bounds=Rect.makeEmpty();
+        bounds.setLTRB(min.x, min.y, max.x, max.y);
+        return bounds;
+    }
+    contains(x:number,y:number){
+        return pointInPath
+    }
     addPath() {
 
     }
@@ -964,4 +1077,106 @@ class RRectPointIterator extends PointIterator {
         this.fPts[6] = Point.create(L, B - radii[kLowerLeft_Corner].y);
         this.fPts[7] = Point.create(L, T + radii[kUpperLeft_Corner].y);
     }
+}
+
+
+
+export function pointInPath(x: number, y: number, path: PathBuilder) {
+    const fillType=path.getFillType()
+    let isInverse =path.isInverseFillType()
+
+    if (path.countVerbs()<=0) {
+        return isInverse;
+    }
+    const bounds=path.getBounds()
+
+    if (!bounds.containPoint(x, y)) {
+        return isInverse;
+    }
+    let iter = new PathIter(path, true)
+    let done = false
+    let w = 0
+    let onCurveCount = Ref.from(0);
+    let pts = [Point.default(), Point.default(), Point.default(), Point.default()]
+    do {
+        switch (iter.next(pts)) {
+            case PathIterVerb.kMoveTo:
+            case PathIterVerb.kClose:
+                break;
+            case PathIterVerb.kLineTo:
+                w += winding_line(pts, x, y, onCurveCount);
+                break;
+            case PathIterVerb.kQuadCurveTo:
+                w += winding_quad(pts, x, y, onCurveCount);
+                break;
+            case PathIterVerb.kConicTo:
+                //  w += winding_conic(pts, x, y, iter.conicWeight(), & onCurveCount);
+                break;
+            case PathIterVerb.kCubicCurveTo:
+                w += winding_cubic(pts, x, y, onCurveCount);
+                break;
+            case PathIterVerb.kDone:
+                done = true
+                break;
+        }
+    } while (!done);
+
+    let evenOddFill = PathFillType.kEvenOdd == fillType || PathFillType.kInverseEvenOdd == fillType;
+    if (evenOddFill) {
+        w &= 1;
+    }
+    if (w) {
+        return !isInverse;
+    }
+    if (onCurveCount.value <= 1) {
+        return Boolean(Number(onCurveCount.value) ^ Number(isInverse));
+    }
+    if ((onCurveCount.value & 1) || evenOddFill) {
+        return Boolean(Number(onCurveCount.value & 1) ^ Number(isInverse))
+    }
+    iter.setPath(path, true)
+    done = false;
+    let tangents: Point[] = []
+    do {
+        let oldCount = tangents.length
+        switch (iter.next(pts)) {
+            case PathIterVerb.kMoveTo:
+            case PathIterVerb.kClose:
+                break;
+            case PathIterVerb.kLineTo:
+                tangent_line(pts, x, y, tangents);
+                break;
+            case PathIterVerb.kQuadCurveTo:
+                tangent_quad(pts, x, y, tangents);
+                break;
+            case PathIterVerb.kConicTo:
+                //tangent_conic(pts, x, y, iter.conicWeight(), & tangents);
+                break;
+            case PathIterVerb.kCubicCurveTo:
+                tangent_cubic(pts, x, y, tangents);
+                break;
+            case PathIterVerb.kDone:
+                done = true
+                break;
+        }
+        if (tangents.length > oldCount) {
+            let last = tangents.length - 1;
+            const tangent: Point = tangents[last];
+            if (SkScalarNearlyZero(tangent.dot(tangent))) {
+                tangents.splice(last, 1)
+            } else {
+                for (let index = 0; index < last; ++index) {
+                    const test = tangents[index];
+                    if (SkScalarNearlyZero(test.cross(tangent))
+                        && SkScalarSignAsInt(tangent.x * test.x) <= 0
+                        && SkScalarSignAsInt(tangent.y * test.y) <= 0) {
+                        tangents.splice(last, 1);
+                        tangents.splice(index, 1, tangents[tangents.length]);
+                        break;
+                    }
+                }
+            }
+        }
+    } while (!done);
+    return Number(tangents.length ^ Number(isInverse));
 }

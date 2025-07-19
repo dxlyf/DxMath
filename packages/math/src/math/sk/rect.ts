@@ -649,7 +649,7 @@ export class Rect {
 
         let accum = min.clone().mulScalar(0);
         while (count) {
-            let xy = FloatPoint.fromPoints(pts.slice(ptsIndex),2);
+            let xy = FloatPoint.fromArray([pts[ptsIndex].x,pts[ptsIndex].y,pts[ptsIndex+1].x,pts[ptsIndex+1].y],4);
             accum = accum.mul(xy);
             min = min.min(xy);
             max = max.max(xy);
