@@ -168,9 +168,6 @@ export class BoundingRect {
         m.mapPoint(min)
         m.mapPoint(max)
     }
-    getBounds(){
-
-    }
     equals(other: BoundingRect) {
         return this.min.equalsEpsilon(other.min) && this.max.equalsEpsilon(other.max)
     }

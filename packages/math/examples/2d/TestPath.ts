@@ -2,6 +2,7 @@
 import { CanvasRenderer } from 'math/2d_graphics/renderer/canvas';
 
 import { PathBuilder } from 'math/2d_graphics/math/path/PathBuilder';
+import { PathStroker,LineJoin,LineCap } from 'math/2d_graphics/math/path/PathStroker';
 import { SKPath2D } from 'math/skia_path/SKPath2D'
 import { GUI } from 'lil-gui'
 import {pointInPath} from  'math/2d_graphics/math/path/pathIntersection';
@@ -282,8 +283,18 @@ export class TestMain {
 
     curGui: GUI | null = null
     _dirty = false
+    showPathBuilder = true
+    showPathBounds=false
+    enablePathFatten=false
+    pathFattenThreshold=1
+    showStroke = true
+    strokeWidth=5
+    lineJoin=LineJoin.Miter
+    lineCap=LineCap.Butt
+    miterLimit=10
+
     constructor() {
-        const renderer = new CanvasRenderer({ width: 500, height: 500, devicePixelRatio: 1 });
+        const renderer = new CanvasRenderer({ width: 500, height: 500, devicePixelRatio: window.devicePixelRatio });
         document.body.appendChild(renderer.domElement)
         this.renderer = renderer
         const gui = new GUI()
@@ -312,6 +323,35 @@ export class TestMain {
         this.gui.add(this, 'showPathBounds').onChange(() => {
             this.refresh()
         })
+        this.gui.add(this, 'pathFattenThreshold',0.1,10,0.1).name('扁平化阈值').onChange(() => {
+            this.refresh()
+        })
+        this.gui.add(this, 'enablePathFatten').name('扁平化').onChange(() => {
+            this.refresh()
+        })
+        this.gui.add(this, 'showStroke').onChange(() => {
+            this.refresh()
+        })
+        this.gui.add(this, 'strokeWidth').onChange(() => {
+            this.refresh()
+        })
+        this.gui.add(this, 'miterLimit').onChange(() => {
+            this.refresh()
+        })
+        this.gui.add(this,'lineJoin',{
+            'Bevel':LineJoin.Bevel,
+            'Miter':LineJoin.Miter,
+            'Round':LineJoin.Round,
+        }).onChange(v=>{
+            this.refresh()
+        })
+        this.gui.add(this,'lineCap',{
+            'Butt':LineCap.Butt,
+            'Round':LineCap.Round,
+            'Square':LineCap.Square,
+        }).onChange(v=>{
+            this.refresh()
+        })
         if (this.examples.size) {
             this.example = Array.from(this.examples.keys())[0]
             this.gui.controllers[0].updateDisplay()
@@ -330,8 +370,6 @@ export class TestMain {
     get curExample() {
         return this.examples.get(this._example)
     }
-    showPathBuilder = true
-    showPathBounds=false
 
     initExample(newExampleID: string) {
         if (newExampleID === this._example) return
@@ -378,6 +416,20 @@ export class TestMain {
                 ctx.beginPath()
                 ctx.strokeStyle = 'red'
                 let path=this.curExample.buildPathBuilder()
+                if(this.showStroke){
+                    let stroker=new PathStroker()
+                   
+                    path=stroker.stroke(path,{
+                        strokeWidth:this.strokeWidth,
+                        lineJoin:this.lineJoin,
+                        lineCap:this.lineCap,
+                        miterLimit:this.miterLimit
+                    })
+                }
+                if(this.enablePathFatten){
+                    path=path.fatten(this.pathFattenThreshold)
+                    console.log('points',path.verbs.length)
+                }
                 ctx.stroke(path.toPath2D())
 
                 if(this.showPathBounds){

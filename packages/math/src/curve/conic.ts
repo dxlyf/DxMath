@@ -56,24 +56,24 @@ const SCALAR_ROOT_2_OVER_2 = 0.707106781;
 const SCALAR_NEARLY_ZERO = 1.0 / (1 << 12);
 const PathDirection = {
     /// Clockwise direction for adding closed contours.
-    CW:0,
+    CW: 0,
     /// Counter-clockwise direction for adding closed contours.
-    CCW:1,
+    CCW: 1,
 }
-function subdivide_weight_value(w:number) {
+function subdivide_weight_value(w: number) {
     return Math.sqrt(0.5 + w * 0.5)
 }
 
-function interp(v0:Vector2, v1:Vector2, t:number) {
+function interp(v0: Vector2, v1: Vector2, t: number) {
     return v0.clone().add(v1.clone().sub(v0)).multiplyScalar(t)
 }
 
-function times_2(value:Vector2) {
+function times_2(value: Vector2) {
     return value.clone().add(value)
 }
 
 
-function subdivide(src:Conic, points:Vector2[], level:number) {
+function subdivide(src: Conic, points: Vector2[], level: number) {
     if (level == 0) {
         points[0].copy(src.points[1])
         points[1].copy(src.points[2])
@@ -129,7 +129,7 @@ function subdivide(src:Conic, points:Vector2[], level:number) {
 
 //这最初是为 pathops 开发和测试的：请参阅 SkOpTypes.h
 //返回 true if (a <= b <= c) || (a >= b >= c)
-function between(a:number, b:number, c:number) {
+function between(a: number, b: number, c: number) {
     return (a - b) * (c - b) <= 0.0
 }
 
@@ -142,21 +142,21 @@ export class Conic {
         conic.weight = weight
         return conic
     }
-    static from_points(points:Vector2[], weight:number) {
+    static from_points(points: Vector2[], weight: number) {
         const conic = new this()
-        conic.points =[points[0], points[1], points[2]]
+        conic.points = [points[0], points[1], points[2]]
         conic.weight = weight
         return conic
     }
-    copy(source:Conic) {
-        this.points = source.points.map(d=>d.clone())
+    copy(source: Conic) {
+        this.points = source.points.map(d => d.clone())
         this.weight = source.weight
         return this;
     }
     clone() {
         return new Conic().copy(this)
     }
-    compute_quad_pow2(tolerance:number) {
+    compute_quad_pow2(tolerance: number) {
         const self = this;
         if (tolerance < 0.0 || !Number.isFinite(tolerance)) {
             return 0;
@@ -247,11 +247,11 @@ export class Conic {
         ]
     }
     static build_unit_arc(
-        u_start:Vector2,
-        u_stop:Vector2,
-        dir:number,
-        user_transform:Matrix2D,
-        dst:Conic[]
+        u_start: Vector2,
+        u_stop: Vector2,
+        dir: number,
+        user_transform: Matrix2D,
+        dst: Conic[]
     ) {
         // rotate by x,y so that u_start is (1.0)
         let x = u_start.dot(u_stop);
@@ -374,7 +374,7 @@ export class AutoConicToQuads {
 
 
 
-export function convertConicToQuads(prevX:number, prevY:number, x0:number, y0:number, x1:number, y1:number, w:number, maxDepth = 3, depth = 0) {
+export function convertConicToQuads(prevX: number, prevY: number, x0: number, y0: number, x1: number, y1: number, w: number, maxDepth = 3, depth = 0) {
     const quads: any[] = [];
     const epsilon = 0.01; // 权重接近1的阈值
 
@@ -444,7 +444,7 @@ export function convertConicToQuads(prevX:number, prevY:number, x0:number, y0:nu
  * @param {number} w - 控制点权重
  * @returns {Array} 二次贝塞尔曲线数组，每个元素为 [P0, P1, P2]
  */
-export function conicToBeziers(x0:number, y0:number, x1:number, y1:number, x2:number, y2:number, w:number) {
+export function conicToBeziers(x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, w: number) {
     // 特殊情况处理：权重为1时直接返回原曲线
     if (Math.abs(w - 1) < 1e-6) {
         return [[[x0, y0], [x1, y1], [x2, y2]]];
@@ -473,7 +473,7 @@ export function conicToBeziers(x0:number, y0:number, x1:number, y1:number, x2:nu
     return segments;
 
     // 辅助函数：查找最优分割点
-    function findOptimalSplit(x0:number, y0:number, x1:number, y1:number, x2:number, y2:number, w:number) {
+    function findOptimalSplit(x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, w: number) {
         // 基于曲率变化的启发式分割算法
         const angle = Math.atan2(y2 - y0, x2 - x0);
         const k = curvatureAt(0.5, x0, y0, x1, y1, x2, y2, w);
@@ -481,19 +481,19 @@ export function conicToBeziers(x0:number, y0:number, x1:number, y1:number, x2:nu
     }
 
     // 计算曲率
-    function curvatureAt(t:number, x0:number, y0:number, x1:number, y1:number, x2:number, y2:number, w:number) {
+    function curvatureAt(t: number, x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, w: number) {
         const [dx, dy] = derivative(t, x0, y0, x1, y1, x2, y2, w);
         const [ddx, ddy] = secondDerivative(t, x0, y0, x1, y1, x2, y2, w);
         return Math.abs(dx * ddy - dy * ddx) / Math.pow(dx * dx + dy * dy, 1.5);
     }
 
     // 判断是否需要继续分割
-    function needsSplit(w:number) {
+    function needsSplit(w: number) {
         return Math.abs(w - 1) > 0.1;
     }
 
     // 有理曲线分割算法
-    function splitRationalCurve(x0:number, y0:number, x1:number, y1:number, x2:number, y2:number, w:number, t:number) {
+    function splitRationalCurve(x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, w: number, t: number) {
         const w0 = 1, w1 = w, w2 = 1;
 
         // 第一段曲线
@@ -531,7 +531,7 @@ export function conicToBeziers(x0:number, y0:number, x1:number, y1:number, x2:nu
     }
 
     // 导数计算
-    function derivative(t:number, x0:number, y0:number, x1:number, y1:number, x2:number, y2:number, w:number) {
+    function derivative(t: number, x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, w: number) {
         const numeratorX = 2 * (1 - t) * (x1 - x0) + 2 * t * (x2 - x1);
         const numeratorY = 2 * (1 - t) * (y1 - y0) + 2 * t * (y2 - y1);
         const denominator = (1 - t) ** 2 + 2 * w * t * (1 - t) + t ** 2;
@@ -542,7 +542,7 @@ export function conicToBeziers(x0:number, y0:number, x1:number, y1:number, x2:nu
     }
 
     // 二阶导数计算
-    function secondDerivative(t:number, x0:number, y0:number, x1:number, y1:number, x2:number, y2:number, w:number) {
+    function secondDerivative(t: number, x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, w: number) {
         // 简化的二阶导数近似计算
         const dt = 0.001;
         const [dx1, dy1] = derivative(t - dt, x0, y0, x1, y1, x2, y2, w);
@@ -554,16 +554,102 @@ export function conicToBeziers(x0:number, y0:number, x1:number, y1:number, x2:nu
     }
 }
 
-export function conicToCubic(p0:Vector2,p1:Vector2,p2:Vector2,w:number,dst:Vector2[]=[]){
-        let k = 4.0 * w / (3.0 * (1.0 + w));
 
-        dst[0] =Vector2.default().interpolateVectors(p0,p1,k) // p0 + (p1 - p0) * k;
-        dst[1] =Vector2.default().interpolateVectors(p2,p1,k)  // p2 + (p1 - p2) * k;
-        dst[2] =p2.clone() //p2;
-
-      return dst
+/****
+ * 给定p0,p1,p2三个点连成的夹角线段，radius半径，绘制夹角的弧
+ * 
+ * @param p0 
+ * @param p1 join点
+ * @param p2 
+ * @param radius 
+ * @returns 
+ */
+export function arcTo(p0: Vector2, p1: Vector2, p2: Vector2, radius: number): null | Vector2[] {
+    const n0 = p1.clone().sub(p0).normalize()
+    const n1 = p2.clone().sub(p1).normalize()
+    const cosh = n0.dot(n1)
+    const sinh = n0.cross(n1)
+    if (Math.abs(sinh) < 1e-6) {
+        return null
+    }
+    // 切线长度
+    // tan(a/2)
+    const tangent = Math.abs((1 - cosh) / sinh)
+    const dist = radius * tangent
+    const k = 4 / 3 * (Math.sqrt(2) - 1)
+    const cp1 = p0.clone().add(n0.clone().multiplyScalar(dist * k))
+    const cp2 = p2.clone().sub(n1.clone().multiplyScalar(dist * k))
+    return [p0, cp1, cp2, p2] // cubicBezier(p0,cp1,cp2,p2)
 }
-export function conicToQuadratic(x0:number, y0:number, x1:number, y1:number, x2:number, y2:number, w:number
+
+/****
+ * 给定p0,p1,p2 
+ * 
+ * @param p0 原点
+ * @param p1 
+ * @param p2 
+ * @param radius 
+ * @returns 
+ */
+export function arcToFromOrigin(p0: Vector2, p1: Vector2, p2: Vector2, radius: number): null | Vector2[] {
+    const n0 = p1.clone().sub(p0).normalize()
+    const n1 = p2.clone().sub(p0).normalize()
+    const cosh = n0.dot(n1)
+    const sinh = n0.cross(n1)
+    if (Math.abs(sinh) < 1e-6) {
+        return null
+    }
+    // 切线长度
+    // tan(a/2)
+    const tangent = Math.abs((1 - cosh) / sinh)
+    const dist = radius * tangent
+    const k = 4 / 3 * (Math.sqrt(2) - 1) // 弧圆的比例系数，近似值，并非精确值
+    // p1和p2的切线方向
+    const tangentDir1=n0.clone().cw()
+    const tangentDir2=n1.clone().ccw()
+
+    // 交点
+    //const intersection=p1.clone().add(tangentDir1.clone().multiplyScalar(dist))
+    // weight=Math.sqrt(0.5+cosh*0.5)
+    // const cp1 = intersection.clone().sub(tangentDir1.clone().multiplyScalar(dist))
+    // const cp2 = intersection.clone().sub(tangentDir2.clone().multiplyScalar(dist))
+    // conicTo(cp1,intersection,cp2,weight)
+    const cp1 = p1.clone().add(tangentDir1.clone().multiplyScalar(dist * k))
+    const cp2 = p2.clone().sub(tangentDir2.clone().multiplyScalar(dist * k))
+    return [p0, cp1, cp2, p2] // cubicBezier(p0,cp1,cp2,p2)
+}
+/****
+ * 给定p0,p1,p2三个点和radius半径，绘制夹角的弧
+*/
+export function arcToWithConic(p0: Vector2, p1: Vector2, p2: Vector2, radius: number): null | Vector2[] {
+    const n0 = p1.clone().sub(p0).normalize()
+    const n1 = p2.clone().sub(p1).normalize()
+    const cosh = n0.dot(n1)
+    const sinh = n0.cross(n1)
+    if (Math.abs(sinh) < 1e-6) {
+        return null
+    }
+    // 切线长度
+    // tan(a/2)
+    const tangent = Math.abs((1 - cosh) / sinh)
+    const dist = radius * tangent
+    const weight = Math.sqrt(0.5 + cosh * 0.5)
+    const cp1 = p1.clone().sub(n0.clone().multiplyScalar(dist))
+    const cp2 = p1.clone().add(n1.clone().multiplyScalar(dist))
+    return conicToCubic(cp1, p1, cp2, weight)
+}
+
+export function conicToCubic(p0: Vector2, p1: Vector2, p2: Vector2, w: number, dst: Vector2[] = []) {
+    let k = 4.0 * w / (3.0 * (1.0 + w));
+
+    dst[0]=p0.clone()
+    dst[1] = Vector2.default().interpolateVectors(p0, p1, k) // p0 + (p1 - p0) * k;
+    dst[2] = Vector2.default().interpolateVectors(p2, p1, k)  // p2 + (p1 - p2) * k;
+    dst[3] = p2.clone() //p2;
+
+    return dst
+}
+export function conicToQuadratic(x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, w: number
 ) {
     // 定义原有理曲线的三个控制点
     const P0 = [x0, y0];
@@ -637,7 +723,7 @@ export function conicToQuadratic2(points: Vector2[], w: number) {
             quads.push(p);
         }
     }
-    conic(points,w)
+    conic(points, w)
     return quads
 
 }

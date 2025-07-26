@@ -1026,6 +1026,7 @@ export function quadraticCurveToLines(p0: Vector2, p1: Vector2, p2: Vector2, tes
             subdivide(q2, q3, q4, maxDeep - 1)
         }
     }
+    points.push(p0)
     subdivide(p0, p1, p2)
     return points
 }
@@ -1049,6 +1050,7 @@ export function cubicCurveToLines(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vec
             subdivide(q3, q4, q5, q6, maxDeep - 1)
         }
     }
+    points.push(p0)
     subdivide(p0, p1, p2, p3)
     return points
 }

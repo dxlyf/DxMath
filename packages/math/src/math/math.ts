@@ -2,7 +2,8 @@ import { Vector2 } from "./vec2";
 
 export const BEZIER_CIRCLE_K=(4/3*(Math.sqrt(2)-1)) // 黄金分割率
 export const BEZIER_CIRCLE_K2=(delta:number)=>4 / 3 * Math.tan(delta / 4)
-export const CONIC_CIRCLE_K=Math.sqrt(2)/2 // cos(pi/4) 0.707106781187
+// 可以用于绘制四分之一圆 conicTo()
+export const CONIC_CIRCLE_K=Math.SQRT1_2//Math.sqrt(2)/2 // cos(pi/4) 0.707106781187
 
 export const PI = Math.PI
 export const PI2 = PI * 2;
@@ -12,6 +13,46 @@ export const EPSILON = 1e-6
 export const ScalarNearlyZero = 1e-6;
 const Scalar1 = 1;
 const ScalarSinCosNearlyZero = (Scalar1 / (1 << 16))
+
+/*** 
+ * 三角函数
+ * x^2+y^2=r^2
+ * 
+ * cos=x/r sin=y/r tan=y/x  cot=x/y sec=r/x csc=r/y
+   函数关系
+   倒数关系: tan*cot=1 sin*csc=1 cos*sec=1
+   商的关系: tan=sin/cos=sec/csc     cot=cos/sin=csc/sec
+            sin/cos=tan cot=cos/sin sec=1/cos csc=1/sin
+            sin=tan*cos 
+
+   平方关系 cos^2+sin^2=1 sin=sqrt(1-cos^2)
+            tan^2+1=sec^2 tan=sqrt(1-cos^2)/cos
+            1+cot^2=csc^2
+
+
+
+    恒等式
+    cos(a+b)=cos(a)*cos(b)-sin(a)*sin(b)
+    cos(a-b)=cos(a)*cos(b)+sin(a)*sin(b)
+    sin(a+b)=sin(a)*cos(b)+cos(a)*sin(b)
+    sin(a-b)=sin(a)*cos(b)-cos(a)*sin(b)
+    tan(a+b)=(tan(a)+tan(b))/(1-tan(a)*tan(b))
+    tan(a-b)=(tan(a)-tan(b))/(1+tan(a)*tan(b))
+
+    半角公式
+    cos(a/2)=sqrt((1+cos(a))/2)
+    sin(a/2)=sqrt((1-cos(a))/2)
+    tan(a/2)=sin(a/2)/cos(a/2)=(1-cos(a))/sin(a)=sqrt((1-cos(a))/(1+cos(a)))
+    cot(a/2)=csc(0)+cot(a)=(1+cos(a))/sin(a)=sin(a)/(1-cos(a))=sqrt((1+cos(a))/(1-cos(a)))
+
+    降次公式
+    sin^2a=(1-cos(2a))/2  cos^a=(1+cos(2a))/2
+    tan^2a=(1-cos(2a))/(1+cos(2a)) cot^2a=(1+cos(2a))/(1-cos(2a))
+
+
+ * 
+*/
+
 
 // 两个向量间的夹角0-pi
 export function angleTo(a: Vector2, b: Vector2) {
@@ -295,6 +336,18 @@ export const degreesToRadian = (degrees: number) => {
 }
 export const radianToDegrees = (radian: number) => {
     return radian * INVERT_DEGREES_RADIAN
+}
+/**
+ * 
+ * @param value 映射值
+ * @param inMin 定义域domain 输入
+ * @param inMax 
+ * @param outMin 值域range 输出
+ * @param outMax 
+ * @returns 
+ */
+export function map(value:number,inMin:number,inMax:number,outMin:number,outMax:number){
+    return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
 }
 
 export const sign = (x: number) => {
@@ -593,12 +646,12 @@ export function adjointFromNthMatrix(m: Float32Array | number[]) {
     let n = Math.sqrt(m.length)
     let l = m.length
     let out = new Float32Array(l)
-    // 默认以行向量形式存储，所以要转置，假始是列向量形式存储，则不需要转置
+    // 默认以列主序形式存储，所以要转置成行主序，假始是行主序形式存储，则不需要转置
     let tm = transposeFromNthMatrix(m) // 转置矩阵，
     for (let i = 0; i < l; i++) {
         let r = i % n
         let c = i / n >> 0;
-        let value = tm[i]
+       // let value = tm[i]
         let sign = ((r + c) % 2 == 0 ? 1 : -1)// 当前行+列，偶数为正,奇数为负
         let cofactor = createLowMatrix(r, c, n, tm)
         let det = determinantFromNthMatrix(cofactor)

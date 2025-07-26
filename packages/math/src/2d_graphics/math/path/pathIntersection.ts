@@ -17,23 +17,6 @@ type PathStyle = {
 function isInverseFillType(type: number) {
     return (type & 2) !== 0
 }
-export function pointInPolygon(x: number, y: number, polygon: number[], fileRule: FillRule = FillRule.NonZero) {
-    let winding = 0
-    for (let j = polygon.length - 2, i = 0; i < polygon.length; j = i, i += 2) {
-        const x0 = polygon[j]
-        const y0 = polygon[j + 1]
-        const x1 = polygon[i]
-        const y1 = polygon[i + 1]
-        if (y > y0 !== y > y1 && x >= x0 + (x1 - x0) * (y - y0) / (y1 - y0)) {
-            if (fileRule === FillRule.EvenOdd) {
-                winding++
-            } else {
-                winding += y0 < y1 ? 1 : -1
-            }
-        }
-    }
-    return winding % 2 !== 0
-}
 enum PathIterVerb {
     MoveTo = PathVerb.MoveTo,
     LineTo = PathVerb.LineTo,
@@ -183,6 +166,7 @@ class PathIter {
     }
 
 }
+
 
 export function pointInPath(x: number, y: number, path: PathBuilder, pathStyle: PathStyle) {
     let isInverse = isInverseFillType(pathStyle.fillRule)

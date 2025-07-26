@@ -11,9 +11,7 @@
         "gifuct-js":["./src/images/gifuct-js/index.d.ts"],
         "colord":["./src/color/colord/src"],
         "@pixi/colord":["./src/color/colord/src"],
-        "@pixi/colord/*":["./src/color/colord/src/*"],
-        "pixi.js":["./src/pixijs/src"],
-        "three":["./src/threejs/src/Three.d.ts"]
+        "@pixi/colord/*":["./src/color/colord/src/*"]
       }
     },
     "include": ["src","examples"]

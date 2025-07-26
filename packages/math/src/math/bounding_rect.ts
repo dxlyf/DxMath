@@ -34,6 +34,12 @@ export class BoundingRect {
     get bottom() {
         return this.max.y
     }
+    get x(){
+        return this.min.x;
+    }
+    get y(){
+        return this.min.y;
+    }
     get width() {
         return this.max.x - this.min.x;
     }

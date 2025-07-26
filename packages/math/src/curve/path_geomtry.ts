@@ -2,7 +2,7 @@
 
 
 import { Vector2 } from '../math/vec2'
-import {Transform} from '../math/fine_transform'
+import {Matrix2D} from '../math/mat2d'
 import { clamp,scalarNearlyZero } from '../math/math';
 export const SCALAR_MAX = 3.402823466e+38;
 
@@ -639,7 +639,7 @@ function calc_cubic_precision(src:Vector2[]):number {
         u_start: Vector2,
         u_stop: Vector2,
         dir: PathDirection,
-        user_transform: Transform,
+        user_transform: Matrix2D,
         dst: Conic[],
     ):Conic[]|undefined{
         // rotate by x,y so that u_start is (1.0)
@@ -724,18 +724,18 @@ function calc_cubic_precision(src:Vector2[]):number {
         }
 
         // now handle counter-clockwise and the initial unitStart rotation
-        let  transform = Transform.from_sin_cos(u_start.y, u_start.x);
+        let  transform = Matrix2D.fromSinCos(u_start.y, u_start.x);
         if(dir == PathDirection.CCW ){
-            transform = transform.pre_scale(1.0, -1.0);
+            transform = transform.preScale(1.0, -1.0);
         }
 
-        transform = transform.post_concat(user_transform);
+        transform = transform.premultiply(user_transform);
 
         // for conic in dst.iter_mut().take(conic_count) {
         //     transform.map_points(&mut conic.points);
         // }
         for(let i=0,conic=dst[i];i<conic_count;i++){
-            transform.map_points(conic.points,conic.points);
+            transform.mapPoints(conic.points,conic.points);
         }
 
         if(conic_count == 0 ){

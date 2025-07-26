@@ -4,7 +4,7 @@ import { pointOnEllipse, ellipseArcToCubicBezier, center_to_endpoint, quarterArc
 import { Rect, OvalPointIterator, RectPointIterator } from './Rect'
 import { RRect, RRectPointIterator } from './RRrect'
 import { BoundingRect } from '../BoundingRect'
-import {QuadBezier,CubicBezier} from '../curve/bezier'
+import { QuadBezier, CubicBezier } from '../curve/bezier'
 
 const PI_2 = Math.PI * 2
 type Point = {
@@ -13,10 +13,10 @@ type Point = {
 }
 type PathBuilderVisitor = {
     moveTo: (x: number, y: number) => void,
-    lineTo: (lastX:number,lastY:number,x: number, y: number) => void,
-    quadraticCurveTo: (lastX:number,lastY:number,cpX: number, cpY: number, x: number, y: number) => void,
-    cubicCurveTo: (lastX:number,lastY:number,cp1X: number, cp1Y: number, cp2X: number, cp2Y: number, x: number, y: number) => void,
-    close: (firstMoveX: number, firstMoveY: number,lastX:number,lastY:number) => void
+    lineTo: (lastX: number, lastY: number, x: number, y: number) => void,
+    quadraticCurveTo: (lastX: number, lastY: number, cpX: number, cpY: number, x: number, y: number) => void,
+    cubicCurveTo: (lastX: number, lastY: number, cp1X: number, cp1Y: number, cp2X: number, cp2Y: number, x: number, y: number) => void,
+    close: (firstMoveX: number, firstMoveY: number, lastX: number, lastY: number) => void
 }
 
 function normalizeRectRadii(radii?: number | DOMPointInit | Iterable<number | DOMPointInit>) {
@@ -68,11 +68,9 @@ function normalizeAngles(startAngle: number, endAngle: number, ccw: boolean = fa
 }
 
 export enum PathDirection {
-    kCW,
-    kCCW,
-    kUnknown = 0x7FFFFFFF,
-
-
+    CW,
+    CCW,
+    Unknown = 0x7FFFFFFF,
 }
 
 export enum PathVerb {
@@ -84,10 +82,10 @@ export enum PathVerb {
     Close
 }
 export enum SegmentMask {
-    Line_SegmentMask=1,
-    Quad_SegmentMask=2,
-    Conic_SegmentMask=4,
-    Cubic_SegmentMask=8,
+    Line_SegmentMask = 1,
+    Quad_SegmentMask = 2,
+    Conic_SegmentMask = 4,
+    Cubic_SegmentMask = 8,
 };
 export class PathBuilder {
     static default() {
@@ -95,18 +93,21 @@ export class PathBuilder {
     }
     points: number[] = []
     verbs: PathVerb[] = []
-    _segmentMask=SegmentMask.Line_SegmentMask
+    _segmentMask = SegmentMask.Line_SegmentMask
     _lastMovePointIndex = 0
     _needMoveTo = true
-    _bounds:BoundingRect|null=null
+    _bounds: BoundingRect | null = null
     reset() {
         this._needMoveTo = true
         this.points.length = 0
         this.verbs.length = 0
         this._lastMovePointIndex = 0
-        this._bounds=null
+        this._bounds = null
         this._segmentMask = SegmentMask.Line_SegmentMask;
         return this
+    }
+    clear(){
+        return this.reset()
     }
     get isEmpty() {
         return this.verbs.length === 0;
@@ -122,9 +123,18 @@ export class PathBuilder {
     get length() {
         return this.points.length
     }
+    setLastPoint(x: number, y: number) {
+        if (this.isEmpty) {
+            this.moveTo(x, y)
+        } else {
+            this.points[this.length - 2] = x
+            this.points[this.length - 1] = y
+        }
+        return this
+    }
     private addPoint(x: number, y: number) {
         this.points.push(x, y)
-        this._bounds=null
+        this._bounds = null
         return this
     }
     private addVerb(verb: PathVerb) {
@@ -201,6 +211,7 @@ export class PathBuilder {
         this.lineTo(x, y + h)
         return this.closePath()
     }
+   
     roundRect(x: number, y: number, width: number, height: number, radii?: number | DOMPointInit | Iterable<number | DOMPointInit>) {
 
         let radius = normalizeRectRadii(radii)
@@ -287,6 +298,9 @@ export class PathBuilder {
             const bezier = quarterArcToCubicBezier(cx, cy, rx, ry, rotation, theta1, theta2);
             this.bezierCurveTo(bezier[2], bezier[3], bezier[4], bezier[5], bezier[6], bezier[7]);
             theta1 = theta2
+        }
+        if(Math.abs(deltaAngle)>=Math.PI*2){
+            this.closePath()
         }
         return this;
     }
@@ -396,9 +410,9 @@ export class PathBuilder {
             return this;
         }
         this.moveTo(points[0], points[1]);
-        for (let i = 2; i < points.length; i+=2) {
+        for (let i = 2; i < points.length; i += 2) {
             let x = points[i]
-            let y = points[i+1]
+            let y = points[i + 1]
             this.lineTo(x, y)
         }
         if (isClosed) {
@@ -412,6 +426,8 @@ export class PathBuilder {
         let rect_points = new RectPointIterator(oval, ccw, index + (ccw ? 1 : 0));
         let weight = Math.SQRT1_2//Math.sqrt(2);
         this.moveTo(oval_points.current.x, oval_points.current.y);
+        rect_points.next()
+        oval_points.next()
         for (let i = 0; i < 4; ++i) {
             this.conicTo(rect_points.get(i).x, rect_points.get(i).y, oval_points.get(i).x, oval_points.get(i).y, weight);
         }
@@ -486,79 +502,139 @@ export class PathBuilder {
             this.points[i + 1] = m[1] * x + m[3] * y + m[5]
         }
     }
-    computeTightBounds(){
-        if(this.isEmpty){
+    scaleRoound(sx: number, sy: number) {
+        for (let i = 0; i < this.points.length; i += 2) {
+            const x = this.points[i]
+            const y = this.points[i + 1]
+            this.points[i] = Math.round(x * sx)
+            this.points[i + 1] = Math.round(y * sx)
+        }
+    }
+    computeTightBounds() {
+        if (this.isEmpty) {
             return BoundingRect.empty()
         }
-        if(this._segmentMask===SegmentMask.Line_SegmentMask){
+        if (this._segmentMask === SegmentMask.Line_SegmentMask) {
             return this.getBounds()
         }
-        const bounds=BoundingRect.default()
-        const lasPoint=Vector2.default()
+        const bounds = BoundingRect.default()
         this.visit({
             moveTo: (x, y) => {
-                lasPoint.setXY(x,y)
                 bounds.expandByXY(x, y)
             },
-            lineTo: (lastX:number,lastY:number,x, y) => {
-                lasPoint.setXY(x,y)
+            lineTo: (lastX: number, lastY: number, x, y) => {
                 bounds.expandByXY(x, y)
             },
-            quadraticCurveTo: (lastX:number,lastY:number,cp1x, cp1y, x, y) => {
-                let b=QuadBezier.fromXY(lasPoint.x,lasPoint.y,cp1x,cp1y,x,y).getBoundingBox()
+            quadraticCurveTo: (lastX: number, lastY: number, cp1x, cp1y, x, y) => {
+                let b = QuadBezier.fromXY(lastX, lastY, cp1x, cp1y, x, y).getBoundingBox()
                 bounds.expandByPoint(b.min)
                 bounds.expandByPoint(b.max)
-                lasPoint.setXY(x,y)
             },
-            cubicCurveTo(lastX:number,lastY:number,cp1x, cp1y, cp2x, cp2y, x, y) {
-                let b=CubicBezier.fromXY(lasPoint.x,lasPoint.y,cp1x,cp1y,cp2x,cp2y,x,y).getBoundingBox()
+            cubicCurveTo(lastX: number, lastY: number, cp1x, cp1y, cp2x, cp2y, x, y) {
+                let b = CubicBezier.fromXY(lastX, lastY, cp1x, cp1y, cp2x, cp2y, x, y).getBoundingBox()
                 bounds.expandByPoint(b.min)
                 bounds.expandByPoint(b.max)
-                lasPoint.setXY(x,y)
-            },
-        })
+            }
+        });
         return bounds
     }
-    getBounds(){
-        if(!this._bounds){
-            this._bounds= BoundingRect.default().setFromVertices(this.points)
+    fatten(tessellationTolerance = 1) {
+        const newPath = PathBuilder.default()
+        if (this.isEmpty) {
+            return newPath
+        }
+        this.visit({
+            moveTo: (x, y) => {
+                newPath.moveTo(x, y)
+            },
+            lineTo: (lastX: number, lastY: number, x, y) => {
+                newPath.lineTo(x, y)
+            },
+            quadraticCurveTo: (lastX: number, lastY: number, cp1x, cp1y, x, y) => {
+                let lines = QuadBezier.fromXY(lastX, lastY, cp1x, cp1y, x, y).fatten(tessellationTolerance)
+                lines.forEach(p => {
+                    newPath.lineTo(p.x, p.y)
+                })
+            },
+            cubicCurveTo: (lastX: number, lastY: number, cp1x, cp1y, cp2x, cp2y, x, y) => {
+                let lines = CubicBezier.fromXY(lastX, lastY, cp1x, cp1y, cp2x, cp2y, x, y).fatten(tessellationTolerance)
+                lines.forEach(p => {
+                    newPath.lineTo(p.x, p.y)
+                })
+            },
+            close: () => {
+                newPath.closePath()
+            }
+        })
+        return newPath
+    }
+    getPolygons(autoClose = true, tessellationTolerance = 1) {
+        const polygons: number[][] = []
+        let polygon: number[] | null = null
+        const path = this.fatten(tessellationTolerance)
+        path.visit({
+            moveTo: (x, y) => {
+                if (polygon !== null) {
+                    polygons.push(polygon)
+                }
+                polygon = [x, y]
+            },
+            lineTo: (lastX: number, lastY: number, x, y) => {
+                polygon!.push(x, y)
+            },
+            close: (x, y) => {
+                if (autoClose) {
+                    polygon!.push(x, y)
+                    polygons.push(polygon!)
+                    polygon = null
+                }
+            }
+        })
+        if (polygon !== null) {
+            polygons.push(polygon)
+        }
+        return polygons
+    }
+    getBounds() {
+        if (!this._bounds) {
+            this._bounds = BoundingRect.default().setFromVertices(this.points)
         }
         return this._bounds
     }
     visit(visitor: Partial<PathBuilderVisitor>) {
         const points = this.points, verbs = this.verbs
         let lastMoveIndex = 0
-        let lastPont:{x:number,y:number}={x:0,y:0}
+        let lastPont: { x: number, y: number } = { x: 0, y: 0 }
         for (let i = 0, k = 0, verbCount = verbs.length; i < verbCount; i++) {
             const verb = verbs[i]
             switch (verb) {
                 case PathVerb.MoveTo:
                     visitor.moveTo?.(points[k], points[k + 1])
-                    lastPont.x=points[k]
-                    lastPont.y=points[k+1]
+                    lastPont.x = points[k]
+                    lastPont.y = points[k + 1]
                     lastMoveIndex = k
                     k += 2
                     break;
                 case PathVerb.LineTo:
-                    visitor.lineTo?.(lastPont.x,lastPont.y,points[k], points[k + 1])
-                    lastPont.x=points[k]
-                    lastPont.y=points[k+1]
+                    visitor.lineTo?.(lastPont.x, lastPont.y, points[k], points[k + 1])
+                    lastPont.x = points[k]
+                    lastPont.y = points[k + 1]
                     k += 2
                     break;
                 case PathVerb.QuadCurveTo:
-                    visitor.quadraticCurveTo?.(lastPont.x,lastPont.y,points[k], points[k + 1], points[k + 2], points[k + 3])
-                    lastPont.x=points[k+2]
-                    lastPont.y=points[k+3]
+                    visitor.quadraticCurveTo?.(lastPont.x, lastPont.y, points[k], points[k + 1], points[k + 2], points[k + 3])
+                    lastPont.x = points[k + 2]
+                    lastPont.y = points[k + 3]
                     k += 4
                     break;
                 case PathVerb.CubicCurveTo:
-                    visitor.cubicCurveTo?.(lastPont.x,lastPont.y,points[k], points[k + 1], points[k + 2], points[k + 3], points[k + 4], points[k + 5])
-                    lastPont.x=points[k+4]
-                    lastPont.y=points[k+5]
+                    visitor.cubicCurveTo?.(lastPont.x, lastPont.y, points[k], points[k + 1], points[k + 2], points[k + 3], points[k + 4], points[k + 5])
+                    lastPont.x = points[k + 4]
+                    lastPont.y = points[k + 5]
                     k += 6
                     break;
                 case PathVerb.Close:
-                    visitor.close?.(points[lastMoveIndex], points[lastMoveIndex + 1],lastPont.x,lastPont.y)
+                    visitor.close?.(points[lastMoveIndex], points[lastMoveIndex + 1], lastPont.x, lastPont.y)
                     break;
             }
         }
@@ -567,42 +643,42 @@ export class PathBuilder {
     invertVisit(visitor: Partial<PathBuilderVisitor>) {
         const points = this.points, verbs = this.verbs
         let lastMoveIndex = 0, needMove = true, needClose = false;
-        let lastPont:{x:number,y:number}={x:0,y:0}
+        let lastPont: { x: number, y: number } = { x: 0, y: 0 }
         for (let i = verbs.length - 1, k = points.length; i >= 0; i--) {
             let verb = verbs[i]
             if (needMove) {
                 k -= 2
                 needMove = false
                 visitor.moveTo?.(points[k], points[k + 1])
-                lastPont.x=points[k]
-                lastPont.y=points[k+1]
+                lastPont.x = points[k]
+                lastPont.y = points[k + 1]
                 lastMoveIndex = k
             }
             switch (verb) {
                 case PathVerb.MoveTo:
                     if (needClose) {
-                        visitor.close?.(points[lastMoveIndex], points[lastMoveIndex + 1],lastPont.x,lastPont.y)
+                        visitor.close?.(points[lastMoveIndex], points[lastMoveIndex + 1], lastPont.x, lastPont.y)
                         needClose = false
                     }
                     needMove = true
                     break;
                 case PathVerb.LineTo:
                     k -= 2
-                    visitor.lineTo?.(lastPont.x,lastPont.y,points[k], points[k + 1])
-                    lastPont.x=points[k]
-                    lastPont.y=points[k+1]
+                    visitor.lineTo?.(lastPont.x, lastPont.y, points[k], points[k + 1])
+                    lastPont.x = points[k]
+                    lastPont.y = points[k + 1]
                     break;
                 case PathVerb.QuadCurveTo:
                     k -= 4
-                    visitor.quadraticCurveTo?.(lastPont.x,lastPont.y,points[k + 2], points[k + 3], points[k], points[k + 1])
-                    lastPont.x=points[k]
-                    lastPont.y=points[k+1]
+                    visitor.quadraticCurveTo?.(lastPont.x, lastPont.y, points[k + 2], points[k + 3], points[k], points[k + 1])
+                    lastPont.x = points[k]
+                    lastPont.y = points[k + 1]
                     break;
                 case PathVerb.CubicCurveTo:
                     k -= 6
-                    visitor.cubicCurveTo?.(lastPont.x,lastPont.y,points[k + 4], points[k + 5], points[k + 2], points[k + 3], points[k], points[k + 1])
-                    lastPont.x=points[k]
-                    lastPont.y=points[k+1]
+                    visitor.cubicCurveTo?.(lastPont.x, lastPont.y, points[k + 4], points[k + 5], points[k + 2], points[k + 3], points[k], points[k + 1])
+                    lastPont.x = points[k]
+                    lastPont.y = points[k + 1]
                     break;
                 case PathVerb.Close:
                     needClose = true
@@ -616,7 +692,7 @@ export class PathBuilder {
             path = path.clone()
             path.transform(matrix)
         }
-        this._segmentMask|=path._segmentMask
+        this._segmentMask |= path._segmentMask
         this._needMoveTo = path._needMoveTo
         this._lastMovePointIndex = this.points.length + path._lastMovePointIndex
         this.points = this.points.concat(path.points)
@@ -628,13 +704,13 @@ export class PathBuilder {
             moveTo: (x: number, y: number) => {
                 this.moveTo(x, y)
             },
-            lineTo: (lastX:number,lastY:number,x: number, y: number) => {
+            lineTo: (lastX: number, lastY: number, x: number, y: number) => {
                 this.lineTo(x, y)
             },
-            quadraticCurveTo: (lastX:number,lastY:number,cpX: number, cpY: number, x: number, y: number) => {
+            quadraticCurveTo: (lastX: number, lastY: number, cpX: number, cpY: number, x: number, y: number) => {
                 this.quadraticCurveTo(cpX, cpY, x, y)
             },
-            cubicCurveTo: (lastX:number,lastY:number,cp1X: number, cp1Y: number, cp2X: number, cp2Y: number, x: number, y: number) => {
+            cubicCurveTo: (lastX: number, lastY: number, cp1X: number, cp1Y: number, cp2X: number, cp2Y: number, x: number, y: number) => {
                 this.cubicCurveTo(cp1X, cp1Y, cp2X, cp2Y, x, y)
             },
             close: () => {
@@ -642,18 +718,76 @@ export class PathBuilder {
             }
         })
     }
+    // 忽略move
+    reversePathTo(other: PathBuilder) {
+        if (other.isEmpty) {
+            return;
+        }
+        other.invertVisit({
+            moveTo: (x: number, y: number) => {
+               
+            },
+            lineTo: (lastX: number, lastY: number, x: number, y: number) => {
+                this.lineTo(x, y)
+            },
+            quadraticCurveTo: (lastX: number, lastY: number, cpX: number, cpY: number, x: number, y: number) => {
+                this.quadraticCurveTo(cpX, cpY, x, y)
+            },
+            cubicCurveTo: (lastX: number, lastY: number, cp1X: number, cp1Y: number, cp2X: number, cp2Y: number, x: number, y: number) => {
+                this.cubicCurveTo(cp1X, cp1Y, cp2X, cp2Y, x, y)
+            },
+            close: () => {
+                this.closePath()
+            }
+        })
+    }
+    offset(x: number, y: number) {
+        for (let i = 0; i < this.points.length; i+=2) {
+            this.points[i]=x
+            this.points[i+1]=y
+
+        }
+    }
+    isZeroLengthSincePoint(start_pt_index: number) {
+        let count = (this.points.length/2)- start_pt_index;
+        if (count < 2) {
+            return true;
+        }
+
+        let first_x = this.points[start_pt_index*2];
+        let first_y = this.points[start_pt_index*2+1];
+        for (let i = 1; i < count; i++) {
+            if (first_x===this.points[start_pt_index + i*2]&&first_y===this.points[start_pt_index + i*2+1]) {
+                return false;
+            }
+        }
+        return true
+    }
+    finish() {
+        if (this.isEmpty) {
+            return null;
+        }
+
+        // Just a move to? Bail.
+        if (this.verbs.length == 1) {
+            return null;
+        }
+
+        return this
+
+    }
     toCanvas(ctx: CanvasRenderingContext2D | Path2D) {
         this.visit({
             moveTo: (x: number, y: number) => {
                 ctx.moveTo(x, y)
             },
-            lineTo: (lastX:number,lastY:number,x: number, y: number) => {
+            lineTo: (lastX: number, lastY: number, x: number, y: number) => {
                 ctx.lineTo(x, y)
             },
-            quadraticCurveTo: (lastX:number,lastY:number,cpX: number, cpY: number, x: number, y: number) => {
+            quadraticCurveTo: (lastX: number, lastY: number, cpX: number, cpY: number, x: number, y: number) => {
                 ctx.quadraticCurveTo(cpX, cpY, x, y)
             },
-            cubicCurveTo: (lastX:number,lastY:number,cp1X: number, cp1Y: number, cp2X: number, cp2Y: number, x: number, y: number) => {
+            cubicCurveTo: (lastX: number, lastY: number, cp1X: number, cp1Y: number, cp2X: number, cp2Y: number, x: number, y: number) => {
                 ctx.bezierCurveTo(cp1X, cp1Y, cp2X, cp2Y, x, y)
             },
             close: () => {

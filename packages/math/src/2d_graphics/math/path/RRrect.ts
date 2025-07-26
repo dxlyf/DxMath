@@ -183,7 +183,7 @@ export class RRect {
         this.computeType();
 
         // TODO:  Why can't we assert this here?
-        //SkASSERT(this->isValid());
+     //   console.assert(this.isValid());
 
         return scale < 1.0;
     }

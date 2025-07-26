@@ -153,7 +153,7 @@ function SkEvalQuadTangentAt(src: Point[], t: number): Point {
 
     let B = P1.clone().sub(P0);
     let A = P2.clone().sub(P1).sub(B);
-    let T = A.clone().mul(A).add(B);
+    let T = A.clone().mulScalar(t).add(B);
 
     return to_point(T.add(T));
 }

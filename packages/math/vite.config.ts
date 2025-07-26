@@ -56,8 +56,8 @@ export default defineConfig({
       'gifuct-js':'/src/images/gifuct-js/index.js',
       'colord':'/src/color/colord/src/index.ts',
       '@pixi/colord':'/src/color/colord/src/index.ts',
-      'pixi.js':'/src/pixijs/src/index.ts',
-      'three':'/src/threejs/src/Three.js',
+      // 'pixi.js':'/src/pixijs/src/index.ts',
+      // 'three':'/src/threejs/src/Three.js',
     }
   },
   plugins: [react(),dts({

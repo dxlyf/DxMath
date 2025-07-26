@@ -32,7 +32,8 @@ export function factorial(n:number):number{
     }
     return result;
 }
-// 组合
+// 组合 C(n,r) = n! / (r!(n-r)!)
+
 export function nCr(n:number,r:number):number{
     if(r > n) return 0;
     let result = 1;
@@ -41,7 +42,7 @@ export function nCr(n:number,r:number):number{
     }
     return result;
 }
-// 排列
+// 排列 P(n,r) = n! / (n-r)!
 export function nPr(n:number,r:number):number{
     if(r > n) return 0;
     let result = 1;

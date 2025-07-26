@@ -3,6 +3,7 @@ import { Conic } from '../curve/conic'
 import { find_cubic_inflections, chop_cubic_at2, eval_cubic_tangent_at, find_cubic_cusp, find_unit_quad_roots, eval_quad_tangent_at, find_cubic_max_curvature, find_quad_max_curvature, eval_quad_at, eval_cubic_pos_at } from '../curve/path_geomtry'
 import { Vector2, Vector2 as Point } from "../math/vec2"
 import { radianToDegrees, scalarNearlyZero } from '../math/math'
+import {BoundingRect} from '../math/bounding_rect'
 const PI_2 = Math.PI * 2
 const twoPi = PI_2
 export {
@@ -661,7 +662,7 @@ function pointOnLineDistance2(px: number, py: number, x0: number, y0: number, x1
 export function quadraticCurveToLines(p0: Point, p1: Point, p2: Point, tessellationTolerance: number = 0.5) {
     const points: Point[] = []
     const subdivide = (p0: Point, p1: Point, p2: Point, maxDep: number = 100) => {
-        const dist = pointOnSegmentDistance(p1, p0, p2)
+        const dist = pointOnLineDistance(p1, p0, p2)
         if (dist < tessellationTolerance || maxDep <= 0) {
             points.push(p2)
         } else {
@@ -680,8 +681,8 @@ export function cubicCurveToLines(p0: Point, p1: Point, p2: Point, p3: Point, te
     const subdivide = (p0: Point, p1: Point, p2: Point, p3: Point, maxDeep = 100) => {
         // const mid=cubicBezier(p0,p1,p2,p3,0.5)
         // const dist0=pointOnSegmentDistance(mid,p0,p3)  
-        const dist1 = pointOnSegmentDistance(p1, p0, p3)
-        const dist2 = pointOnSegmentDistance(p2, p0, p3)
+        const dist1 = pointOnLineDistance(p1, p0, p3)
+        const dist2 = pointOnLineDistance(p2, p0, p3)
         const dist = Math.max(dist1, dist2)
         // 计算平直度误差（使用最大弦高）
         //  const chordHeight = maxChordHeight(p0, p3, p1, p2, mid);
@@ -1935,7 +1936,7 @@ export class PathBuilder {
                     break
             }
         }
-        return { min, max }
+        return BoundingRect.fromLTRB(min.x,min.y,max.x,max.y)
 
     }
     isPointInPath(x: number, y: number, fillRule: FillRule) {
@@ -2032,7 +2033,7 @@ export class PathBuilder {
             return (intersectionCount % 2) === 1;
         }
     }
-    fatten() {
+    fatten(tessellationTolerance=1) {
         let path = PathBuilder.default()
 
         this.visit({
@@ -2043,11 +2044,11 @@ export class PathBuilder {
                 path.lineTo(d.p0!.x, d.p0!.y)
             },
             quadraticCurveTo: (d) => {
-                const points = quadraticCurveToLines(d.p0!, d.p1!, d.p2!, 0.1)
+                const points = quadraticCurveToLines(d.p0!, d.p1!, d.p2!, tessellationTolerance)
                 points.forEach(p => path.lineTo(p.x, p.y))
             },
             bezierCurveTo: (d) => {
-                const points = cubicCurveToLines(d.p0!, d.p1!, d.p2!, d.p3!, 0.1)
+                const points = cubicCurveToLines(d.p0!, d.p1!, d.p2!, d.p3!, tessellationTolerance)
                 points.forEach(p => path.lineTo(p.x, p.y))
             },
             closePath: () => {

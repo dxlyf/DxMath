@@ -15,7 +15,23 @@ function setXY<T extends Vector2Like=Vector2Like>(out: T, x: number, y: number) 
     out[1] = y;
     return out
 }
-
+function setLength<T extends Vector2Like=Vector2Like>(out: T, x:number,y:number,length:number,orig_length?: { value: any }) {
+    let xx = x;
+    let yy = y;
+    let dmag = Math.sqrt(xx * xx + yy * yy);
+    if(dmag===0||!Number.isFinite(dmag)){
+        return false
+    }
+    let dscale = length / dmag;
+    x *= dscale;
+    y *= dscale;
+    out[0] = x
+    out[1] = y
+    if(orig_length){
+        orig_length.value=dmag;
+    }
+    return true
+}
 function splat<T extends Vector2Like=Vector2Like>(out: T, x: number) {
     out[0] = x;
     out[1] = x;
@@ -455,6 +471,14 @@ export class Vector2 extends Float32Array {
     setXY(x: number, y: number) { // 向量加法，传入另一个向量，返回新的向量
         return setXY(this, x, y); // 返回新的向量
     }
+    setLength(len:number){
+         setLength(this,this.x,this.y,len)
+         return this
+    }
+    setLengthFromPoint(x: number, y: number,len:number) {
+        setLength(this,x,y,len)
+        return this
+    }
     setRotation(rad: number) {
         return this.setXY(Math.cos(rad), Math.sin(rad))
     }
@@ -462,16 +486,16 @@ export class Vector2 extends Float32Array {
         return splat(this, x)
     }
     add(other: Vector2Like) { // 向量加法，传入另一个向量，返回新的向量
-        return add(this, this, other) as Vector2; // 返回新的向量
+        return add(this, this, other); // 返回新的向量
     }
     addVectors(a: Vector2Like, b: Vector2Like) { // 向量减法，传入两个向量，返回新的向量
-        return add(this, a, b) as Vector2; // 返回新的向量
+        return add(this, a, b); // 返回新的向量
     }
     sub(other: Vector2Like) { // 向量减法，传入另一个向量，返回新的向量
-        return subtract(this, this, other) as Vector2; // 返回新的向量
+        return subtract(this, this, other); // 返回新的向量
     }
     subtractVectors(a: Vector2Like, b: Vector2Like) { // 向量减法，传入两个向量，返回新的向量
-        return subtract(this, a, b) as Vector2; // 返回新的向量
+        return subtract(this, a, b); // 返回新的向量
     }
     mul(other: Vector2Like) { // 向量乘法，传入另一个向量，返回新的向量
         return multiply(this, this, other); // 返回新的向量
@@ -480,7 +504,7 @@ export class Vector2 extends Float32Array {
         return multiplyScalar(this, this, scalar); // 返回新的向量
     }
     multiplyScalar(scalar: number) { // 向量乘法，传入一个标量，返回新的向量
-        return multiplyScalar(this, this, scalar) as Vector2; // 返回新的向量
+        return multiplyScalar(this, this, scalar); // 返回新的向量
     }
     div(other: Vector2Like) { // 向量除法，传入另一个向量，返回新的向量
         return divide(this, this, other); // 返回新的向量
@@ -504,7 +528,7 @@ export class Vector2 extends Float32Array {
         return length(this); // 返回标量
     }
     normalize() { // 向量归一化，返回新的向量
-        return normalize(this, this) as Vector2; // 返回新的向量
+        return normalize(this, this); // 返回新的向量
     }
     lerp(other: Vector2Like, t: number) { // 向量插值，传入另一个向量和一个标量，返回新的向量
         return lerp(this, this, other, t); // 返回新的向量
@@ -516,7 +540,7 @@ export class Vector2 extends Float32Array {
         return angleTo(this, other); // 返回标量
     }
     perp() { // 向量垂直向量，返回新的向量
-        return perpendicular(this, this) as Vector2; // 返回新的向量
+        return perpendicular(this, this); // 返回新的向量
     }
     ccw() {
         return this.setXY(this.y, -this.x)

@@ -100,37 +100,58 @@
         update(): void;
         computedirection(): void;
         length(): number;
-        getLUT(steps?: number): Point[];
+        getLUT(steps?: number): Point[]; // 生成曲线上坐标的查找表，以参数等距间隔排列
         on(point: Point, error: number): number;
+        /**
+         * 使用基于曲线查找表 (LUT) 的两遍投影测试，查找最接近特定曲线外点的曲线内点。
+         * 通过距离比较找到最接近的匹配项，然后检查该匹配项周围的精细区间，看看是否可以找到更优的投影。
+        */
         project(point: Point): Projection;
-        get(t: number): Point;
+        get(t: number): Point; // 计算曲线上某个点，给定介于t0 到 1 之间的值（含 0 和 1）
         point(idx: number): Point;
         compute(t: number): Point;
-        raise(): Bezier;
-        derivative(t: number): Point;
-        inflections(): number[];
-        normal(t: number): Point;
+        raise(): Bezier; // 向上提升曲线阶数，使之成为更高阶的贝塞尔曲线
+        derivative(t: number): Point; //计算指定值处的曲线切线
+        /**
+         * 计算曲线上的所有拐点。即曲线曲率符号发生变化的所有点。
+            t此函数产生发生拐点的值数组。
+            请注意，根据定义，二次曲线不能有拐点。
+         */
+        inflections(): number[]; 
+        normal(t: number): Point; // 计算指定t值处的曲线法线
         private __normal2(t);
         private __normal3(t);
         private __normal(t);
-        hull(t: number): Point[];
-        split(t1: number): Split;
+        hull(t: number): Point[];// 在所有迭代中，为指定 t 值的曲线上点生成所有包点。
+        split(t1: number): Split;//t当仅给出一个值时，此函数将把曲线分成t=... 两条新曲线，这两条新曲线合在一起相当于原始曲线
         split(t1: number, t2: number): Bezier;
-        extrema(): Inflection;
-        bbox(): BBox;
+        extrema(): Inflection; //计算曲线上的所有极值
+        bbox(): BBox; // 根据其外壳坐标和极值计算（如果未缓存）此曲线的边界框。
         overlaps(curve: Bezier): boolean;
-        offset(t: number, d?: number): Offset | Bezier[];
+        offset(t: number, d?: number): Offset | Bezier[];//果仅使用距离参数调用此函数，则会创建一条沿曲线法线偏移距离为 的新曲线d
         simple(): boolean;
+        /** 
+         * 将曲线简化为“简单”子曲线的集合，其中简单性定义为所有控制点都在基线的同一侧（三次曲线具有控制到端点线不得交叉的附加约束），并且端点法线之间的角度不大于 60 度。
+        此函数存在的主要原因是为了能够缩放曲线。正如偏移函数中提到的，如果不使用欺骗手段，曲线就无法偏移，而这种欺骗手段正是在此函数中实现的。此函数生成的简单曲线数组可以安全地进行缩放。
+        */
         reduce(): Bezier[];
         scale(d: Function): Bezier;
         scale(d: number): Bezier;
-        outline(d1: number, d2?: number, d3?: number, d4?: number): PolyBezier;
-        outlineshapes(d1: number, d2: number, curveIntersectionThreshold?: number): Shape[];
-        intersects(curve: Bezier, curveIntersectionThreshold?: number): string[] | number[];
-        intersects(curve: Line): string[] | number[];
+        //t使用曲率公式计算点处的曲线曲率：
+        //该函数生成一个对象{ k:number, r:number}，其中 的值k 是点的曲率t，r是该曲率的半径，等于 1/k。注意，无穷大曲率（例如 时k=0）也表示为 r=0，而不是某个无穷大值。
+        curvature(t:number):{ k:number, r:number, dk: number, adk:number };
+        outline(d1: number, d2?: number, d3?: number, d4?: number): PolyBezier; // 这将生成一条曲线的轮廓，
+        outlineshapes(d1: number, d2: number, curveIntersectionThreshold?: number): Shape[]; // 这会将曲线轮廓生成为一系列形状，而不是路径序列。每个形状都是一个对象
+        intersects(curve: Bezier, curveIntersectionThreshold?: number): string[] | number[];// 查找此曲线与另一条曲线的交点。
+        intersects(curve: Line): string[] | number[];// 查找此曲线与某条线的交点{p1: {x:... ,y:...}, p2: ... }。交点是t此曲线上的值的数组。
         lineIntersects(line: Line): number[];
         selfintersects(curveIntersectionThreshold?: number): string[];
         curveintersects(c1: Bezier[], c2: Bezier[], curveIntersectionThreshold?: number): string[];
+        /**
+         * 将贝塞尔曲线近似为一系列圆弧。可选的阈值参数控制圆弧需要达到何种程度的拟合才能被视为合理的近似值。阈值越高，圆弧拟合的精度越低。如果未设置明确的阈值，则使用threshold的值。0.5
+
+此操作仅支持 2d（目前）。
+         */
         arcs(errorThreshold?: number): Arc[];
         private _error(pc, np1, s, e);
         private _iterate(errorThreshold, circles);

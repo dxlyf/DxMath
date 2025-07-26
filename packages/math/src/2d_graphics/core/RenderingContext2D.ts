@@ -64,7 +64,7 @@ export enum ImageSmoothingQuality{
     
 // }
 
-export class RenderingContext2D implements CanvasRenderingContext2D{
+export abstract class RenderingContext2D implements CanvasRenderingContext2D{
     canvas!: HTMLCanvasElement;
     getContextAttributes(): CanvasRenderingContext2DSettings {
         throw new Error("Method not implemented.");
@@ -95,6 +95,7 @@ export class RenderingContext2D implements CanvasRenderingContext2D{
     textBaseline: CanvasTextBaseline='top';
     textRendering: CanvasTextRendering='auto'
     wordSpacing: string='normal';
+    
     drawImage(image: unknown, sx: unknown, sy: unknown, sw?: unknown, sh?: unknown, dx?: unknown, dy?: unknown, dw?: unknown, dh?: unknown): void {
         throw new Error("Method not implemented.");
     }

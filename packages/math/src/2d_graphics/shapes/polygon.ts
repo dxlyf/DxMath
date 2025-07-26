@@ -1,3 +1,4 @@
+import { BoundingRect } from "../math/BoundingRect";
 import { clamp } from "../math/util";
 import { Vector2Like } from "../math/Vector2";
 
@@ -12,57 +13,41 @@ function pointOnSegmentDistance(x:number,y:number,x0:number,y0:number,x1:number,
     }
     return Number.POSITIVE_INFINITY;
 }
-
+export function pointInPolygon(x: number, y: number, polygon: number[], fileRule:'nonzero'|'evenodd'='evenodd') {
+    let winding = 0
+    for (let j = polygon.length - 2, i = 0; i < polygon.length; j = i, i += 2) {
+        const x0 = polygon[j]
+        const y0 = polygon[j + 1]
+        const x1 = polygon[i]
+        const y1 = polygon[i + 1]
+        if (y > y0 !== y > y1 && x >= x0 + (x1 - x0) * (y - y0) / (y1 - y0)) {
+            if (fileRule === 'evenodd') {
+                winding++
+            } else {
+                winding += y0 < y1 ? 1 : -1
+            }
+        }
+    }
+    return winding % 2 !== 0
+}
 export class Polygon{
-    vertices:Vector2Like[]
-    constructor(vertices:Vector2Like[]) {
+    vertices:number[]
+    constructor(vertices:number[]) {
         this.vertices = vertices;
     }
     
     contains(x:number, y:number,fillRule:'nonzero'|'evenodd') {
-        const polygon=this.vertices
-        if (fillRule === "evenodd") {
-            let inside = false;
-            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-                const xi = polygon[i][0],
-                    yi = polygon[i][1];
-                const xj = polygon[j][0],
-                    yj = polygon[j][1];
-                // 条件：当前扫描线与边相交
-                const intersect =
-                    (yi > y) !== (yj > y) &&
-                    x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
-                if (intersect) {
-                    inside = !inside;
-                }
-            }
-            return inside;
-        } else {
-            // nonzero 使用绕数算法
-            let windingNumber = 0;
-            for (let i = 0; i < polygon.length; i++) {
-                const [x0, y0] = polygon[i];
-                const [x1, y1] = polygon[(i + 1) % polygon.length];
-                if (y0 <= y) {
-                    if (y1 > y && (x1 - x0) * (y - y0) - (x - x0) * (y1 - y0) > 0) {
-                        windingNumber++;
-                    }
-                } else {
-                    if (y1 <= y && (x1 - x0) * (y - y0) - (x - x0) * (y1 - y0) < 0) {
-                        windingNumber--;
-                    }
-                }
-            }
-            return windingNumber !== 0;
-        }
+       return pointInPolygon(x,y,this.vertices,fillRule)
     }
 
     containsStroke(x:number, y:number,width:number,alignment=0.5) {
         const halfWidth=width*0.5
         const offset=(alignment-0.5)*2*halfWidth
-        for (let i = 0; i < this.vertices.length; i++) {
-            let [x0, y0] = this.vertices[i];
-            let [x1, y1] = this.vertices[(i + 1) % this.vertices.length];
+        for (let i = 0; i < this.vertices.length; i+=2) {
+            let x0 = this.vertices[i];
+            let y0 = this.vertices[i+1];
+            let x1 = this.vertices[(i + 2) % this.vertices.length];
+            let y1 = this.vertices[(i + 3) % this.vertices.length];
             const len=Math.hypot(x1-x0,y1-y0)
             
             const dx=(x1-x0)/len
@@ -79,5 +64,9 @@ export class Polygon{
         }
         return false;
     }
-
+   getBoundingBox(boundingBox: BoundingRect) {
+        boundingBox.makeEmpty()
+        boundingBox.setFromVertices(this.vertices)
+        return boundingBox;
+    }
 }

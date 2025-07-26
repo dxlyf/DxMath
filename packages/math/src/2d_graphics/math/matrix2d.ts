@@ -1,6 +1,18 @@
 import { Vector2Like } from "./Vector2"
 export type Matrix2dLike = number[] | Float32Array;
-function identity<T extends Matrix2dLike=Matrix2dLike>(out: T) {
+
+
+
+function set<T extends Matrix2dLike = Matrix2dLike>(out: T, a: number, b: number, c: number, d: number, e: number, f: number) {
+    out[0] = a;
+    out[1] = b;
+    out[2] = c
+    out[3] = d;
+    out[4] = e;
+    out[5] = f;
+    return out;
+}
+function identity<T extends Matrix2dLike = Matrix2dLike>(out: T) {
     out[0] = 1;
     out[1] = 0;
     out[2] = 0
@@ -9,8 +21,44 @@ function identity<T extends Matrix2dLike=Matrix2dLike>(out: T) {
     out[5] = 0;
     return out;
 }
+function translate<T extends Matrix2dLike = Matrix2dLike>(out: T, a: Matrix2dLike, v: Vector2Like) {
+    const a00 = a[0], a02 = a[2], a04 = a[4];
+    const a01 = a[1], a03 = a[3], a05 = a[5];
+    out[0] = a00;
+    out[1] = a01;
+    out[2] = a02;
+    out[3] = a03;
+    out[4] = a04 + a00 * v[0] + a02 * v[1];
+    out[5] = a05 + a01 * v[0] + a03 * v[1];
+    return out;
+}
+function rotation<T extends Matrix2dLike = Matrix2dLike>(out: T, a: Matrix2dLike, radian: number) {
+    const a00 = a[0], a01 = a[2], a02 = a[4];
+    const a10 = a[1], a11 = a[3], a12 = a[5];
+    const cos = Math.cos(radian);
+    const sin = Math.sin(radian);
+    out[0] = a00 * cos + a01 * sin;
+    out[1] = a10 * cos + a11 * sin;
+    out[2] = a00 * -sin + a01 * cos;
+    out[3] = a10 * sin + a11 * cos;
+    out[4] = a02;
+    out[5] = a12;
+    return out;
+}
+function scale<T extends Matrix2dLike = Matrix2dLike>(out: T, a: Matrix2dLike, v: Vector2Like) {
+    const a00 = a[0], a01 = a[2], a02 = a[4];
+    const a10 = a[1], a11 = a[3], a12 = a[5];
+    const sx = v[0], sy = v[1]
+    out[0] = a00 * sx;
+    out[1] = a10 * sx;
+    out[2] = a01 * sy;
+    out[3] = a01 * sy;
+    out[4] = a02;
+    out[5] = a12;
+    return out;
+}
 // 主行序
-function makeTranslation<T extends Matrix2dLike=Matrix2dLike>(out: T, v: Vector2Like) {
+function makeTranslation<T extends Matrix2dLike = Matrix2dLike>(out: T, v: Vector2Like) {
     out[0] = 1;
     out[1] = 0;
     out[2] = 0;
@@ -19,7 +67,7 @@ function makeTranslation<T extends Matrix2dLike=Matrix2dLike>(out: T, v: Vector2
     out[5] = v[1];
     return out;
 }
-function makeRotation<T extends Matrix2dLike=Matrix2dLike>(out: T, radian: number) {
+function makeRotation<T extends Matrix2dLike = Matrix2dLike>(out: T, radian: number) {
     const c = Math.cos(radian);
     const s = Math.sin(radian);
     out[0] = c;
@@ -30,16 +78,29 @@ function makeRotation<T extends Matrix2dLike=Matrix2dLike>(out: T, radian: numbe
     out[5] = 0;
     return out;
 }
-function makeScale<T extends Matrix2dLike=Matrix2dLike>(out: T, v: Vector2Like) {
-    out[0] = v[0];
+function makeScale<T extends Matrix2dLike = Matrix2dLike>(out: T, v: Vector2Like) {
+    const sx = v[0];
+    const sy = v[1];
+    out[0] = sx;
     out[1] = 0;
     out[2] = 0;
-    out[3] = v[1];
+    out[3] = sy;
     out[4] = 0;
     out[5] = 0;
     return out;
 }
-function makeTranslationRotationScale<T extends Matrix2dLike=Matrix2dLike>(out: T, v: Vector2Like, radian: number, scale: Vector2Like) {
+function makeSkew<T extends Matrix2dLike = Matrix2dLike>(out: T, v: Vector2Like) {
+    const kx = Math.tan(v[0]);
+    const ky = Math.tan(v[1]);
+    out[0] = 1;
+    out[1] = ky;
+    out[2] = kx;
+    out[3] = 1;
+    out[4] = 0;
+    out[5] = 0;
+    return out;
+}
+function makeTranslationRotationScale<T extends Matrix2dLike = Matrix2dLike>(out: T, v: Vector2Like, radian: number, scale: Vector2Like) {
     const c = Math.cos(radian);
     const s = Math.sin(radian);
     out[0] = c * scale[0];
@@ -50,17 +111,59 @@ function makeTranslationRotationScale<T extends Matrix2dLike=Matrix2dLike>(out: 
     out[5] = v[1];
     return out;
 }
-function makeTranslationRotationScaleOrigin<T extends Matrix2dLike=Matrix2dLike>(out: T, v: Vector2Like, radian: number, scale: Vector2Like, origin: Vector2Like) {
+function makeTranslationRotationScaleOrigin<T extends Matrix2dLike = Matrix2dLike>(out: T, v: Vector2Like, radian: number, scale: Vector2Like, origin: Vector2Like) {
     const c = Math.cos(radian);
     const s = Math.sin(radian);
+    const dx=v[0]+origin[0],dy=v[1]+origin[1];
     out[0] = c * scale[0];
     out[1] = s * scale[0];
     out[2] = -s * scale[1];
     out[3] = c * scale[1];
-    out[4] = v[0] - origin[0] * c * scale[0] - origin[1] * s * scale[1];
-    out[5] = v[1] - origin[0] * s * scale[0] + origin[1] * c * scale[1];
+    out[4] = dx - (origin[0] * out[0] + origin[1] * out[2]);
+    out[5] = dy - (origin[0] * out[1] + origin[1] * out[3]);
     return out;
 }
+function makeTranslationSkewRotationScaleOrigin<T extends Matrix2dLike = Matrix2dLike>(out: T, v: Vector2Like,skew:Vector2Like, radian: number, scale: Vector2Like, origin: Vector2Like) {
+    const c = Math.cos(radian);
+    const s = Math.sin(radian);
+    const kx=Math.tan(skew[0]),ky=Math.tan(skew[1]);
+    const dx=v[0]+origin[0],dy=v[1]+origin[1];
+    out[0] = (c+kx*s) * scale[0];
+    out[1] = (ky*s+c) * scale[0];
+    out[2] = (-s+kx*c) * scale[1];
+    out[3] = (ky*-s+c) * scale[1];
+    out[4] = dx - (origin[0] * out[0] + origin[1] * out[2]);
+    out[5] = dy - (origin[0] * out[1] + origin[1] * out[3]);
+    return out;
+}
+function makeTranslationRotationScaleOriginPivot<T extends Matrix2dLike = Matrix2dLike>(out: T, v: Vector2Like, radian: number, scale: Vector2Like, origin: Vector2Like,pivot:Vector2Like) {
+    const c = Math.cos(radian);
+    const s = Math.sin(radian);
+    const dx=v[0]+origin[0],dy=v[1]+origin[1];
+    const px=pivot[0]+origin[0],py=pivot[1]+origin[1];
+    out[0] = c * scale[0];
+    out[1] = s * scale[0];
+    out[2] = -s * scale[1];
+    out[3] = c * scale[1];
+    out[4] = dx - (px * out[0] + py * out[2]);
+    out[5] = dy - (px * out[1] + py * out[3]);
+    return out;
+}
+function makeTranslationSkewRotationScaleOriginPivot<T extends Matrix2dLike = Matrix2dLike>(out: T, v: Vector2Like,skew:Vector2Like, radian: number, scale: Vector2Like, origin: Vector2Like,pivot:Vector2Like) {
+    const c = Math.cos(radian);
+    const s = Math.sin(radian);
+    const kx=Math.tan(skew[0]),ky=Math.tan(skew[1]);
+    const dx=v[0]+origin[0],dy=v[1]+origin[1];
+    const px=pivot[0]+origin[0],py=pivot[1]+origin[1];
+    out[0] = (c+kx*s) * scale[0];
+    out[1] = (ky*c+s) * scale[0];
+    out[2] = (-s+kx*c) * scale[1];
+    out[3] = (ky*-s+c) * scale[1];
+    out[4] = dx - (px * out[0] + py * out[2]);
+    out[5] = dy - (px * out[1] + py * out[3]);
+    return out;
+}
+
 function extractTranslation(out: Vector2Like, a: Matrix2dLike) {
     out[0] = a[4];
     out[1] = a[5];
@@ -88,7 +191,7 @@ function extractOrigin(out: Vector2Like, a: Matrix2dLike) {
  * @param a 输入的 2D 变换矩阵
  * @returns 输出数组
  */
-function decompose<T extends Matrix2dLike=Matrix2dLike>(out: T, a: Matrix2dLike) {
+function decompose<T extends Matrix2dLike = Matrix2dLike>(out: T, a: Matrix2dLike) {
     const a00 = a[0];
     const a01 = a[1];
     const a02 = a[2];
@@ -125,7 +228,7 @@ function decompose<T extends Matrix2dLike=Matrix2dLike>(out: T, a: Matrix2dLike)
 
     return out;
 }
-function multiply<T extends Matrix2dLike=Matrix2dLike>(out: T, a: Matrix2dLike, b: Matrix2dLike) {
+function multiply<T extends Matrix2dLike = Matrix2dLike>(out: T, a: Matrix2dLike, b: Matrix2dLike) {
     const a00 = a[0];
     const a01 = a[1];
     const a02 = a[2];
@@ -146,7 +249,7 @@ function multiply<T extends Matrix2dLike=Matrix2dLike>(out: T, a: Matrix2dLike, 
     out[5] = a01 * b04 + a03 * b05 + a05;
     return out;
 }
-function invert<T extends Matrix2dLike=Matrix2dLike>(out: T, a: Matrix2dLike) {
+function invert<T extends Matrix2dLike = Matrix2dLike>(out: T, a: Matrix2dLike) {
     const a00 = a[0];
     const a01 = a[1];
     const a02 = a[2];
@@ -189,106 +292,148 @@ function hasTranslation(a: Matrix2dLike) {
 function hasRotation(a: Matrix2dLike) {
     return a[0] !== 1 || a[1] !== 0 || a[2] !== 0 || a[3] !== 1;
 }
-function hasScale(a:Matrix2dLike){
-    return a[0]!==1||a[3]!==1
+function hasScale(a: Matrix2dLike) {
+    return a[0] !== 1 || a[3] !== 1
 }
+/**
+ * 列主序存储
+ */
 export class Matrix2D extends Float32Array {
-    static default(){
+    static default() {
         return new this()
     }
-    static identity=identity
-    static multiply=multiply
-    static invert=invert
-    static makeTranslation=makeTranslation
-    static makeRotation=makeRotation
-    static makeScale=makeScale
-    static makeTranslationRotationScale=makeTranslationRotationScale
-    static makeTranslationRotationScaleOrigin=makeTranslationRotationScaleOrigin
-    static extractTranslation=extractTranslation
-    static extractRotation=extractRotation
-    static extractScale=extractScale
-    static extractOrigin=extractOrigin
-    static decompose=decompose
-    static mapPoint=mapPoint
-    static mapPoints=mapPoints
+    // 列主序
+    static fromColumns(a: number, b: number, c: number, d: number, e: number, f: number) {
+        return set(new this(), a, b, c, d, e, f)
+    }
+    static fromMatrix2D(a: Matrix2dLike) {
+        const m = this.default()
+        m.set(a)
+        return m
+    }
+    static identity = identity
+    static multiply = multiply
+    static invert = invert
+    static makeTranslation = makeTranslation
+    static makeRotation = makeRotation
+    static makeScale = makeScale
+    static makeTranslationRotationScale = makeTranslationRotationScale
+    static makeTranslationRotationScaleOrigin = makeTranslationRotationScaleOrigin
+    static makeTranslationSkewRotationScaleOrigin=makeTranslationSkewRotationScaleOrigin
+    static makeTranslationRotationScaleOriginPivot=makeTranslationRotationScaleOriginPivot
+    static makeTranslationSkewRotationScaleOriginPivot=makeTranslationSkewRotationScaleOriginPivot
+    static extractTranslation = extractTranslation
+    static extractRotation = extractRotation
+    static extractScale = extractScale
+    static extractOrigin = extractOrigin
+    static decompose = decompose
+    static mapPoint = mapPoint
+    static mapPoints = mapPoints
+    static hasTranslation = hasTranslation
+    static hasRotation = hasRotation
+    static hasScale = hasScale
+    static hasIdentity = hasIdentity
 
     constructor() {
         super(6);
         identity(this);
     }
-    get a(){
+    get a() {
         return this[0]
     }
-    get b(){
+    get b() {
         return this[1]
     }
-    get c(){
+    get c() {
         return this[2]
     }
-    get d(){
+    get d() {
         return this[3]
     }
-    get e(){
+    get e() {
         return this[4]
     }
-    get f(){
+    get f() {
         return this[5]
     }
     identity() {
-        return   identity(this);
+        return identity(this);
     }
-    multiply(a:Matrix2dLike,b: Matrix2dLike) {
-        return   multiply(this, a, b); 
+    multiply(a: Matrix2dLike, b: Matrix2dLike) {
+        return multiply(this, a, b);
     }
-    premultiply(a:Matrix2dLike) {
-        return   multiply(this,a, this);
+    premultiply(a: Matrix2dLike) {
+        return multiply(this, a, this);
     }
-    postmultiply(a:Matrix2dLike) {
-        return  multiply(this, this, a); 
+    postmultiply(a: Matrix2dLike) {
+        return multiply(this, this, a);
     }
     invert() {
-        return   invert(this, this); 
+        return invert(this, this);
+    }
+    translate(v: Vector2Like) {
+        return translate(this, this, v)
+    }
+
+    rotate(radian: number) {
+        return rotation(this, this, radian)
+    }
+
+    scale(v: Vector2Like) {
+        return scale(this, this, v)
     }
     makeTranslation(v: Vector2Like) {
-      return  makeTranslation(this, v);
+        return makeTranslation(this, v);
     }
     makeRotation(radian: number) {
-      return   makeRotation(this, radian);
+        return makeRotation(this, radian);
     }
     makeScale(v: Vector2Like) {
-      return   makeScale(this, v);
+        return makeScale(this, v);
+    }
+    makeSkew(v: Vector2Like) {
+        return makeSkew(this, v)
     }
     makeTranslationRotationScale(v: Vector2Like, radian: number, scale: Vector2Like) {
-      return   makeTranslationRotationScale(this, v, radian, scale);
+        return makeTranslationRotationScale(this, v, radian, scale);
     }
     makeTranslationRotationScaleOrigin(v: Vector2Like, radian: number, scale: Vector2Like, origin: Vector2Like) {
-      return   makeTranslationRotationScaleOrigin(this, v, radian, scale, origin);
+        return makeTranslationRotationScaleOrigin(this, v, radian, scale, origin);
+    }
+    makeTranslationSkewRotationScaleOrigin(translate: Vector2Like,skew:Vector2Like, radian: number, scale: Vector2Like, origin: Vector2Like) {
+        return makeTranslationSkewRotationScaleOrigin(this, translate,skew, radian, scale, origin);
+    }
+    makeTranslationRotationScaleOriginPivot(translate: Vector2Like, radian: number, scale: Vector2Like, origin: Vector2Like,pivot:Vector2Like){
+        return makeTranslationRotationScaleOriginPivot(this, translate, radian, scale, origin,pivot);
+    }
+    makeTranslationSkewRotationScaleOriginPivot(translate: Vector2Like,skew:Vector2Like, radian: number, scale: Vector2Like, origin: Vector2Like,pivot:Vector2Like){
+        return makeTranslationSkewRotationScaleOriginPivot(this, translate,skew, radian, scale, origin,pivot);
     }
     extractTranslation(out: Vector2Like) {
-      return   extractTranslation(out, this);
+        return extractTranslation(out, this);
     }
     extractRotation() {
-      return   extractRotation(this);
+        return extractRotation(this);
     }
     extractScale(out: Vector2Like) {
-      return   extractScale(out, this);
+        return extractScale(out, this);
     }
     extractOrigin(out: Vector2Like) {
-      return   extractOrigin(out, this);
+        return extractOrigin(out, this);
     }
-    mapPoint(v: Vector2Like,out=v) {
-        return  mapPoint(out, this, v);
+    mapPoint(v: Vector2Like, out = v) {
+        return mapPoint(out, this, v);
     }
-    mapPoints(v: Vector2Like[],out=v) {
-        return  mapPoints(out, this, v);
+    mapPoints(v: Vector2Like[], out = v) {
+        return mapPoints(out, this, v);
     }
-    hasIdentity(){
+    hasIdentity() {
         return hasIdentity(this)
     }
-    hasRotation(){
+    hasRotation() {
         return hasRotation(this)
     }
-    hasScale(){
+    hasScale() {
         return hasScale(this)
     }
 }

@@ -1,59 +1,51 @@
 import { isNumber } from "../../utils/lang";
-import { BaseRenderer,BaseRendererOptions } from "../../base/renderer";
+import { BaseRenderer, BaseRendererOptions } from "../../base/Renderer";
+import { Paint, PaintStyle } from "../../base/Paint";
+import { Color } from "../../image/Color";
+import { Matrix2dLike } from "math/2d_graphics/math/Matrix2d";
 
+export interface CanvasRendererOptions extends BaseRendererOptions {
 
-export interface CanvasRendererOptions extends BaseRendererOptions{
-    canvas?: HTMLCanvasElement; // 可选的画布参数
 }
-export class CanvasRenderer implements BaseRenderer {
-    domElement: HTMLCanvasElement;
-    ctx: CanvasRenderingContext2D;
-    options: CanvasRendererOptions;
-    constructor(options?:CanvasRendererOptions) {
-        const newOpts=this.options = {devicePixelRatio:window.devicePixelRatio,...options};
-        this.domElement = newOpts.canvas || document.createElement('canvas');
-        this.ctx = this.domElement.getContext('2d')!;
-        if(isNumber(newOpts.width)&& isNumber(newOpts.height)){ 
-            this.setSize(newOpts.width!, newOpts.height!);
+
+
+export class CanvasRenderer extends BaseRenderer<CanvasRenderingContext2D, CanvasRendererOptions> {
+    createRenderContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+        return canvas.getContext("2d")!;
+    }
+    clear(): void {
+        this.ctx.clearRect(0, 0, this.pixelWidth, this.pixelHeight)
+    }
+    save(): void {
+        this.ctx.save()
+    }
+    restore(): void {
+        this.ctx.restore()
+    }
+    transform(matrix: Matrix2dLike): void {
+
+    }
+    drawPaint(paint: Paint): void {
+        const ctx = this.ctx;
+        const color = Color.parse(paint.color!)
+        if (color.alpha !== 1) {
+            ctx.globalAlpha = color.alpha;
+        }
+        if (paint.paintStyle & PaintStyle.Fill) {
+            ctx.fillStyle = color.toCssRGB();
+            ctx.fill();
+        }
+        if (paint.paintStyle & PaintStyle.Stroke) {
+            ctx.strokeStyle = color.toCssRGB();
+            ctx.stroke();
         }
     }
-    get pixelWidth(){
-        return this.domElement.width
+    drawCircle(x: number, y: number, radius: number, ccw = false): void {
+        this.ctx.arc(x, y, radius, 0, Math.PI * 2, ccw);
     }
-    get pixelHeight(){
-        return this.domElement.height
+    drawRect(x: number, y: number, width: number, height: number): void {
+        this.ctx.rect(x, y, width, height);
     }
-    get width(){
-        return this.options.width!;
-    }
-    set width(width: number) {
-        this.options.width = width;
-    }
-    get height(){
-        return this.options.height!;
-    }
-    set height(height: number) {
-        this.options.height = height;
-    }
-    get devicePixelRatio(){
-        return this.options.devicePixelRatio!;
-    }
-    set devicePixelRatio(dpr: number) {
-        this.options.devicePixelRatio = dpr;
-        this.setSize(this.width, this.height, false);
-    }
-    setPixelRatio(dpr: number) {
-        this.devicePixelRatio = dpr;
-        this.setSize(this.width, this.height, false);
-    }
-    setSize(width: number, height: number,updateStyle=true): void {
-        this.width = width;
-        this.height = height;
-        this.domElement.width = Math.floor(width * this.devicePixelRatio);
-        this.domElement.height = Math.floor(height * this.devicePixelRatio);
-        if(updateStyle){
-            this.domElement.style.width = `${width}px`;
-            this.domElement.style.height = `${height}px`;
-        }
-    }
+
+
 }
